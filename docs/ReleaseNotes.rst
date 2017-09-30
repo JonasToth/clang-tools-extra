@@ -57,6 +57,11 @@ The improvements are...
 Improvements to clang-tidy
 --------------------------
 
+- New `cppcoreguidelines-mixed-int-arithmetic
+  <http://clang.llvm.org/extra/clang-tidy/checks/cppcoreguidelines-mixed-int-arithmetic.html>`_ check
+
+  FIXME: add release notes.
+
 - New `fuchsia-statically-constructed-objects
   <http://clang.llvm.org/extra/clang-tidy/checks/fuchsia-statically-constructed-objects.html>`_ check
 

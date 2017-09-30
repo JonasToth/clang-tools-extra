@@ -12,6 +12,7 @@
 #include "../ClangTidyModuleRegistry.h"
 #include "../misc/UnconventionalAssignOperatorCheck.h"
 #include "InterfacesGlobalInitCheck.h"
+#include "MixedIntArithmeticCheck.h"
 #include "NoMallocCheck.h"
 #include "OwningMemoryCheck.h"
 #include "ProBoundsArrayToPointerDecayCheck.h"
@@ -37,6 +38,8 @@ public:
   void addCheckFactories(ClangTidyCheckFactories &CheckFactories) override {
     CheckFactories.registerCheck<InterfacesGlobalInitCheck>(
         "cppcoreguidelines-interfaces-global-init");
+    CheckFactories.registerCheck<MixedIntArithmeticCheck>(
+        "cppcoreguidelines-mixed-int-arithmetic");
     CheckFactories.registerCheck<NoMallocCheck>("cppcoreguidelines-no-malloc");
     CheckFactories.registerCheck<OwningMemoryCheck>(
         "cppcoreguidelines-owning-memory");

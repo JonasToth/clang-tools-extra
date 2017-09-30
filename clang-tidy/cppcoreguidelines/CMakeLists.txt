@@ -3,6 +3,7 @@ set(LLVM_LINK_COMPONENTS support)
 add_clang_library(clangTidyCppCoreGuidelinesModule
   CppCoreGuidelinesTidyModule.cpp
   InterfacesGlobalInitCheck.cpp
+  MixedIntArithmeticCheck.cpp
   NoMallocCheck.cpp
   OwningMemoryCheck.cpp
   ProBoundsArrayToPointerDecayCheck.cpp
