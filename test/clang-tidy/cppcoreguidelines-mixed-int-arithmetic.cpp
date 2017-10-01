@@ -1,14 +1,10 @@
 // RUN: %check_clang_tidy %s cppcoreguidelines-mixed-int-arithmetic %t
 
-// FIXME: Add something that triggers the check here.
-void f();
-// CHECK-MESSAGES: :[[@LINE-1]]:6: warning: function 'f' is insufficiently awesome [cppcoreguidelines-mixed-int-arithmetic]
+void mixed() {
+    unsigned int UInt1 = 42;
+    signed int SInt1 = 42;
 
-// FIXME: Verify the applied fix.
-//   * Make the CHECK patterns specific enough and try to make verified lines
-//     unique to avoid incorrect matches.
-//   * Use {{}} for regular expressions.
-// CHECK-FIXES: {{^}}void awesome_f();{{$}}
-
-// FIXME: Add something that doesn't trigger the check here.
-void awesome_f2();
+    auto R1 = UInt1 + SInt1;
+    int R2 = UInt1 + SInt1;
+    unsigned int R3 = UInt1 + SInt1;
+}

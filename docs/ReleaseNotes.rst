@@ -60,7 +60,9 @@ Improvements to clang-tidy
 - New `cppcoreguidelines-mixed-int-arithmetic
   <http://clang.llvm.org/extra/clang-tidy/checks/cppcoreguidelines-mixed-int-arithmetic.html>`_ check
 
-  FIXME: add release notes.
+  Finds cases where unsigned and signed integers are used together in arithmetic expressions.
+  Unsigned integers wrap to 0 when overflowing while the behaviour of signed integers
+  is undefined in this case. The combination leads to possibly unexpected results.
 
 - New `fuchsia-statically-constructed-objects
   <http://clang.llvm.org/extra/clang-tidy/checks/fuchsia-statically-constructed-objects.html>`_ check

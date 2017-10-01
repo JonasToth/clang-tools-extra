@@ -18,18 +18,31 @@ namespace tidy {
 namespace cppcoreguidelines {
 
 void MixedIntArithmeticCheck::registerMatchers(MatchFinder *Finder) {
-  // FIXME: Add matchers.
-  Finder->addMatcher(functionDecl().bind("x"), this);
+  const auto UnsignedIntegerOperand =
+      expr(ignoringImpCasts(hasType(isUnsignedInteger())))
+          .bind("unsigned-operand");
+
+  // Match binary bitwise operations on signed integer arguments.
+  Finder->addMatcher(
+      binaryOperator(allOf(anyOf(hasOperatorName("+"), hasOperatorName("-"),
+                                 hasOperatorName("*"), hasOperatorName("/")),
+                           hasEitherOperand(UnsignedIntegerOperand),
+                           hasRHS(hasType(isInteger())),
+                           hasLHS(hasType(isInteger()))))
+          .bind("mixed-arithmetic"),
+      this);
 }
 
 void MixedIntArithmeticCheck::check(const MatchFinder::MatchResult &Result) {
-  // FIXME: Add callback implementation.
-  const auto *MatchedDecl = Result.Nodes.getNodeAs<FunctionDecl>("x");
-  if (MatchedDecl->getName().startswith("awesome_"))
-    return;
-  diag(MatchedDecl->getLocation(), "function %0 is insufficiently awesome")
-      << MatchedDecl
-      << FixItHint::CreateInsertion(MatchedDecl->getLocation(), "awesome_");
+  const auto *UnsignedOperand =
+      Result.Nodes.getNodeAs<Expr>("unsigned-operand");
+  const auto *MixedArithmetic =
+      Result.Nodes.getNodeAs<BinaryOperator>("mixed-arithmetic");
+
+  diag(MixedArithmetic->getLocStart(), "use of signed and unsigned integers in "
+                                       "arithmetic expression; use signed "
+                                       "integers only")
+      << UnsignedOperand->getSourceRange();
 }
 
 } // namespace cppcoreguidelines
