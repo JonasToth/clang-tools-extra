@@ -57,11 +57,6 @@ The improvements are...
 Improvements to clang-tidy
 --------------------------
 
-- New `cppcoreguidelines-mixed-int-arithmetic
-  <http://clang.llvm.org/extra/clang-tidy/checks/cppcoreguidelines-mixed-int-arithmetic.html>`_ check
-
-  FIXME: add release notes.
-
 - Renamed checks to use correct term "implicit conversion" instead of "implicit
   cast" and modified messages and option names accordingly:
 
@@ -118,6 +113,13 @@ Improvements to clang-tidy
 
   Finds cases where integer division in a floating point context is likely to
   cause unintended loss of precision.
+
+- New `cppcoreguidelines-mixed-int-arithmetic
+  <http://clang.llvm.org/extra/clang-tidy/checks/cppcoreguidelines-mixed-int-arithmetic.html>`_ check
+
+  Finds cases where unsigned and signed integers are used together in arithmetic expressions.
+  Unsigned integers wrap to 0 when overflowing while the behaviour of signed integers
+  is undefined in this case. The combination leads to possibly unexpected results.
 
 - New `cppcoreguidelines-owning-memory <http://clang.llvm.org/extra/clang-tidy/checks/cppcoreguidelines-owning-memory.html>`_ check 
 

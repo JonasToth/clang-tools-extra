@@ -16,7 +16,7 @@ namespace clang {
 namespace tidy {
 namespace cppcoreguidelines {
 
-/// FIXME: Write a short description.
+/// Find places that use unsigned integers in arithmetic expressions.
 ///
 /// For the user-facing documentation see:
 /// http://clang.llvm.org/extra/clang-tidy/checks/cppcoreguidelines-mixed-int-arithmetic.html
