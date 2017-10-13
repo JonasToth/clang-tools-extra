@@ -99,7 +99,7 @@ ClangdScheduler::ClangdScheduler(unsigned AsyncThreadsCount)
   for (unsigned I = 0; I < AsyncThreadsCount; ++I) {
     Workers.push_back(std::thread([this]() {
       while (true) {
-        std::future<void> Request;
+        UniqueFunction<void()> Request;
 
         // Pick request from the queue
         {
@@ -120,7 +120,7 @@ ClangdScheduler::ClangdScheduler(unsigned AsyncThreadsCount)
           RequestQueue.pop_front();
         } // unlock Mutex
 
-        Request.get();
+        Request();
       }
     }));
   }
@@ -194,15 +194,69 @@ std::future<void> ClangdServer::forceReparse(PathRef File) {
                                  std::move(TaggedFS));
 }
 
-Tagged<std::vector<CompletionItem>>
+std::future<Tagged<std::vector<CompletionItem>>>
 ClangdServer::codeComplete(PathRef File, Position Pos,
                            llvm::Optional<StringRef> OverridenContents,
                            IntrusiveRefCntPtr<vfs::FileSystem> *UsedFS) {
+  std::string Contents;
+  if (OverridenContents) {
+    Contents = *OverridenContents;
+  } else {
+    auto FileContents = DraftMgr.getDraft(File);
+    assert(FileContents.Draft &&
+           "codeComplete is called for non-added document");
+
+    Contents = std::move(*FileContents.Draft);
+  }
+
+  auto TaggedFS = FSProvider.getTaggedFileSystem(File);
+  if (UsedFS)
+    *UsedFS = TaggedFS.Value;
+
+  std::shared_ptr<CppFile> Resources = Units.getFile(File);
+  assert(Resources && "Calling completion on non-added file");
+
+  using PackagedTask =
+      std::packaged_task<Tagged<std::vector<CompletionItem>>()>;
+
+  // Remember the current Preamble and use it when async task starts executing.
+  // At the point when async task starts executing, we may have a different
+  // Preamble in Resources. However, we assume the Preamble that we obtain here
+  // is reusable in completion more often.
+  std::shared_ptr<const PreambleData> Preamble =
+      Resources->getPossiblyStalePreamble();
+  // A task that will be run asynchronously.
+  PackagedTask Task([=]() mutable { // 'mutable' to reassign Preamble variable.
+    if (!Preamble) {
+      // Maybe we built some preamble before processing this request.
+      Preamble = Resources->getPossiblyStalePreamble();
+    }
+    // FIXME(ibiryukov): even if Preamble is non-null, we may want to check
+    // both the old and the new version in case only one of them matches.
+
+    std::vector<CompletionItem> Result = clangd::codeComplete(
+        File, Resources->getCompileCommand(),
+        Preamble ? &Preamble->Preamble : nullptr, Contents, Pos, TaggedFS.Value,
+        PCHs, SnippetCompletions, Logger);
+    return make_tagged(std::move(Result), std::move(TaggedFS.Tag));
+  });
+
+  auto Future = Task.get_future();
+  // FIXME(ibiryukov): to reduce overhead for wrapping the same callable
+  // multiple times, ClangdScheduler should return future<> itself.
+  WorkScheduler.addToFront([](PackagedTask Task) { Task(); }, std::move(Task));
+  return Future;
+}
+
+Tagged<SignatureHelp>
+ClangdServer::signatureHelp(PathRef File, Position Pos,
+                            llvm::Optional<StringRef> OverridenContents,
+                            IntrusiveRefCntPtr<vfs::FileSystem> *UsedFS) {
   std::string DraftStorage;
   if (!OverridenContents) {
     auto FileContents = DraftMgr.getDraft(File);
     assert(FileContents.Draft &&
-           "codeComplete is called for non-added document");
+           "signatureHelp is called for non-added document");
 
     DraftStorage = std::move(*FileContents.Draft);
     OverridenContents = DraftStorage;
@@ -213,13 +267,13 @@ ClangdServer::codeComplete(PathRef File, Position Pos,
     *UsedFS = TaggedFS.Value;
 
   std::shared_ptr<CppFile> Resources = Units.getFile(File);
-  assert(Resources && "Calling completion on non-added file");
+  assert(Resources && "Calling signatureHelp on non-added file");
 
   auto Preamble = Resources->getPossiblyStalePreamble();
-  std::vector<CompletionItem> Result = clangd::codeComplete(
-      File, Resources->getCompileCommand(),
-      Preamble ? &Preamble->Preamble : nullptr, *OverridenContents, Pos,
-      TaggedFS.Value, PCHs, SnippetCompletions, Logger);
+  auto Result = clangd::signatureHelp(File, Resources->getCompileCommand(),
+                                      Preamble ? &Preamble->Preamble : nullptr,
+                                      *OverridenContents, Pos, TaggedFS.Value,
+                                      PCHs, Logger);
   return make_tagged(std::move(Result), TaggedFS.Tag);
 }
 
@@ -344,12 +398,11 @@ llvm::Optional<Path> ClangdServer::switchSourceHeader(PathRef Path) {
       return NewPath.str().str(); // First str() to convert from SmallString to
                                   // StringRef, second to convert from StringRef
                                   // to std::string
-    
+
     // Also check NewExt in upper-case, just in case.
     llvm::sys::path::replace_extension(NewPath, NewExt.upper());
     if (FS->exists(NewPath))
       return NewPath.str().str();
-
   }
 
   return llvm::None;
@@ -360,8 +413,9 @@ std::future<void> ClangdServer::scheduleReparseAndDiags(
     Tagged<IntrusiveRefCntPtr<vfs::FileSystem>> TaggedFS) {
 
   assert(Contents.Draft && "Draft must have contents");
-  std::future<llvm::Optional<std::vector<DiagWithFixIts>>> DeferredRebuild =
-      Resources->deferRebuild(*Contents.Draft, TaggedFS.Value);
+  UniqueFunction<llvm::Optional<std::vector<DiagWithFixIts>>()>
+      DeferredRebuild =
+          Resources->deferRebuild(*Contents.Draft, TaggedFS.Value);
   std::promise<void> DonePromise;
   std::future<void> DoneFuture = DonePromise.get_future();
 
@@ -370,7 +424,7 @@ std::future<void> ClangdServer::scheduleReparseAndDiags(
   VFSTag Tag = TaggedFS.Tag;
   auto ReparseAndPublishDiags =
       [this, FileStr, Version,
-       Tag](std::future<llvm::Optional<std::vector<DiagWithFixIts>>>
+       Tag](UniqueFunction<llvm::Optional<std::vector<DiagWithFixIts>>()>
                 DeferredRebuild,
             std::promise<void> DonePromise) -> void {
     FulfillPromiseGuard Guard(DonePromise);
@@ -379,7 +433,7 @@ std::future<void> ClangdServer::scheduleReparseAndDiags(
     if (CurrentVersion != Version)
       return; // This request is outdated
 
-    auto Diags = DeferredRebuild.get();
+    auto Diags = DeferredRebuild();
     if (!Diags)
       return; // A new reparse was requested before this one completed.
 
@@ -414,13 +468,18 @@ ClangdServer::scheduleCancelRebuild(std::shared_ptr<CppFile> Resources) {
     return DoneFuture;
   }
 
-  std::future<void> DeferredCancel = Resources->deferCancelRebuild();
+  UniqueFunction<void()> DeferredCancel = Resources->deferCancelRebuild();
   auto CancelReparses = [Resources](std::promise<void> DonePromise,
-                                    std::future<void> DeferredCancel) {
+                                    UniqueFunction<void()> DeferredCancel) {
     FulfillPromiseGuard Guard(DonePromise);
-    DeferredCancel.get();
+    DeferredCancel();
   };
   WorkScheduler.addToFront(std::move(CancelReparses), std::move(DonePromise),
                            std::move(DeferredCancel));
   return DoneFuture;
+}
+
+void ClangdServer::onFileEvent(const DidChangeWatchedFilesParams &Params) {
+  // FIXME: Do nothing for now. This will be used for indexing and potentially
+  // invalidating other caches.
 }

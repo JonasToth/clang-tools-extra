@@ -48,6 +48,7 @@ void ClangdLSPServer::onInitialize(StringRef ID, InitializeParams IP,
           "documentOnTypeFormattingProvider": {"firstTriggerCharacter":"}","moreTriggerCharacter":[]},
           "codeActionProvider": true,
           "completionProvider": {"resolveProvider": false, "triggerCharacters": [".",">",":"]},
+          "signatureHelpProvider": {"triggerCharacters": ["(",","]},
           "definitionProvider": true
         }}})");
   if (IP.rootUri && !IP.rootUri->file.empty())
@@ -71,6 +72,10 @@ void ClangdLSPServer::onDocumentDidChange(DidChangeTextDocumentParams Params,
   // We only support full syncing right now.
   Server.addDocument(Params.textDocument.uri.file,
                      Params.contentChanges[0].text);
+}
+
+void ClangdLSPServer::onFileEvent(const DidChangeWatchedFilesParams &Params) {
+  Server.onFileEvent(Params);
 }
 
 void ClangdLSPServer::onDocumentDidClose(DidCloseTextDocumentParams Params,
@@ -145,6 +150,9 @@ void ClangdLSPServer::onCompletion(TextDocumentPositionParams Params,
                    .codeComplete(Params.textDocument.uri.file,
                                  Position{Params.position.line,
                                           Params.position.character})
+                   .get() // FIXME(ibiryukov): This could be made async if we
+                          // had an API that would allow to attach callbacks to
+                          // futures returned by ClangdServer.
                    .Value;
 
   std::string Completions;
@@ -157,6 +165,18 @@ void ClangdLSPServer::onCompletion(TextDocumentPositionParams Params,
   Out.writeMessage(
       R"({"jsonrpc":"2.0","id":)" + ID.str() +
       R"(,"result":[)" + Completions + R"(]})");
+}
+
+void ClangdLSPServer::onSignatureHelp(TextDocumentPositionParams Params,
+                                      StringRef ID, JSONOutput &Out) {
+  const auto SigHelp = SignatureHelp::unparse(
+      Server
+          .signatureHelp(
+              Params.textDocument.uri.file,
+              Position{Params.position.line, Params.position.character})
+          .Value);
+  Out.writeMessage(R"({"jsonrpc":"2.0","id":)" + ID.str() + R"(,"result":)" +
+                   SigHelp + "}");
 }
 
 void ClangdLSPServer::onGoToDefinition(TextDocumentPositionParams Params,
@@ -196,8 +216,9 @@ void ClangdLSPServer::onSwitchSourceHeader(TextDocumentIdentifier Params,
 
 ClangdLSPServer::ClangdLSPServer(JSONOutput &Out, unsigned AsyncThreadsCount,
                                  bool SnippetCompletions,
-                                 llvm::Optional<StringRef> ResourceDir)
-    : Out(Out), CDB(/*Logger=*/Out),
+                                 llvm::Optional<StringRef> ResourceDir,
+                                 llvm::Optional<Path> CompileCommandsDir)
+    : Out(Out), CDB(/*Logger=*/Out, std::move(CompileCommandsDir)),
       Server(CDB, /*DiagConsumer=*/*this, FSProvider, AsyncThreadsCount,
              SnippetCompletions, /*Logger=*/Out, ResourceDir) {}
 
