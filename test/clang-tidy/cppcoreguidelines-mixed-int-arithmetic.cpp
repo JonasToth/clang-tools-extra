@@ -11,6 +11,7 @@ enum SignedEnum : signed char {
 };
 
 unsigned char returnUnsignedCharacter() { return 42; }
+unsigned returnUnsignedNumber() { return 42u; }
 long returnBigNumber() { return 42; }
 float unrelatedThing() { return 42.f; }
 SignedEnum returnSignedEnum() { return SEnum1; }
@@ -143,10 +144,7 @@ void pure_unsigned() {
   // in either `signed int` or `unsigned int` (arch dependent i guess). Both `short`
   // and `char` perform this conversion in arithmetic operations. This would probably
   // need some bigger magic to match in the AST, but should be possible in theory.
-  auto Ok9 = 10u * (returnUnsignedCharacter() + returnUnsignedEnum());
-  // CHECK-MESSAGES: [[@LINE-1]]:14: warning: mixed signed and unsigned arithmetic; prefer signed integers and use unsigned types only for modulo arithmetic
-  // CHECK-MESSAGES: [[@LINE-2]]:20: note: signed operand
-  // CHECK-MESSAGES: [[@LINE-3]]:14: note: unsigned operand
+  auto Ok9 = 10u * (returnUnsignedNumber() + returnUnsignedEnum());
   auto Ok10 = 10u * (10u + 10ul);
   auto Ok11 = 10u * (10u + returnUnsignedEnum());
   auto Ok12 = returnUnsignedCharacter() * (10u + returnUnsignedEnum());

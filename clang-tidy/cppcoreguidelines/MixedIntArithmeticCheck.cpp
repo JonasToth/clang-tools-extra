@@ -28,6 +28,7 @@ void MixedIntArithmeticCheck::registerMatchers(MatchFinder *Finder) {
           .bind("signed-binary-operand");
 
   // Match binary bitwise operations on signed integer arguments.
+  // FIXME: Add assignment operations to the matcher and tests.
   Finder->addMatcher(
       binaryOperator(allOf(anyOf(hasOperatorName("+"), hasOperatorName("-"),
                                  hasOperatorName("*"), hasOperatorName("/")),
@@ -42,8 +43,8 @@ void MixedIntArithmeticCheck::registerMatchers(MatchFinder *Finder) {
 void MixedIntArithmeticCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *UnsignedOperand =
       Result.Nodes.getNodeAs<Expr>("unsigned-binary-operand");
-  //const auto *SignedOperand =
-      //Result.Nodes.getNodeAs<Expr>("signed-binary-operand");
+  const auto *SignedOperand =
+      Result.Nodes.getNodeAs<Expr>("signed-binary-operand");
   const auto *MixedArithmetic =
       Result.Nodes.getNodeAs<BinaryOperator>("mixed-binary-arithmetic");
 
@@ -64,8 +65,9 @@ void MixedIntArithmeticCheck::check(const MatchFinder::MatchResult &Result) {
                    *Result.SourceManager, getLangOpts(), 0))
             << "'\n";
   */
-  //diag(SignedOperand->getLocStart(), "signed operand", DiagnosticIDs::Note)
-      //<< SignedOperand->getSourceRange();
+
+  diag(SignedOperand->getLocStart(), "signed operand", DiagnosticIDs::Note)
+      << SignedOperand->getSourceRange();
   diag(UnsignedOperand->getLocStart(), "unsigned operand", DiagnosticIDs::Note)
       << UnsignedOperand->getSourceRange();
 }
