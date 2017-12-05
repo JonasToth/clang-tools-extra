@@ -10,10 +10,13 @@
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_JSONRPCDISPATCHER_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_JSONRPCDISPATCHER_H
 
+#include "JSONExpr.h"
 #include "Logger.h"
+#include "Protocol.h"
+#include "Trace.h"
 #include "clang/Basic/LLVM.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringMap.h"
-#include "llvm/Support/YAMLParser.h"
 #include <iosfwd>
 #include <mutex>
 
@@ -25,19 +28,22 @@ namespace clangd {
 class JSONOutput : public Logger {
 public:
   JSONOutput(llvm::raw_ostream &Outs, llvm::raw_ostream &Logs,
-             llvm::raw_ostream *InputMirror = nullptr)
-      : Outs(Outs), Logs(Logs), InputMirror(InputMirror) {}
+             llvm::raw_ostream *InputMirror = nullptr, bool Pretty = false)
+      : Pretty(Pretty), Outs(Outs), Logs(Logs), InputMirror(InputMirror) {}
 
   /// Emit a JSONRPC message.
-  void writeMessage(const Twine &Message);
+  void writeMessage(const json::Expr &Result);
 
-  /// Write to the logging stream.
+  /// Write a line to the logging stream.
   void log(const Twine &Message) override;
 
   /// Mirror \p Message into InputMirror stream. Does nothing if InputMirror is
   /// null.
   /// Unlike other methods of JSONOutput, mirrorInput is not thread-safe.
   void mirrorInput(const Twine &Message);
+
+  // Whether output should be pretty-printed.
+  const bool Pretty;
 
 private:
   llvm::raw_ostream &Outs;
@@ -47,45 +53,53 @@ private:
   std::mutex StreamMutex;
 };
 
-/// Callback for messages sent to the server, called by the JSONRPCDispatcher.
-class Handler {
+/// Context object passed to handlers to allow replies.
+class RequestContext {
 public:
-  Handler(JSONOutput &Output) : Output(Output) {}
-  virtual ~Handler() = default;
+  RequestContext(JSONOutput &Out, StringRef Method,
+                 llvm::Optional<json::Expr> ID)
+      : Out(Out), ID(std::move(ID)),
+        Tracer(llvm::make_unique<trace::Span>(Method)) {
+    if (this->ID)
+      SPAN_ATTACH(tracer(), "ID", *this->ID);
+  }
 
-  /// Called when the server receives a method call. This is supposed to return
-  /// a result on Outs. The default implementation returns an "unknown method"
-  /// error to the client and logs a warning.
-  virtual void handleMethod(llvm::yaml::MappingNode *Params, StringRef ID);
-  /// Called when the server receives a notification. No result should be
-  /// written to Outs. The default implemetation logs a warning.
-  virtual void handleNotification(llvm::yaml::MappingNode *Params);
+  /// Sends a successful reply.
+  void reply(json::Expr &&Result);
+  /// Sends an error response to the client, and logs it.
+  void replyError(ErrorCode code, const llvm::StringRef &Message);
+  /// Sends a request to the client.
+  void call(llvm::StringRef Method, json::Expr &&Params);
 
-protected:
-  JSONOutput &Output;
+  trace::Span &tracer() { return *Tracer; }
 
-  /// Helper to write a JSONRPC result to Output.
-  void writeMessage(const Twine &Message) { Output.writeMessage(Message); }
+private:
+  JSONOutput &Out;
+  llvm::Optional<json::Expr> ID;
+  std::unique_ptr<trace::Span> Tracer;
 };
 
 /// Main JSONRPC entry point. This parses the JSONRPC "header" and calls the
 /// registered Handler for the method received.
 class JSONRPCDispatcher {
 public:
+  // A handler responds to requests for a particular method name.
+  using Handler = std::function<void(RequestContext, const json::Expr &)>;
+
   /// Create a new JSONRPCDispatcher. UnknownHandler is called when an unknown
   /// method is received.
-  JSONRPCDispatcher(std::unique_ptr<Handler> UnknownHandler)
+  JSONRPCDispatcher(Handler UnknownHandler)
       : UnknownHandler(std::move(UnknownHandler)) {}
 
   /// Registers a Handler for the specified Method.
-  void registerHandler(StringRef Method, std::unique_ptr<Handler> H);
+  void registerHandler(StringRef Method, Handler H);
 
   /// Parses a JSONRPC message and calls the Handler for it.
-  bool call(StringRef Content) const;
+  bool call(const json::Expr &Message, JSONOutput &Out) const;
 
 private:
-  llvm::StringMap<std::unique_ptr<Handler>> Handlers;
-  std::unique_ptr<Handler> UnknownHandler;
+  llvm::StringMap<Handler> Handlers;
+  Handler UnknownHandler;
 };
 
 /// Parses input queries from LSP client (coming from \p In) and runs call

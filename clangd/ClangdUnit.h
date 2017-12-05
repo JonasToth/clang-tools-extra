@@ -48,6 +48,17 @@ struct DiagWithFixIts {
   llvm::SmallVector<tooling::Replacement, 1> FixIts;
 };
 
+// Stores Preamble and associated data.
+struct PreambleData {
+  PreambleData(PrecompiledPreamble Preamble,
+               std::vector<serialization::DeclID> TopLevelDeclIDs,
+               std::vector<DiagWithFixIts> Diags);
+
+  PrecompiledPreamble Preamble;
+  std::vector<serialization::DeclID> TopLevelDeclIDs;
+  std::vector<DiagWithFixIts> Diags;
+};
+
 /// Stores and provides access to parsed AST.
 class ParsedAST {
 public:
@@ -55,8 +66,7 @@ public:
   /// it is reused during parsing.
   static llvm::Optional<ParsedAST>
   Build(std::unique_ptr<clang::CompilerInvocation> CI,
-        const PrecompiledPreamble *Preamble,
-        ArrayRef<serialization::DeclID> PreambleDeclIDs,
+        std::shared_ptr<const PreambleData> Preamble,
         std::unique_ptr<llvm::MemoryBuffer> Buffer,
         std::shared_ptr<PCHContainerOperations> PCHs,
         IntrusiveRefCntPtr<vfs::FileSystem> VFS, clangd::Logger &Logger);
@@ -80,15 +90,18 @@ public:
   const std::vector<DiagWithFixIts> &getDiagnostics() const;
 
 private:
-  ParsedAST(std::unique_ptr<CompilerInstance> Clang,
+  ParsedAST(std::shared_ptr<const PreambleData> Preamble,
+            std::unique_ptr<CompilerInstance> Clang,
             std::unique_ptr<FrontendAction> Action,
             std::vector<const Decl *> TopLevelDecls,
-            std::vector<serialization::DeclID> PendingTopLevelDecls,
             std::vector<DiagWithFixIts> Diags);
 
 private:
   void ensurePreambleDeclsDeserialized();
 
+  // In-memory preambles must outlive the AST, it is important that this member
+  // goes before Clang and Action.
+  std::shared_ptr<const PreambleData> Preamble;
   // We store an "incomplete" FrontendAction (i.e. no EndSourceFile was called
   // on it) and CompilerInstance used to run it. That way we don't have to do
   // complex memory management of all Clang structures on our own. (They are
@@ -100,7 +113,7 @@ private:
   // Data, stored after parsing.
   std::vector<DiagWithFixIts> Diags;
   std::vector<const Decl *> TopLevelDecls;
-  std::vector<serialization::DeclID> PendingTopLevelDecls;
+  bool PreambleDeclsDeserialized;
 };
 
 // Provides thread-safe access to ParsedAST.
@@ -124,17 +137,6 @@ private:
   mutable llvm::Optional<ParsedAST> AST;
 };
 
-// Stores Preamble and associated data.
-struct PreambleData {
-  PreambleData(PrecompiledPreamble Preamble,
-               std::vector<serialization::DeclID> TopLevelDeclIDs,
-               std::vector<DiagWithFixIts> Diags);
-
-  PrecompiledPreamble Preamble;
-  std::vector<serialization::DeclID> TopLevelDeclIDs;
-  std::vector<DiagWithFixIts> Diags;
-};
-
 /// Manages resources, required by clangd. Allows to rebuild file with new
 /// contents, and provides AST and Preamble for it.
 class CppFile : public std::enable_shared_from_this<CppFile> {
@@ -143,10 +145,12 @@ public:
   // deferRebuild will hold references to it.
   static std::shared_ptr<CppFile>
   Create(PathRef FileName, tooling::CompileCommand Command,
+         bool StorePreamblesInMemory,
          std::shared_ptr<PCHContainerOperations> PCHs, clangd::Logger &Logger);
 
 private:
   CppFile(PathRef FileName, tooling::CompileCommand Command,
+          bool StorePreamblesInMemory,
           std::shared_ptr<PCHContainerOperations> PCHs, clangd::Logger &Logger);
 
 public:
@@ -222,6 +226,7 @@ private:
 
   Path FileName;
   tooling::CompileCommand Command;
+  bool StorePreamblesInMemory;
 
   /// Mutex protects all fields, declared below it, FileName and Command are not
   /// mutated.
@@ -251,21 +256,10 @@ private:
   clangd::Logger &Logger;
 };
 
-/// Get code completions at a specified \p Pos in \p FileName.
-std::vector<CompletionItem>
-codeComplete(PathRef FileName, tooling::CompileCommand Command,
-             PrecompiledPreamble const *Preamble, StringRef Contents,
-             Position Pos, IntrusiveRefCntPtr<vfs::FileSystem> VFS,
-             std::shared_ptr<PCHContainerOperations> PCHs,
-             bool SnippetCompletions, clangd::Logger &Logger);
 
-/// Get signature help at a specified \p Pos in \p FileName.
-SignatureHelp signatureHelp(PathRef FileName, tooling::CompileCommand Command,
-                            PrecompiledPreamble const *Preamble,
-                            StringRef Contents, Position Pos,
-                            IntrusiveRefCntPtr<vfs::FileSystem> VFS,
-                            std::shared_ptr<PCHContainerOperations> PCHs,
-                            clangd::Logger &Logger);
+/// Get the beginning SourceLocation at a specified \p Pos.
+SourceLocation getBeginningOfIdentifier(ParsedAST &Unit, const Position &Pos,
+                                        const FileEntry *FE);
 
 /// Get definition of symbol at a specified \p Pos.
 std::vector<Location> findDefinitions(ParsedAST &AST, Position Pos,

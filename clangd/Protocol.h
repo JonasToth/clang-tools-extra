@@ -13,23 +13,36 @@
 // This is not meant to be a complete implementation, new interfaces are added
 // when they're needed.
 //
-// Each struct has a parse and unparse function, that converts back and forth
-// between the struct and a JSON representation.
+// Each struct has a toJSON and fromJSON function, that converts between
+// the struct and a JSON representation. (See JSONExpr.h)
 //
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_PROTOCOL_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_PROTOCOL_H
 
+#include "JSONExpr.h"
 #include "llvm/ADT/Optional.h"
-#include "llvm/Support/YAMLParser.h"
 #include <string>
 #include <vector>
 
 namespace clang {
 namespace clangd {
 
-class Logger;
+enum class ErrorCode {
+  // Defined by JSON RPC.
+  ParseError = -32700,
+  InvalidRequest = -32600,
+  MethodNotFound = -32601,
+  InvalidParams = -32602,
+  InternalError = -32603,
+
+  ServerNotInitialized = -32002,
+  UnknownErrorCode = -32001,
+
+  // Defined by the protocol.
+  RequestCancelled = -32800,
+};
 
 struct URI {
   std::string uri;
@@ -37,9 +50,6 @@ struct URI {
 
   static URI fromUri(llvm::StringRef uri);
   static URI fromFile(llvm::StringRef file);
-
-  static URI parse(llvm::yaml::ScalarNode *Param);
-  static std::string unparse(const URI &U);
 
   friend bool operator==(const URI &LHS, const URI &RHS) {
     return LHS.uri == RHS.uri;
@@ -53,14 +63,14 @@ struct URI {
     return LHS.uri < RHS.uri;
   }
 };
+json::Expr toJSON(const URI &U);
+bool fromJSON(const json::Expr &, URI &);
 
 struct TextDocumentIdentifier {
   /// The text document's URI.
   URI uri;
-
-  static llvm::Optional<TextDocumentIdentifier>
-  parse(llvm::yaml::MappingNode *Params, clangd::Logger &Logger);
 };
+bool fromJSON(const json::Expr &, TextDocumentIdentifier &);
 
 struct Position {
   /// Line position in a document (zero-based).
@@ -77,11 +87,9 @@ struct Position {
     return std::tie(LHS.line, LHS.character) <
            std::tie(RHS.line, RHS.character);
   }
-
-  static llvm::Optional<Position> parse(llvm::yaml::MappingNode *Params,
-                                        clangd::Logger &Logger);
-  static std::string unparse(const Position &P);
 };
+bool fromJSON(const json::Expr &, Position &);
+json::Expr toJSON(const Position &);
 
 struct Range {
   /// The range's start position.
@@ -96,11 +104,9 @@ struct Range {
   friend bool operator<(const Range &LHS, const Range &RHS) {
     return std::tie(LHS.start, LHS.end) < std::tie(RHS.start, RHS.end);
   }
-
-  static llvm::Optional<Range> parse(llvm::yaml::MappingNode *Params,
-                                     clangd::Logger &Logger);
-  static std::string unparse(const Range &P);
 };
+bool fromJSON(const json::Expr &, Range &);
+json::Expr toJSON(const Range &);
 
 struct Location {
   /// The text document's URI.
@@ -118,16 +124,13 @@ struct Location {
   friend bool operator<(const Location &LHS, const Location &RHS) {
     return std::tie(LHS.uri, LHS.range) < std::tie(RHS.uri, RHS.range);
   }
-
-  static std::string unparse(const Location &P);
 };
+json::Expr toJSON(const Location &);
 
 struct Metadata {
   std::vector<std::string> extraFlags;
-
-  static llvm::Optional<Metadata> parse(llvm::yaml::MappingNode *Params,
-                                        clangd::Logger &Logger);
 };
+bool fromJSON(const json::Expr &, Metadata &);
 
 struct TextEdit {
   /// The range of the text document to be manipulated. To insert
@@ -137,11 +140,9 @@ struct TextEdit {
   /// The string to be inserted. For delete operations use an
   /// empty string.
   std::string newText;
-
-  static llvm::Optional<TextEdit> parse(llvm::yaml::MappingNode *Params,
-                                        clangd::Logger &Logger);
-  static std::string unparse(const TextEdit &P);
 };
+bool fromJSON(const json::Expr &, TextEdit &);
+json::Expr toJSON(const TextEdit &);
 
 struct TextDocumentItem {
   /// The text document's URI.
@@ -155,16 +156,20 @@ struct TextDocumentItem {
 
   /// The content of the opened text document.
   std::string text;
-
-  static llvm::Optional<TextDocumentItem> parse(llvm::yaml::MappingNode *Params,
-                                                clangd::Logger &Logger);
 };
+bool fromJSON(const json::Expr &, TextDocumentItem &);
 
 enum class TraceLevel {
   Off = 0,
   Messages = 1,
   Verbose = 2,
 };
+bool fromJSON(const json::Expr &E, TraceLevel &Out);
+
+struct NoParams {};
+inline bool fromJSON(const json::Expr &, NoParams &) { return true; }
+using ShutdownParams = NoParams;
+using ExitParams = NoParams;
 
 struct InitializeParams {
   /// The process Id of the parent process that started
@@ -193,9 +198,8 @@ struct InitializeParams {
 
   /// The initial trace setting. If omitted trace is disabled ('off').
   llvm::Optional<TraceLevel> trace;
-  static llvm::Optional<InitializeParams> parse(llvm::yaml::MappingNode *Params,
-                                                clangd::Logger &Logger);
 };
+bool fromJSON(const json::Expr &, InitializeParams &);
 
 struct DidOpenTextDocumentParams {
   /// The document that was opened.
@@ -203,26 +207,20 @@ struct DidOpenTextDocumentParams {
 
   /// Extension storing per-file metadata, such as compilation flags.
   llvm::Optional<Metadata> metadata;
-
-  static llvm::Optional<DidOpenTextDocumentParams>
-  parse(llvm::yaml::MappingNode *Params, clangd::Logger &Logger);
 };
+bool fromJSON(const json::Expr &, DidOpenTextDocumentParams &);
 
 struct DidCloseTextDocumentParams {
   /// The document that was closed.
   TextDocumentIdentifier textDocument;
-
-  static llvm::Optional<DidCloseTextDocumentParams>
-  parse(llvm::yaml::MappingNode *Params, clangd::Logger &Logger);
 };
+bool fromJSON(const json::Expr &, DidCloseTextDocumentParams &);
 
 struct TextDocumentContentChangeEvent {
   /// The new text of the document.
   std::string text;
-
-  static llvm::Optional<TextDocumentContentChangeEvent>
-  parse(llvm::yaml::MappingNode *Params, clangd::Logger &Logger);
 };
+bool fromJSON(const json::Expr &, TextDocumentContentChangeEvent &);
 
 struct DidChangeTextDocumentParams {
   /// The document that did change. The version number points
@@ -232,10 +230,8 @@ struct DidChangeTextDocumentParams {
 
   /// The actual content changes.
   std::vector<TextDocumentContentChangeEvent> contentChanges;
-
-  static llvm::Optional<DidChangeTextDocumentParams>
-  parse(llvm::yaml::MappingNode *Params, clangd::Logger &Logger);
 };
+bool fromJSON(const json::Expr &, DidChangeTextDocumentParams &);
 
 enum class FileChangeType {
   /// The file got created.
@@ -245,24 +241,21 @@ enum class FileChangeType {
   /// The file got deleted.
   Deleted = 3
 };
+bool fromJSON(const json::Expr &E, FileChangeType &Out);
 
 struct FileEvent {
   /// The file's URI.
   URI uri;
   /// The change type.
   FileChangeType type;
-
-  static llvm::Optional<FileEvent> parse(llvm::yaml::MappingNode *Params,
-                                         clangd::Logger &Logger);
 };
+bool fromJSON(const json::Expr &, FileEvent &);
 
 struct DidChangeWatchedFilesParams {
   /// The actual file events.
   std::vector<FileEvent> changes;
-
-  static llvm::Optional<DidChangeWatchedFilesParams>
-  parse(llvm::yaml::MappingNode *Params, clangd::Logger &Logger);
 };
+bool fromJSON(const json::Expr &, DidChangeWatchedFilesParams &);
 
 struct FormattingOptions {
   /// Size of a tab in spaces.
@@ -270,11 +263,9 @@ struct FormattingOptions {
 
   /// Prefer spaces over tabs.
   bool insertSpaces;
-
-  static llvm::Optional<FormattingOptions>
-  parse(llvm::yaml::MappingNode *Params, clangd::Logger &Logger);
-  static std::string unparse(const FormattingOptions &P);
 };
+bool fromJSON(const json::Expr &, FormattingOptions &);
+json::Expr toJSON(const FormattingOptions &);
 
 struct DocumentRangeFormattingParams {
   /// The document to format.
@@ -285,10 +276,8 @@ struct DocumentRangeFormattingParams {
 
   /// The format options
   FormattingOptions options;
-
-  static llvm::Optional<DocumentRangeFormattingParams>
-  parse(llvm::yaml::MappingNode *Params, clangd::Logger &Logger);
 };
+bool fromJSON(const json::Expr &, DocumentRangeFormattingParams &);
 
 struct DocumentOnTypeFormattingParams {
   /// The document to format.
@@ -302,10 +291,8 @@ struct DocumentOnTypeFormattingParams {
 
   /// The format options.
   FormattingOptions options;
-
-  static llvm::Optional<DocumentOnTypeFormattingParams>
-  parse(llvm::yaml::MappingNode *Params, clangd::Logger &Logger);
 };
+bool fromJSON(const json::Expr &, DocumentOnTypeFormattingParams &);
 
 struct DocumentFormattingParams {
   /// The document to format.
@@ -313,10 +300,8 @@ struct DocumentFormattingParams {
 
   /// The format options
   FormattingOptions options;
-
-  static llvm::Optional<DocumentFormattingParams>
-  parse(llvm::yaml::MappingNode *Params, clangd::Logger &Logger);
 };
+bool fromJSON(const json::Expr &, DocumentFormattingParams &);
 
 struct Diagnostic {
   /// The range at which the message applies.
@@ -346,18 +331,14 @@ struct Diagnostic {
     return std::tie(LHS.range, LHS.severity, LHS.message) <
            std::tie(RHS.range, RHS.severity, RHS.message);
   }
-
-  static llvm::Optional<Diagnostic> parse(llvm::yaml::MappingNode *Params,
-                                          clangd::Logger &Logger);
 };
+bool fromJSON(const json::Expr &, Diagnostic &);
 
 struct CodeActionContext {
   /// An array of diagnostics.
   std::vector<Diagnostic> diagnostics;
-
-  static llvm::Optional<CodeActionContext>
-  parse(llvm::yaml::MappingNode *Params, clangd::Logger &Logger);
 };
+bool fromJSON(const json::Expr &, CodeActionContext &);
 
 struct CodeActionParams {
   /// The document in which the command was invoked.
@@ -368,10 +349,44 @@ struct CodeActionParams {
 
   /// Context carrying additional information.
   CodeActionContext context;
-
-  static llvm::Optional<CodeActionParams> parse(llvm::yaml::MappingNode *Params,
-                                                clangd::Logger &Logger);
 };
+bool fromJSON(const json::Expr &, CodeActionParams &);
+
+struct WorkspaceEdit {
+  /// Holds changes to existing resources.
+  llvm::Optional<std::map<std::string, std::vector<TextEdit>>> changes;
+
+  /// Note: "documentChanges" is not currently used because currently there is
+  /// no support for versioned edits.
+};
+bool fromJSON(const json::Expr &, WorkspaceEdit &);
+json::Expr toJSON(const WorkspaceEdit &WE);
+
+/// Exact commands are not specified in the protocol so we define the
+/// ones supported by Clangd here. The protocol specifies the command arguments
+/// to be "any[]" but to make this safer and more manageable, each command we
+/// handle maps to a certain llvm::Optional of some struct to contain its
+/// arguments. Different commands could reuse the same llvm::Optional as
+/// arguments but a command that needs different arguments would simply add a
+/// new llvm::Optional and not use any other ones. In practice this means only
+/// one argument type will be parsed and set.
+struct ExecuteCommandParams {
+  // Command to apply fix-its. Uses WorkspaceEdit as argument.
+  const static std::string CLANGD_APPLY_FIX_COMMAND;
+
+  /// The command identifier, e.g. CLANGD_APPLY_FIX_COMMAND
+  std::string command;
+
+  // Arguments
+
+  llvm::Optional<WorkspaceEdit> workspaceEdit;
+};
+bool fromJSON(const json::Expr &, ExecuteCommandParams &);
+
+struct ApplyWorkspaceEditParams {
+  WorkspaceEdit edit;
+};
+json::Expr toJSON(const ApplyWorkspaceEditParams &);
 
 struct TextDocumentPositionParams {
   /// The text document.
@@ -379,10 +394,8 @@ struct TextDocumentPositionParams {
 
   /// The position inside the text document.
   Position position;
-
-  static llvm::Optional<TextDocumentPositionParams>
-  parse(llvm::yaml::MappingNode *Params, clangd::Logger &Logger);
 };
+bool fromJSON(const json::Expr &, TextDocumentPositionParams &);
 
 /// The kind of a completion entry.
 enum class CompletionItemKind {
@@ -477,8 +490,21 @@ struct CompletionItem {
   //
   // data?: any - A data entry field that is preserved on a completion item
   //              between a completion and a completion resolve request.
-  static std::string unparse(const CompletionItem &P);
 };
+json::Expr toJSON(const CompletionItem &);
+
+bool operator<(const CompletionItem &, const CompletionItem &);
+
+/// Represents a collection of completion items to be presented in the editor.
+struct CompletionList {
+  /// The list is not complete. Further typing should result in recomputing the
+  /// list.
+  bool isIncomplete = false;
+
+  /// The completion items.
+  std::vector<CompletionItem> items;
+};
+json::Expr toJSON(const CompletionList &);
 
 /// A single parameter of a particular signature.
 struct ParameterInformation {
@@ -488,9 +514,8 @@ struct ParameterInformation {
 
   /// The documentation of this parameter. Optional.
   std::string documentation;
-
-  static std::string unparse(const ParameterInformation &);
 };
+json::Expr toJSON(const ParameterInformation &);
 
 /// Represents the signature of something callable.
 struct SignatureInformation {
@@ -503,9 +528,8 @@ struct SignatureInformation {
 
   /// The parameters of this signature.
   std::vector<ParameterInformation> parameters;
-
-  static std::string unparse(const SignatureInformation &);
 };
+json::Expr toJSON(const SignatureInformation &);
 
 /// Represents the signature of a callable.
 struct SignatureHelp {
@@ -518,9 +542,20 @@ struct SignatureHelp {
 
   /// The active parameter of the active signature.
   int activeParameter = 0;
-
-  static std::string unparse(const SignatureHelp &);
 };
+json::Expr toJSON(const SignatureHelp &);
+
+struct RenameParams {
+  /// The document that was opened.
+  TextDocumentIdentifier textDocument;
+
+  /// The position at which this request was sent.
+  Position position;
+
+  /// The new name of the symbol.
+  std::string newName;
+};
+bool fromJSON(const json::Expr &, RenameParams &);
 
 } // namespace clangd
 } // namespace clang

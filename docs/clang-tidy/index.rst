@@ -61,6 +61,7 @@ Name prefix            Description
 ``cert-``              Checks related to CERT Secure Coding Guidelines.
 ``cppcoreguidelines-`` Checks related to C++ Core Guidelines.
 ``clang-analyzer-``    Clang Static Analyzer checks.
+``fuchsia-``           Checks related to Fuchsia coding conventions.
 ``google-``            Checks related to Google coding conventions.
 ``hicpp-``             Checks related to High Integrity C++ Coding Standard.
 ``llvm-``              Checks related to the LLVM coding conventions.
@@ -68,6 +69,7 @@ Name prefix            Description
 ``modernize-``         Checks that advocate usage of modern (currently "modern"
                        means "C++11") language constructs.
 ``mpi-``               Checks related to MPI (Message Passing Interface).
+``objc-``              Checks related to Objective-C coding conventions.
 ``performance-``       Checks that target performance-related issues.
 ``readability-``       Checks that target readability-related issues that don't
                        relate to any particular coding style.
@@ -341,6 +343,11 @@ The Directory Structure
     |-- LLVMTidyModule.cpp
     |-- LLVMTidyModule.h
           ...
+  |-- objc/                         # Objective-C clang-tidy module.
+  |-+
+    |-- ObjCTidyModule.cpp
+    |-- ObjCTidyModule.h
+          ...
   |-- tool/                         # Sources of the clang-tidy binary.
           ...
   test/clang-tidy/                  # Integration tests.
@@ -349,6 +356,7 @@ The Directory Structure
   |-- ClangTidyTest.h
   |-- GoogleModuleTest.cpp
   |-- LLVMModuleTest.cpp
+  |-- ObjCModuleTest.cpp
       ...
 
 
