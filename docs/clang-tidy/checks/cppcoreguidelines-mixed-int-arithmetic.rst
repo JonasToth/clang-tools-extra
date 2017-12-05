@@ -8,12 +8,12 @@ and `ES. 102 <http://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#es102-
 of the `CppCoreGuidelines <http://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#c-core-guidelines>`_ 
 addressing the use of unsigned types in integer arithmetic.
 
-Because of the subtile difference between `signed` and `unsigned` integer
-types in C++ it is recommended to use `signed` types in general for arithmetic
-and to not mix `signed` and `unsigned` integers in arithmetic expressions.
+Because of the subtile difference between ``signed`` and ``unsigned`` integer
+types in C++ it is recommended to use ``signed`` types in general for arithmetic
+and to not mix ``signed`` and ``unsigned`` integers in arithmetic expressions.
 
-The behaviour of `signed` integer type is undefined when an overflow is happening.
-On the contrary `unsigned` types will wrap around leading to potentially 
+The behaviour of ``signed`` integer type is undefined when an overflow is happening.
+On the contrary ``unsigned`` types will wrap around leading to potentially 
 unexpected results of integer computations.
 
 .. code-block:: c++
