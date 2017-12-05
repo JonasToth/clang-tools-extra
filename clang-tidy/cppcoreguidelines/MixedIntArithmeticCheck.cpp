@@ -27,8 +27,7 @@ void MixedIntArithmeticCheck::registerMatchers(MatchFinder *Finder) {
       expr(ignoringImpCasts(hasType(isSignedInteger())))
           .bind("signed-binary-operand");
 
-  // Match binary bitwise operations on signed integer arguments.
-  // FIXME: Add assignment operations to the matcher and tests.
+  // Match integer arithmetic mixing signed and unsigned types.
   Finder->addMatcher(
       binaryOperator(allOf(anyOf(hasOperatorName("+"), hasOperatorName("-"),
                                  hasOperatorName("*"), hasOperatorName("/")),
@@ -56,15 +55,6 @@ void MixedIntArithmeticCheck::check(const MatchFinder::MatchResult &Result) {
        "prefer signed integers and use unsigned types only for modulo "
        "arithmetic")
       << MixedArithmetic->getSourceRange();
-
-  /*
-  std::cout << "Debug: signed expr = '"
-            << std::string(Lexer::getSourceText(
-                   CharSourceRange::getTokenRange(
-                       SignedOperand->getSourceRange()),
-                   *Result.SourceManager, getLangOpts(), 0))
-            << "'\n";
-  */
 
   diag(SignedOperand->getLocStart(), "signed operand", DiagnosticIDs::Note)
       << SignedOperand->getSourceRange();
