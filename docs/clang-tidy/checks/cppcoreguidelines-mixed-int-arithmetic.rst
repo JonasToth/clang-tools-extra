@@ -18,21 +18,21 @@ unexpected results of integer computations.
 
 .. code-block:: c++
 
-	// Taken from the CppCoreGuidelines
-	template<typename T, typename T2>
-	T subtract(T x, T2 y)
-	{
-		return x - y;
-	}
+    // Taken from the CppCoreGuidelines
+    template<typename T, typename T2>
+    T subtract(T x, T2 y)
+    {
+        return x - y;
+    }
 
-	void test()
-	{
-		int s = 5;
-		unsigned int us = 5;
-		cout << subtract(s, 7) << '\n';       // -2
-		cout << subtract(us, 7u) << '\n';     // 4294967294
-		cout << subtract(s, 7u) << '\n';      // -2
-		cout << subtract(us, 7) << '\n';      // 4294967294
-		cout << subtract(s, us + 2) << '\n';  // -2
-		cout << subtract(us, s + 2) << '\n';  // 4294967294
-	}
+    void test()
+    {
+        int s = 5;
+        unsigned int us = 5;
+        cout << subtract(s, 7) << '\n';       // -2
+        cout << subtract(us, 7u) << '\n';     // 4294967294
+        cout << subtract(s, 7u) << '\n';      // -2
+        cout << subtract(us, 7) << '\n';      // 4294967294
+        cout << subtract(s, us + 2) << '\n';  // -2
+        cout << subtract(us, s + 2) << '\n';  // 4294967294
+    }
