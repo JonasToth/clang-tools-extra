@@ -57,7 +57,12 @@ The improvements are...
 Improvements to clang-tidy
 --------------------------
 
-- ...
+- New `cppcoreguidelines-mixed-int-arithmetic
+  <http://clang.llvm.org/extra/clang-tidy/checks/cppcoreguidelines-mixed-int-arithmetic.html>`_ check
+
+  Finds cases where unsigned and signed integers are used together in arithmetic expressions.
+  Unsigned integers wrap to 0 when overflowing while the behaviour of signed integers
+  is undefined in this case. The combination leads to possibly unexpected results.
 
 Improvements to include-fixer
 -----------------------------
