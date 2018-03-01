@@ -9,6 +9,7 @@
 
 #include "index/Index.h"
 #include "index/MemIndex.h"
+#include "index/Merge.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
@@ -89,13 +90,15 @@ generateNumSymbols(int Begin, int End,
 }
 
 std::vector<std::string> match(const SymbolIndex &I,
-                               const FuzzyFindRequest &Req) {
+                               const FuzzyFindRequest &Req,
+                               bool *Incomplete = nullptr) {
   std::vector<std::string> Matches;
-  auto Ctx = Context::empty();
-  I.fuzzyFind(Ctx, Req, [&](const Symbol &Sym) {
+  bool IsIncomplete = I.fuzzyFind(Req, [&](const Symbol &Sym) {
     Matches.push_back(
         (Sym.Scope + (Sym.Scope.empty() ? "" : "::") + Sym.Name).str());
   });
+  if (Incomplete)
+    *Incomplete = IsIncomplete;
   return Matches;
 }
 
@@ -144,8 +147,21 @@ TEST(MemIndexTest, MemIndexLimitedNumMatches) {
   FuzzyFindRequest Req;
   Req.Query = "5";
   Req.MaxCandidateCount = 3;
-  auto Matches = match(I, Req);
+  bool Incomplete;
+  auto Matches = match(I, Req, &Incomplete);
   EXPECT_EQ(Matches.size(), Req.MaxCandidateCount);
+  EXPECT_TRUE(Incomplete);
+}
+
+TEST(MemIndexTest, FuzzyMatch) {
+  MemIndex I;
+  I.build(
+      generateSymbols({"LaughingOutLoud", "LionPopulation", "LittleOldLady"}));
+  FuzzyFindRequest Req;
+  Req.Query = "lol";
+  Req.MaxCandidateCount = 2;
+  EXPECT_THAT(match(I, Req),
+              UnorderedElementsAre("LaughingOutLoud", "LittleOldLady"));
 }
 
 TEST(MemIndexTest, MatchQualifiedNamesWithoutSpecificScope) {
@@ -153,7 +169,6 @@ TEST(MemIndexTest, MatchQualifiedNamesWithoutSpecificScope) {
   I.build(generateSymbols({"a::xyz", "b::yz", "yz"}));
   FuzzyFindRequest Req;
   Req.Query = "y";
-  auto Matches = match(I, Req);
   EXPECT_THAT(match(I, Req), UnorderedElementsAre("a::xyz", "b::yz", "yz"));
 }
 
@@ -163,7 +178,6 @@ TEST(MemIndexTest, MatchQualifiedNamesWithGlobalScope) {
   FuzzyFindRequest Req;
   Req.Query = "y";
   Req.Scopes = {""};
-  auto Matches = match(I, Req);
   EXPECT_THAT(match(I, Req), UnorderedElementsAre("yz"));
 }
 
@@ -173,7 +187,6 @@ TEST(MemIndexTest, MatchQualifiedNamesWithOneScope) {
   FuzzyFindRequest Req;
   Req.Query = "y";
   Req.Scopes = {"a"};
-  auto Matches = match(I, Req);
   EXPECT_THAT(match(I, Req), UnorderedElementsAre("a::xyz", "a::yy"));
 }
 
@@ -183,7 +196,6 @@ TEST(MemIndexTest, MatchQualifiedNamesWithMultipleScopes) {
   FuzzyFindRequest Req;
   Req.Query = "y";
   Req.Scopes = {"a", "b"};
-  auto Matches = match(I, Req);
   EXPECT_THAT(match(I, Req), UnorderedElementsAre("a::xyz", "a::yy", "b::yz"));
 }
 
@@ -193,7 +205,6 @@ TEST(MemIndexTest, NoMatchNestedScopes) {
   FuzzyFindRequest Req;
   Req.Query = "y";
   Req.Scopes = {"a"};
-  auto Matches = match(I, Req);
   EXPECT_THAT(match(I, Req), UnorderedElementsAre("a::xyz"));
 }
 
@@ -203,8 +214,65 @@ TEST(MemIndexTest, IgnoreCases) {
   FuzzyFindRequest Req;
   Req.Query = "AB";
   Req.Scopes = {"ns"};
-  auto Matches = match(I, Req);
   EXPECT_THAT(match(I, Req), UnorderedElementsAre("ns::ABC", "ns::abc"));
+}
+
+TEST(MergeTest, MergeIndex) {
+  MemIndex I, J;
+  I.build(generateSymbols({"ns::A", "ns::B"}));
+  J.build(generateSymbols({"ns::B", "ns::C"}));
+  FuzzyFindRequest Req;
+  Req.Scopes = {"ns"};
+  EXPECT_THAT(match(*mergeIndex(&I, &J), Req),
+              UnorderedElementsAre("ns::A", "ns::B", "ns::C"));
+}
+
+TEST(MergeTest, Merge) {
+  Symbol L, R;
+  L.ID = R.ID = SymbolID("hello");
+  L.Name = R.Name = "Foo";                    // same in both
+  L.CanonicalDeclaration.FileURI = "file:///left.h"; // differs
+  R.CanonicalDeclaration.FileURI = "file:///right.h";
+  L.CompletionPlainInsertText = "f00";        // present in left only
+  R.CompletionSnippetInsertText = "f0{$1:0}"; // present in right only
+  Symbol::Details DetL, DetR;
+  DetL.CompletionDetail = "DetL";
+  DetR.CompletionDetail = "DetR";
+  DetR.Documentation = "--doc--";
+  L.Detail = &DetL;
+  R.Detail = &DetR;
+
+  Symbol::Details Scratch;
+  Symbol M = mergeSymbol(L, R, &Scratch);
+  EXPECT_EQ(M.Name, "Foo");
+  EXPECT_EQ(M.CanonicalDeclaration.FileURI, "file:///left.h");
+  EXPECT_EQ(M.CompletionPlainInsertText, "f00");
+  EXPECT_EQ(M.CompletionSnippetInsertText, "f0{$1:0}");
+  ASSERT_TRUE(M.Detail);
+  EXPECT_EQ(M.Detail->CompletionDetail, "DetL");
+  EXPECT_EQ(M.Detail->Documentation, "--doc--");
+}
+
+TEST(MergeTest, PreferSymbolWithDefn) {
+  Symbol L, R;
+  Symbol::Details Scratch;
+
+  L.ID = R.ID = SymbolID("hello");
+  L.CanonicalDeclaration.FileURI = "file:/left.h";
+  R.CanonicalDeclaration.FileURI = "file:/right.h";
+  L.CompletionPlainInsertText = "left-insert";
+  R.CompletionPlainInsertText = "right-insert";
+
+  Symbol M = mergeSymbol(L, R, &Scratch);
+  EXPECT_EQ(M.CanonicalDeclaration.FileURI, "file:/left.h");
+  EXPECT_EQ(M.Definition.FileURI, "");
+  EXPECT_EQ(M.CompletionPlainInsertText, "left-insert");
+
+  R.Definition.FileURI = "file:/right.cpp"; // Now right will be favored.
+  M = mergeSymbol(L, R, &Scratch);
+  EXPECT_EQ(M.CanonicalDeclaration.FileURI, "file:/right.h");
+  EXPECT_EQ(M.Definition.FileURI, "file:/right.cpp");
+  EXPECT_EQ(M.CompletionPlainInsertText, "right-insert");
 }
 
 } // namespace
