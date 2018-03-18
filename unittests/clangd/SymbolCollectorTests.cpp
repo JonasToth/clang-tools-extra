@@ -59,6 +59,7 @@ MATCHER_P(DefRange, Offsets, "") {
   return arg.Definition.StartOffset == Offsets.first &&
          arg.Definition.EndOffset == Offsets.second;
 }
+MATCHER_P(Refs, R, "") { return int(arg.References) == R; }
 
 namespace clang {
 namespace clangd {
@@ -198,6 +199,19 @@ TEST_F(SymbolCollectorTest, CollectSymbols) {
                    QName("foo::bar::v2"), QName("foo::baz")}));
 }
 
+TEST_F(SymbolCollectorTest, Template) {
+  Annotations Header(R"(
+    // Template is indexed, specialization and instantiation is not.
+    template <class T> struct [[Tmpl]] {T x = 0;};
+    template <> struct Tmpl<int> {};
+    extern template struct Tmpl<float>;
+    template struct Tmpl<double>;
+  )");
+  runSymbolCollector(Header.code(), /*Main=*/"");
+  EXPECT_THAT(Symbols, UnorderedElementsAreArray({AllOf(
+                           QName("Tmpl"), DeclRange(Header.offsetRange()))}));
+}
+
 TEST_F(SymbolCollectorTest, Locations) {
   Annotations Header(R"cpp(
     // Declared in header, defined in main.
@@ -227,6 +241,31 @@ TEST_F(SymbolCollectorTest, Locations) {
           AllOf(QName("print"), DeclRange(Header.offsetRange("printdecl")),
                 DefRange(Main.offsetRange("printdef"))),
           AllOf(QName("Z"), DeclRange(Header.offsetRange("zdecl")))));
+}
+
+TEST_F(SymbolCollectorTest, References) {
+  const std::string Header = R"(
+    class W;
+    class X {};
+    class Y;
+    class Z {}; // not used anywhere
+    Y* y = nullptr;  // used in header doesn't count
+  )";
+  const std::string Main = R"(
+    W* w = nullptr;
+    W* w2 = nullptr; // only one usage counts
+    X x();
+    class V;
+    V* v = nullptr; // Used, but not eligible for indexing.
+    class Y{}; // definition doesn't count as a reference
+  )";
+  CollectorOpts.CountReferences = true;
+  runSymbolCollector(Header, Main);
+  EXPECT_THAT(Symbols,
+              UnorderedElementsAre(AllOf(QName("W"), Refs(1)),
+                                   AllOf(QName("X"), Refs(1)),
+                                   AllOf(QName("Y"), Refs(0)),
+                                   AllOf(QName("Z"), Refs(0)), QName("y")));
 }
 
 TEST_F(SymbolCollectorTest, SymbolRelativeNoFallback) {
@@ -546,6 +585,32 @@ TEST_F(SymbolCollectorTest, CanonicalSTLHeader) {
                                                   IncludeHeader("<string>"))));
 }
 #endif
+
+TEST_F(SymbolCollectorTest, STLiosfwd) {
+  CollectorOpts.CollectIncludePath = true;
+  CanonicalIncludes Includes;
+  addSystemHeadersMapping(&Includes);
+  CollectorOpts.Includes = &Includes;
+  // Symbols from <iosfwd> should be mapped individually.
+  TestHeaderName = testPath("iosfwd");
+  TestFileName = testPath("iosfwd.cpp");
+  std::string Header = R"(
+    namespace std {
+      class no_map {};
+      class ios {};
+      class ostream {};
+      class filebuf {};
+    } // namespace std
+  )";
+  runSymbolCollector(Header, /*Main=*/"");
+  EXPECT_THAT(Symbols,
+              UnorderedElementsAre(
+                  QName("std"),
+                  AllOf(QName("std::no_map"), IncludeHeader("<iosfwd>")),
+                  AllOf(QName("std::ios"), IncludeHeader("<ios>")),
+                  AllOf(QName("std::ostream"), IncludeHeader("<ostream>")),
+                  AllOf(QName("std::filebuf"), IncludeHeader("<fstream>"))));
+}
 
 TEST_F(SymbolCollectorTest, IWYUPragma) {
   CollectorOpts.CollectIncludePath = true;

@@ -4,6 +4,7 @@ Clang-Tidy Checks
 =================
 
 .. toctree::
+   abseil-string-find-startswith
    android-cloexec-accept
    android-cloexec-accept4
    android-cloexec-creat
@@ -29,11 +30,14 @@ Clang-Tidy Checks
    bugprone-incorrect-roundings
    bugprone-integer-division
    bugprone-lambda-function-name
+   bugprone-macro-parentheses
    bugprone-macro-repeated-side-effects
    bugprone-misplaced-operator-in-strlen-in-alloc
    bugprone-misplaced-widening-cast
    bugprone-move-forwarding-reference
    bugprone-multiple-statement-macro
+   bugprone-sizeof-container
+   bugprone-sizeof-expression
    bugprone-string-constructor
    bugprone-string-integer-assignment
    bugprone-string-literal-with-embedded-nul
@@ -46,6 +50,7 @@ Clang-Tidy Checks
    bugprone-throw-keyword-missing
    bugprone-undefined-memory-manipulation
    bugprone-undelegated-constructor
+   bugprone-unused-raii
    bugprone-use-after-move
    bugprone-virtual-near-miss
    cert-dcl03-c (redirects to misc-static-assert) <cert-dcl03-c>
@@ -140,20 +145,16 @@ Clang-Tidy Checks
    llvm-namespace-comment
    llvm-twine-local
    misc-definitions-in-headers
-   misc-macro-parentheses
    misc-misplaced-const
    misc-new-delete-overloads
    misc-non-copyable-objects
    misc-redundant-expression
-   misc-sizeof-container
-   misc-sizeof-expression
    misc-static-assert
    misc-throw-by-value-catch-by-reference
    misc-unconventional-assign-operator
    misc-uniqueptr-reset-release
    misc-unused-alias-decls
    misc-unused-parameters
-   misc-unused-raii
    misc-unused-using-decls
    modernize-avoid-bind
    modernize-deprecated-headers
@@ -198,6 +199,7 @@ Clang-Tidy Checks
    performance-type-promotion-in-math-fn
    performance-unnecessary-copy-initialization
    performance-unnecessary-value-param
+   portability-simd-intrinsics
    readability-avoid-const-params-in-decls
    readability-braces-around-statements
    readability-container-size-empty
@@ -219,9 +221,9 @@ Clang-Tidy Checks
    readability-redundant-smartptr-get
    readability-redundant-string-cstr
    readability-redundant-string-init
-   readability-simd-intrinsics
    readability-simplify-boolean-expr
    readability-static-accessed-through-instance
    readability-static-definition-in-anonymous-namespace
    readability-string-compare
    readability-uniqueptr-delete-release
+   zircon-temporary-objects

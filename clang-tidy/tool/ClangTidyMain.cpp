@@ -499,6 +499,11 @@ extern volatile int CERTModuleAnchorSource;
 static int LLVM_ATTRIBUTE_UNUSED CERTModuleAnchorDestination =
     CERTModuleAnchorSource;
 
+// This anchor is used to force the linker to link the AbseilModule.
+extern volatile int AbseilModuleAnchorSource;
+static int LLVM_ATTRIBUTE_UNUSED AbseilModuleAnchorDestination =
+    AbseilModuleAnchorSource;
+
 // This anchor is used to force the linker to link the BoostModule.
 extern volatile int BoostModuleAnchorSource;
 static int LLVM_ATTRIBUTE_UNUSED BoostModuleAnchorDestination =
@@ -519,7 +524,7 @@ extern volatile int CppCoreGuidelinesModuleAnchorSource;
 static int LLVM_ATTRIBUTE_UNUSED CppCoreGuidelinesModuleAnchorDestination =
     CppCoreGuidelinesModuleAnchorSource;
 
-// This anchor is used to force the linker to link the GoogleModule.
+// This anchor is used to force the linker to link the FuchsiaModule.
 extern volatile int FuchsiaModuleAnchorSource;
 static int LLVM_ATTRIBUTE_UNUSED FuchsiaModuleAnchorDestination =
     FuchsiaModuleAnchorSource;
@@ -554,6 +559,11 @@ extern volatile int PerformanceModuleAnchorSource;
 static int LLVM_ATTRIBUTE_UNUSED PerformanceModuleAnchorDestination =
     PerformanceModuleAnchorSource;
 
+// This anchor is used to force the linker to link the PortabilityModule.
+extern volatile int PortabilityModuleAnchorSource;
+static int LLVM_ATTRIBUTE_UNUSED PortabilityModuleAnchorDestination =
+    PortabilityModuleAnchorSource;
+
 // This anchor is used to force the linker to link the ReadabilityModule.
 extern volatile int ReadabilityModuleAnchorSource;
 static int LLVM_ATTRIBUTE_UNUSED ReadabilityModuleAnchorDestination =
@@ -568,6 +578,11 @@ static int LLVM_ATTRIBUTE_UNUSED ObjCModuleAnchorDestination =
 extern volatile int HICPPModuleAnchorSource;
 static int LLVM_ATTRIBUTE_UNUSED HICPPModuleAnchorDestination =
     HICPPModuleAnchorSource;
+
+// This anchor is used to force the linker to link the ZirconModule.
+extern volatile int ZirconModuleAnchorSource;
+static int LLVM_ATTRIBUTE_UNUSED ZirconModuleAnchorDestination =
+    ZirconModuleAnchorSource;
 
 } // namespace tidy
 } // namespace clang
