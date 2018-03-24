@@ -82,6 +82,13 @@ Improvements to clang-tidy
   with looping constructs. Every backward jump is rejected. Forward jumps are
   only allowed in nested loops.
 
+- New :doc:`cppcoreguidelines-mixed-int-arithmetic
+  <clang-tidy/checks/cppcoreguidelines-mixed-int-arithmetic>` check
+
+  Finds cases where unsigned and signed integers are used together in arithmetic expressions.
+  Unsigned integers wrap to 0 when overflowing while the behaviour of signed integers
+  is undefined in this case. The combination leads to possibly unexpected results.
+
 - New :doc:`fuchsia-multiple-inheritance
   <clang-tidy/checks/fuchsia-multiple-inheritance>` check
 

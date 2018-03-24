@@ -13,6 +13,7 @@
 #include "../misc/UnconventionalAssignOperatorCheck.h"
 #include "AvoidGotoCheck.h"
 #include "InterfacesGlobalInitCheck.h"
+#include "MixedIntArithmeticCheck.h"
 #include "NoMallocCheck.h"
 #include "OwningMemoryCheck.h"
 #include "ProBoundsArrayToPointerDecayCheck.h"
@@ -40,6 +41,8 @@ public:
         "cppcoreguidelines-avoid-goto");
     CheckFactories.registerCheck<InterfacesGlobalInitCheck>(
         "cppcoreguidelines-interfaces-global-init");
+    CheckFactories.registerCheck<MixedIntArithmeticCheck>(
+        "cppcoreguidelines-mixed-int-arithmetic");
     CheckFactories.registerCheck<NoMallocCheck>("cppcoreguidelines-no-malloc");
     CheckFactories.registerCheck<OwningMemoryCheck>(
         "cppcoreguidelines-owning-memory");
