@@ -82,8 +82,8 @@ Improvements to clang-tidy
   with looping constructs. Every backward jump is rejected. Forward jumps are
   only allowed in nested loops.
 
-- New `cppcoreguidelines-mixed-int-arithmetic
-  <http://clang.llvm.org/extra/clang-tidy/checks/cppcoreguidelines-mixed-int-arithmetic.html>`_ check
+- New :doc:`cppcoreguidelines-mixed-int-arithmetic
+  <clang-tidy/checks/cppcoreguidelines-mixed-int-arithmetic>` check
 
   Finds cases where unsigned and signed integers are used together in arithmetic expressions.
   Unsigned integers wrap to 0 when overflowing while the behaviour of signed integers
