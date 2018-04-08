@@ -39,13 +39,14 @@ namespace cppcoreguidelines {
  *  - it is neither global nor namespace level                        + CHECK
  *  - it never gets assigned to after initialization                  + CHECK
  *    -> every uninitialized variable can not be const                + CHECK
- *  - no non-const handle is created with it
- *    - no non-const pointer from it
- *    - no non-const reference from it
+ *  - no non-const handle is created with it                          + CHECK
+ *    - no non-const pointer from it                                  + CHECK
+ *    - no non-const pointer argument                                 + CHECK
+ *    - no non-const reference from it                                + CHECK
+ *    - no non-const reference argument                               + CHECK
  *    - no non-const capture by reference in a lambda                 + CHECK
- *  - it is not used as argument to a non-const handle (pointer/ref)
  *  - it is not returned as non-const handle from a function
- *  - it address is not assigned to an out pointer parameter
+ *  - it address is not assigned to an out pointer parameter          + CHECK
  *
  * primitive Builtins
  * ----------------
@@ -124,6 +125,9 @@ void ConstCheck::registerMatchers(MatchFinder *Finder) {
 }
 
 void ConstCheck::check(const MatchFinder::MatchResult &Result) {
+  if (!getLangOpts().CPlusPlus)
+    return;
+
   handleRegistration(Result);
   checkValueType(Result);
   // checkHandleType(Result);
@@ -148,7 +152,8 @@ void ConstCheck::variableRegistering(MatchFinder *Finder) {
 
   const auto ConstType = hasType(isConstQualified());
   const auto LocalVariable =
-      anyOf(hasAncestor(functionDecl()), hasAncestor(lambdaExpr()));
+      anyOf(hasAncestor(functionDecl(hasBody(compoundStmt()))),
+            hasAncestor(lambdaExpr()));
 
   // Match global and namespace wide variables that will never be diagnosed.
   // Global handles are not relevant, because this check does not analyze that
@@ -210,7 +215,7 @@ void ConstCheck::valueTypeMatchers(MatchFinder *Finder) {
   // Match value and pointer access.
   // Pointer do have value and reference semantic.
   const auto IsValueDeclRefExpr = declRefExpr(
-      allOf(hasDeclaration(varDecl().bind("var-decl")), IsValueType));
+      allOf(hasDeclaration(varDecl().bind("value-decl")), IsValueType));
 
   // Classical assignment of any form (=, +=, <<=, ...) modifies the LHS
   // and prohibts it from being const.
@@ -226,6 +231,33 @@ void ConstCheck::valueTypeMatchers(MatchFinder *Finder) {
           .bind("value-unary-modification"),
       this);
 
+  // Check the address operator.
+  Finder->addMatcher(
+      unaryOperator(allOf(hasOperatorName("&"),
+                          // Checking for the ImplicitCastExpr is enough,
+                          // because a pointer can get casted only in the 'add
+                          // const' direction implicitly.
+                          unless(hasParent(implicitCastExpr())),
+                          hasUnaryOperand(IsValueDeclRefExpr)))
+          .bind("value-address-to-non-const"),
+      this);
+
+  const auto RefenceNonConstValueType = hasType(references(
+      qualType(allOf(unless(referenceType()), unless(isConstQualified())))));
+
+  // Check creation of references to this value.
+  Finder->addMatcher(varDecl(allOf(RefenceNonConstValueType,
+                                   hasInitializer(IsValueDeclRefExpr)))
+                         .bind("value-non-const-reference"),
+                     this);
+
+  // Check function calls that bind by reference.
+  Finder->addMatcher(
+      callExpr(forEachArgumentWithParam(
+          IsValueDeclRefExpr, parmVarDecl(RefenceNonConstValueType)
+                                  .bind("value-non-const-ref-call-param"))),
+      this);
+
   // Lambda expression can capture variables by reference which invalidates
   // the captured variables. Lambdas capture only the variables they actually
   // use!
@@ -234,22 +266,43 @@ void ConstCheck::valueTypeMatchers(MatchFinder *Finder) {
 
 void ConstCheck::checkValueType(const MatchFinder::MatchResult &Result) {
 
+  const auto *Variable = Result.Nodes.getNodeAs<VarDecl>("value-decl");
   // Assignment of any form prohibits the LHS to be const.
   if (Result.Nodes.getNodeAs<BinaryOperator>("value-assignment")) {
-    const auto *Variable = Result.Nodes.getNodeAs<VarDecl>("var-decl");
     ValueCanBeConst[Variable] = false;
+    return;
   }
 
   // Usage of the '++' or '--' operator modifies a variable.
   if (Result.Nodes.getNodeAs<UnaryOperator>("value-unary-modification")) {
-    const auto *Variable = Result.Nodes.getNodeAs<VarDecl>("var-decl");
     ValueCanBeConst[Variable] = false;
+    return;
   }
 
-  // Anylsis of the lambda is more difficult.
+  // The address of the values has been taken and did not result in a
+  // pointer to const.
+  if (Result.Nodes.getNodeAs<UnaryOperator>("value-address-to-non-const")) {
+    ValueCanBeConst[Variable] = false;
+    return;
+  }
+
+  // A reference is initialized with a value.
+  if (Result.Nodes.getNodeAs<VarDecl>("value-non-const-reference")) {
+    ValueCanBeConst[Variable] = false;
+    return;
+  }
+
+  // A call where a parameter is a non-const reference.
+  if (Result.Nodes.getNodeAs<ParmVarDecl>("value-non-const-ref-call-param")) {
+    ValueCanBeConst[Variable] = false;
+    return;
+  }
+
+  // Analysis of the lambda is more difficult.
   // Offloaded into a separate function.
   if (const auto *Lambda = Result.Nodes.getNodeAs<LambdaExpr>("value-lambda")) {
     invalidateRefCaptured(Lambda);
+    return;
   }
 }
 
@@ -276,6 +329,7 @@ void ConstCheck::diagnosePotentialConst() {
     }
   }
 
+  /*
   for (const auto it : HandleCanBeConst) {
     bool HandleCanBeConst = it.second;
 
@@ -299,6 +353,7 @@ void ConstCheck::diagnosePotentialConst() {
         llvm_unreachable("Expected handle type");
     }
   }
+  */
 }
 
 } // namespace cppcoreguidelines
