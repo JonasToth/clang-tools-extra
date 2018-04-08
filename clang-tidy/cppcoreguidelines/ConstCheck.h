@@ -11,12 +11,14 @@
 #define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_CPPCOREGUIDELINES_CONSTCHECK_H
 
 #include "../ClangTidy.h"
+#include <unordered_map>
 
 namespace clang {
 namespace tidy {
 namespace cppcoreguidelines {
 
-/// FIXME: Write a short description.
+/// This check warns for every variable, that could be declared as const, but
+/// isn't.
 ///
 /// For the user-facing documentation see:
 /// http://clang.llvm.org/extra/clang-tidy/checks/cppcoreguidelines-const.html
@@ -26,6 +28,13 @@ public:
       : ClangTidyCheck(Name, Context) {}
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
+  void onEndOfTranslationUnit() override;
+
+private:
+  void invalidate_ref_captured(const LambdaExpr *Lambda);
+  void diagnosePotentialConst();
+
+  std::unordered_map<const VarDecl *, bool> CanBeConst;
 };
 
 } // namespace cppcoreguidelines
