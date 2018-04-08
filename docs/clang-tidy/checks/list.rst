@@ -77,6 +77,7 @@ Clang-Tidy Checks
    cert-oop11-cpp (redirects to performance-move-constructor-init) <cert-oop11-cpp>
    cppcoreguidelines-avoid-goto
    cppcoreguidelines-c-copy-assignment-signature (redirects to misc-unconventional-assign-operator) <cppcoreguidelines-c-copy-assignment-signature>
+   cppcoreguidelines-const
    cppcoreguidelines-interfaces-global-init
    cppcoreguidelines-narrowing-conversions
    cppcoreguidelines-no-malloc

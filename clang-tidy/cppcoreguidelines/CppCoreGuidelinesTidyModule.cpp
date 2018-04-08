@@ -12,6 +12,7 @@
 #include "../ClangTidyModuleRegistry.h"
 #include "../misc/UnconventionalAssignOperatorCheck.h"
 #include "AvoidGotoCheck.h"
+#include "ConstCheck.h"
 #include "InterfacesGlobalInitCheck.h"
 #include "NarrowingConversionsCheck.h"
 #include "NoMallocCheck.h"
@@ -39,6 +40,8 @@ public:
   void addCheckFactories(ClangTidyCheckFactories &CheckFactories) override {
     CheckFactories.registerCheck<AvoidGotoCheck>(
         "cppcoreguidelines-avoid-goto");
+    CheckFactories.registerCheck<ConstCheck>(
+        "cppcoreguidelines-const");
     CheckFactories.registerCheck<InterfacesGlobalInitCheck>(
         "cppcoreguidelines-interfaces-global-init");
     CheckFactories.registerCheck<NarrowingConversionsCheck>(

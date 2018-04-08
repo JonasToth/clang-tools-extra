@@ -57,6 +57,11 @@ The improvements are...
 Improvements to clang-tidy
 --------------------------
 
+- New :doc:`cppcoreguidelines-const
+  <clang-tidy/checks/cppcoreguidelines-const>` check
+
+  FIXME: add release notes.
+
 - New module `abseil` for checks related to the `Abseil <https://abseil.io>`_
   library.
 
