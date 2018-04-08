@@ -31,10 +31,20 @@ public:
   void onEndOfTranslationUnit() override;
 
 private:
-  void invalidate_ref_captured(const LambdaExpr *Lambda);
+  void variableRegistering(ast_matchers::MatchFinder *Finder);
+  void handleRegistration(const ast_matchers::MatchFinder::MatchResult &Result);
+
+  void valueTypeMatchers(ast_matchers::MatchFinder *Finder);
+  void checkValueType(const ast_matchers::MatchFinder::MatchResult &Result);
+  void invalidateRefCaptured(const LambdaExpr *Lambda);
+
+  void handleTypeMatchers(ast_matchers::MatchFinder *Finder);
+  void checkHandleType(const ast_matchers::MatchFinder::MatchResult &Result);
+
   void diagnosePotentialConst();
 
-  std::unordered_map<const VarDecl *, bool> CanBeConst;
+  std::unordered_map<const VarDecl *, bool> ValueCanBeConst;
+  std::unordered_map<const VarDecl *, bool> HandleCanBeConst;
 };
 
 } // namespace cppcoreguidelines

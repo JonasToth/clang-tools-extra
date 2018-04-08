@@ -16,13 +16,13 @@ void some_function(double, wchar_t);
 
 void some_function(double np_arg0, wchar_t np_arg1) {
   int p_local0 = 2;
-  // CHECK-MESSAGES: [[@LINE-1]]:3: warning: variable 'p_local0' of type 'int' could be declared const
+  // CHECK-MESSAGES: [[@LINE-1]]:3: warning: variable 'p_local0' of type 'int' can be declared const
 
   int np_local0;
   const int np_local1 = 42;
 
   unsigned int np_local2 = 3;
-  np_local2<<= 4;
+  np_local2 <<= 4;
 
   int np_local3 = 4;
   ++np_local3;
@@ -38,7 +38,7 @@ void some_function(double np_arg0, wchar_t np_arg1) {
 void some_lambda_environment_capture_all_by_reference(double np_arg0) {
   int np_local0 = 0;
   int p_local0 = 1;
-  // CHECK-MESSAGES: [[@LINE-1]]:3: warning: variable 'p_local0' of type 'int' could be declared const
+  // CHECK-MESSAGES: [[@LINE-1]]:3: warning: variable 'p_local0' of type 'int' can be declared const
 
   int np_local2;
   const int np_local3 = 2;
@@ -47,13 +47,13 @@ void some_lambda_environment_capture_all_by_reference(double np_arg0) {
   [&]() { ++np_local0; };
 
   int p_local1 = 0;
-  // CHECK-MESSAGES: [[@LINE-1]]:3: warning: variable 'p_local1' of type 'int' could be declared const
+  // CHECK-MESSAGES: [[@LINE-1]]:3: warning: variable 'p_local1' of type 'int' can be declared const
 }
 
 void some_lambda_environment_capture_all_by_value(double np_arg0) {
   int np_local0 = 0;
   int p_local0 = 1;
-  // CHECK-MESSAGES: [[@LINE-1]]:3: warning: variable 'p_local0' of type 'int' could be declared const
+  // CHECK-MESSAGES: [[@LINE-1]]:3: warning: variable 'p_local0' of type 'int' can be declared const
 
   int np_local1;
   const int np_local2 = 2;
@@ -63,3 +63,45 @@ void some_lambda_environment_capture_all_by_value(double np_arg0) {
 
   np_local0 += 10;
 }
+
+/*
+void function_inout_pointer(int *inout);
+void function_in_pointer(const int *in);
+
+void some_pointer_taking() {
+  int np_local0 = 42;
+  const int *const p0_np_local0 = &np_local0;
+  int *const p1_np_local0 = &np_local0;
+
+  int np_local1 = 42;
+  function_inout_pointer(&np_local1);
+
+  int p_local0 = 42;
+  // CHECK MESSAGES: [[@LINE-1]]:3: warning: variable 'p_local0' of type 'int' can be declared const
+  const int *const p0_p_local0 = &p_local0;
+
+  int p_local1 = 42;
+  // CHECK MESSAGES: [[@LINE-1]]:3: warning: variable 'p_local1' of type 'int' can be declared const
+  function_in_pointer(&p_local1);
+}
+
+void function_inout_ref(int &inout);
+void function_in_ref(const int &in);
+
+void some_reference_taking() {
+  int np_local0 = 42;
+  const int &r0_np_local0 = np_local0;
+  int &r1_np_local0 = np_local0;
+
+  int np_local1 = 42;
+  function_inout_ref(np_local1);
+
+  int p_local0 = 42;
+  // CHECK MESSAGES: [[@LINE-1]]:3: warning: variable 'p_local0' of type 'int' can be declared const
+  const int &r0_p_local0 = p_local0;
+
+  int p_local1 = 42;
+  // CHECK MESSAGES: [[@LINE-1]]:3: warning: variable 'p_local1' of type 'int' can be declared const
+  function_in_ref(p_local1);
+}
+*/
