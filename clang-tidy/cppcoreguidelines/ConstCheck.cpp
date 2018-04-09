@@ -27,15 +27,7 @@ namespace cppcoreguidelines {
  * Value  = everything else (Type variable_name;)
  *
  * Value Semantic
- * --------------
- *  - modifications of itself prohibit constness
- *
- * Handle Semantic
- * ---------------
- *  - modification of the pointee prohibit constness
- *
- * All types
- * ---------
+ * ==============
  *  - it is neither global nor namespace level                        + CHECK
  *  - it never gets assigned to after initialization                  + CHECK
  *    -> every uninitialized variable can not be const                + CHECK
@@ -45,7 +37,7 @@ namespace cppcoreguidelines {
  *    - no non-const reference from it                                + CHECK
  *    - no non-const reference argument                               + CHECK
  *    - no non-const capture by reference in a lambda                 + CHECK
- *  - it is not returned as non-const handle from a function
+ *  - it is not returned as non-const handle from a function          * STARTED
  *  - it address is not assigned to an out pointer parameter          + CHECK
  *
  * primitive Builtins
@@ -66,14 +58,32 @@ namespace cppcoreguidelines {
  *  - there is no non-const handle creation of one of the elements
  *  - there is no non-const iterator created from this type
  *    (std::begin and friends)
+ * 
+ * templated variables
+ * -------------------
+ *  - more dificult to reason about
+ *  - everything from the untemplated sections apply here
+ *  
+ *  - Used as argument to a function having a non-const overload      * STARTED
+ *  - Method call that has a non-const overload
+ *  
+ *  Ignore it for now?
+ *
+ * Handle Semantic
+ * ===============
+ *  - modification of the pointee prohibit constness
  *
  * pointers
  * --------
  *  - match both for value and handle semantic
- *
+ *  
  * references
  * ----------
  *  - only handle semantic applies
+ * 
+ * forwarding reference
+ * --------------------
+ *  - same as references?
  *
  * Implementation strategy
  * =======================

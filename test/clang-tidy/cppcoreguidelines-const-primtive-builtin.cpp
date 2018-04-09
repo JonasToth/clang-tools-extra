@@ -67,7 +67,7 @@ void some_lambda_environment_capture_all_by_value(double np_arg0) {
 void function_inout_pointer(int *inout);
 void function_in_pointer(const int *in);
 
-void some_pointer_taking(int* out) {
+void some_pointer_taking(int *out) {
   int np_local0 = 42;
   const int *const p0_np_local0 = &np_local0;
   int *const p1_np_local0 = &np_local0;
@@ -75,6 +75,7 @@ void some_pointer_taking(int* out) {
   int np_local1 = 42;
   function_inout_pointer(&np_local1);
 
+  // Prevents const.
   int np_local2 = 42;
   out = &np_local2; // This returns and invalid address, its just about the AST
 
@@ -106,4 +107,71 @@ void some_reference_taking() {
   int p_local1 = 42;
   // CHECK-MESSAGES: [[@LINE-1]]:3: warning: variable 'p_local1' of type 'int' can be declared const
   function_in_ref(p_local1);
+}
+
+double *non_const_pointer_return() {
+  double p_local = 0.0;
+  // CHECK-MESSAGES: [[@LINE-1]]:3: warning: variable 'p_local0' of type 'double' can be declared const
+  double np_local = 24.4;
+
+  return &np_local;
+}
+
+const double *const_pointer_return() {
+  double p_local0 = 0.0;
+  // CHECK-MESSAGES: [[@LINE-1]]:3: warning: variable 'p_local0' of type 'double' can be declared const
+  double p_local1 = 24.4;
+  // CHECK-MESSAGES: [[@LINE-1]]:3: warning: variable 'p_local0' of type 'double' can be declared const
+  return &p_local1;
+}
+
+double &non_const_ref_return() {
+  double p_local = 0.0;
+  // CHECK-MESSAGES: [[@LINE-1]]:3: warning: variable 'p_local0' of type 'double' can be declared const
+  double np_local = 42.42;
+  return np_local;
+}
+
+const double &const_ref_return() {
+  double p_local0 = 0.0;
+  // CHECK-MESSAGES: [[@LINE-1]]:3: warning: variable 'p_local0' of type 'double' can be declared const
+  double p_local1 = 24.4;
+  // CHECK-MESSAGES: [[@LINE-1]]:3: warning: variable 'p_local0' of type 'double' can be declared const
+  return p_local1;
+}
+
+void overloaded_arguments(const int &in);
+void overloaded_arguments(int &inout);
+void overloaded_arguments(const int *in);
+void overloaded_arguments(int *inout);
+
+void function_calling() {
+  double np_local0 = 42.;
+  overloaded_arguments(np_local0);
+
+  const double np_local1 = 42.f;
+  overloaded_arguments(np_local1);
+
+  double np_local2 = 42.f;
+  overloaded_arguments(&np_local2);
+
+  const double np_local3 = 42.f;
+  overloaded_arguments(&np_local3);
+}
+
+// Now comes the tricky part. Templates
+
+// deactivate delayed parsing
+template <typename T>
+void define_locals(T np_arg0, T &np_arg1, int np_arg2) {
+  T np_local0 = 0;
+  np_local0 += np_arg0 * np_arg1;
+
+  T p_local0 = 42;
+  // CHECK-MESSAGES: [[@LINE-1]]:3: warning: variable 'p_local0' of type 'T' can be declared const
+  np_local0 += p_local0;
+
+  // Used as argument to an overloaded function with const and non-const.
+  T np_local1 = 42;
+  overloaded_arguments(np_local1);
 }
