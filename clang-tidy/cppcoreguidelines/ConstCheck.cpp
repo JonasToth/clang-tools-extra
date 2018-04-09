@@ -42,7 +42,7 @@ namespace cppcoreguidelines {
  *    - no non-const reference from it                                + CHECK
  *    - no non-const reference argument                               + CHECK
  *    - no non-const capture by reference in a lambda                 + CHECK
- *  - it is not returned as non-const handle from a function          * STARTED
+ *  - it is not returned as non-const handle from a function          + CHECK
  *  - it address is not assigned to an out pointer parameter          + CHECK
  *
  * primitive Builtins
@@ -73,6 +73,11 @@ namespace cppcoreguidelines {
  *  - Method call that has a non-const overload
  *  - any call to operators, as they can be overloaded
  *
+ *  -> Everything can be overloaded, only a call to a function, that
+ *     requires a const value as argument is a safe const. That must have
+ *     been declared const already
+ *  -> Values in Templates can not be reasoned about.
+ *
  *  Ignore it for now?
  *
  * Handle Semantic
@@ -86,6 +91,7 @@ namespace cppcoreguidelines {
  * references
  * ----------
  *  - only handle semantic applies
+ *  - references to templated types?
  *
  * forwarding reference
  * --------------------
@@ -141,6 +147,7 @@ namespace cppcoreguidelines {
  *    - one can overload the type conversion operation and modify a value of a
  *      class -> implications?
  *  - what about the 'mutable' keyword
+ *  - handles to templated types
  */
 
 void ConstCheck::registerMatchers(MatchFinder *Finder) {
@@ -178,6 +185,7 @@ void ConstCheck::variableRegistering(MatchFinder *Finder) {
       allOf(hasDeclaration(varDecl().bind("handle-decl")), IsHandleType));
 
   const auto ConstType = hasType(isConstQualified());
+  const auto TemplateType = hasType(templateTypeParmType());
   const auto LocalVariable =
       anyOf(hasAncestor(functionDecl(hasBody(compoundStmt()))),
             hasAncestor(lambdaExpr()));
@@ -195,10 +203,11 @@ void ConstCheck::variableRegistering(MatchFinder *Finder) {
 
   // Match local variables, that could be const.
   // Example: `int i = 10`, `int i` (will be used if program is correct)
-  Finder->addMatcher(varDecl(allOf(LocalVariable, hasInitializer(anything()),
-                                   unless(ConstType), IsValueType))
-                         .bind("new-local-value"),
-                     this);
+  Finder->addMatcher(
+      varDecl(allOf(LocalVariable, hasInitializer(anything()),
+                    unless(ConstType), unless(TemplateType), IsValueType))
+          .bind("new-local-value"),
+      this);
   // Match local constants.
   // Example: `const int ri = 1`
   /* Not necessary?!
@@ -271,7 +280,6 @@ void ConstCheck::valueTypeMatchers(MatchFinder *Finder) {
 
   const auto RefenceNonConstValueType = hasType(references(
       qualType(allOf(unless(referenceType()), unless(isConstQualified())))));
-
   // Check creation of references to this value.
   Finder->addMatcher(varDecl(allOf(RefenceNonConstValueType,
                                    hasInitializer(IsValueDeclRefExpr)))
@@ -285,27 +293,38 @@ void ConstCheck::valueTypeMatchers(MatchFinder *Finder) {
                                   .bind("value-non-const-ref-call-param"))),
       this);
 
+  // Check return values that reference a value.
+  Finder->addMatcher(
+      functionDecl(
+          allOf(hasDescendant(returnStmt(hasReturnValue(IsValueDeclRefExpr))),
+                returns(qualType(
+                    references(qualType(unless(isConstQualified())))))))
+          .bind("returns-non-const-ref"),
+      this);
+
   // Lambda expression can capture variables by reference which invalidates
   // the captured variables. Lambdas capture only the variables they actually
   // use!
   Finder->addMatcher(lambdaExpr().bind("value-lambda"), this);
 }
 
-void ConstCheck::checkValueType(const MatchFinder::MatchResult &Result) {
+void ConstCheck::checkValueType(const MatchFinder::MatchResult &Res) {
   bool Prohibited = false;
 
   // Assignment of any form prohibits the LHS to be const.
-  Prohibited = prohibitConstValue<BinaryOperator>("value-assignment");
+  Prohibited = notConstVal<BinaryOperator>(Res, "value-assignment");
   // Usage of the '++' or '--' operator modifies a value.
-  Prohibited |= prohibitConstValue<UnaryOperator>("value-unary-modification");
+  Prohibited |= notConstVal<UnaryOperator>(Res, "value-unary-modification");
   // The address of the values has been taken and did not result in a
   // pointer to const.
-  Prohibited |= prohibitConstValue<UnaryOperator>("value-address-to-non-const");
+  Prohibited |= notConstVal<UnaryOperator>(Res, "value-address-to-non-const");
   // A reference is initialized with a value.
-  Prohibited |= prohibitConstValue<VarDecl>("value-non-const-reference");
+  Prohibited |= notConstVal<VarDecl>(Res, "value-non-const-reference");
   // A call where a parameter is a non-const reference.
-  Prohibited |=
-      prohibitConstValue<ParmVarDecl>("value-non-const-ref-call-param");
+  Prohibited |= notConstVal<ParmVarDecl>(Res, "value-non-const-ref-call-param");
+  // A function returning a non-const reference prohibts its return value
+  // to be const.
+  Prohibited |= notConstVal<FunctionDecl>(Res, "returns-non-const-ref");
 
   // If the matchable targets did result in prohibiton, we can stop.
   // Otherwise analysis that does not function with the same pattern must be
@@ -315,7 +334,7 @@ void ConstCheck::checkValueType(const MatchFinder::MatchResult &Result) {
 
   // Analysis of the lambda is more difficult.
   // Offloaded into a separate function.
-  if (const auto *Lambda = Result.Nodes.getNodeAs<LambdaExpr>("value-lambda")) {
+  if (const auto *Lambda = Res.Nodes.getNodeAs<LambdaExpr>("value-lambda")) {
     invalidateRefCaptured(Lambda);
     return;
   }

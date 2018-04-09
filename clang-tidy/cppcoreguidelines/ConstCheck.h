@@ -11,6 +11,7 @@
 #define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_CPPCOREGUIDELINES_CONSTCHECK_H
 
 #include "../ClangTidy.h"
+#include <iostream>
 #include <unordered_map>
 
 namespace clang {
@@ -37,10 +38,13 @@ private:
   void valueTypeMatchers(ast_matchers::MatchFinder *Finder);
   void checkValueType(const ast_matchers::MatchFinder::MatchResult &Result);
   void invalidateRefCaptured(const LambdaExpr *Lambda);
-  template <TypeName ASTElement>
-  bool prohibitConstValue(const ast_matchers::MatchFinder::MatchResult &Result,
-                          StringRef matcher_bind) {
+
+  template <typename ASTElement>
+  bool notConstVal(const ast_matchers::MatchFinder::MatchResult &Result,
+                   StringRef matcher_bind) {
     if (Result.Nodes.getNodeAs<ASTElement>(matcher_bind)) {
+      //std::cout << "Prohibting through " << std::string(matcher_bind)
+                //<< std::endl;
       const auto *Variable = Result.Nodes.getNodeAs<VarDecl>("value-decl");
       ValueCanBeConst[Variable] = false;
       return true;

@@ -110,34 +110,39 @@ void some_reference_taking() {
 }
 
 double *non_const_pointer_return() {
-  double p_local = 0.0;
+  double p_local0 = 0.0;
   // CHECK-MESSAGES: [[@LINE-1]]:3: warning: variable 'p_local0' of type 'double' can be declared const
-  double np_local = 24.4;
+  double np_local0 = 24.4;
 
-  return &np_local;
+  return &np_local0;
 }
 
 const double *const_pointer_return() {
   double p_local0 = 0.0;
   // CHECK-MESSAGES: [[@LINE-1]]:3: warning: variable 'p_local0' of type 'double' can be declared const
   double p_local1 = 24.4;
-  // CHECK-MESSAGES: [[@LINE-1]]:3: warning: variable 'p_local0' of type 'double' can be declared const
+  // CHECK-MESSAGES: [[@LINE-1]]:3: warning: variable 'p_local1' of type 'double' can be declared const
   return &p_local1;
 }
 
 double &non_const_ref_return() {
-  double p_local = 0.0;
+  double p_local0 = 0.0;
   // CHECK-MESSAGES: [[@LINE-1]]:3: warning: variable 'p_local0' of type 'double' can be declared const
-  double np_local = 42.42;
-  return np_local;
+  double np_local0 = 42.42;
+  return np_local0;
 }
 
 const double &const_ref_return() {
   double p_local0 = 0.0;
   // CHECK-MESSAGES: [[@LINE-1]]:3: warning: variable 'p_local0' of type 'double' can be declared const
   double p_local1 = 24.4;
-  // CHECK-MESSAGES: [[@LINE-1]]:3: warning: variable 'p_local0' of type 'double' can be declared const
+  // CHECK-MESSAGES: [[@LINE-1]]:3: warning: variable 'p_local1' of type 'double' can be declared const
   return p_local1;
+}
+
+double *&return_non_const_pointer_ref() {
+    double * np_local0 = nullptr;
+    return np_local0;
 }
 
 void overloaded_arguments(const int &in);
@@ -146,16 +151,16 @@ void overloaded_arguments(const int *in);
 void overloaded_arguments(int *inout);
 
 void function_calling() {
-  double np_local0 = 42.;
+  int np_local0 = 42;
   overloaded_arguments(np_local0);
 
-  const double np_local1 = 42.f;
+  const int np_local1 = 42;
   overloaded_arguments(np_local1);
 
-  double np_local2 = 42.f;
+  int np_local2 = 42;
   overloaded_arguments(&np_local2);
 
-  const double np_local3 = 42.f;
+  const int np_local3 = 42;
   overloaded_arguments(&np_local3);
 }
 
@@ -167,11 +172,16 @@ void define_locals(T np_arg0, T &np_arg1, int np_arg2) {
   T np_local0 = 0;
   np_local0 += np_arg0 * np_arg1;
 
-  T p_local0 = 42;
-  // CHECK-MESSAGES: [[@LINE-1]]:3: warning: variable 'p_local0' of type 'T' can be declared const
-  np_local0 += p_local0;
+  T np_local1 = 42;
+  np_local0 += np_local1;
 
   // Used as argument to an overloaded function with const and non-const.
-  T np_local1 = 42;
-  overloaded_arguments(np_local1);
+  T np_local2 = 42;
+  overloaded_arguments(np_local2);
+
+  int np_local4 = 42;
+  // non-template values are ok still.
+  int p_local0 = 42;
+  // CHECK-MESSAGES: [[@LINE-1]]:3: warning: variable 'p_local0' of type 'int' can be declared const
+  np_local4 += p_local0;
 }
