@@ -23,6 +23,11 @@ namespace cppcoreguidelines {
  * General Thoughts
  * ================
  *
+ * For now: Only local variables are considered. Globals/namespace variables,
+ * paramters and class members are not analyzed.
+ * Parameters have a check already: readability-non-const-parameter
+ *
+ *
  * Handle = either a pointer or reference
  * Value  = everything else (Type variable_name;)
  *
@@ -58,15 +63,16 @@ namespace cppcoreguidelines {
  *  - there is no non-const handle creation of one of the elements
  *  - there is no non-const iterator created from this type
  *    (std::begin and friends)
- * 
+ *
  * templated variables
  * -------------------
  *  - more dificult to reason about
  *  - everything from the untemplated sections apply here
- *  
- *  - Used as argument to a function having a non-const overload      * STARTED
+ *
+ *  - Used as argument to a function having a non-const overload
  *  - Method call that has a non-const overload
- *  
+ *  - any call to operators, as they can be overloaded
+ *
  *  Ignore it for now?
  *
  * Handle Semantic
@@ -76,11 +82,11 @@ namespace cppcoreguidelines {
  * pointers
  * --------
  *  - match both for value and handle semantic
- *  
+ *
  * references
  * ----------
  *  - only handle semantic applies
- * 
+ *
  * forwarding reference
  * --------------------
  *  - same as references?
@@ -107,23 +113,34 @@ namespace cppcoreguidelines {
  *  - Match operations/events that forbid values to be const -> mark then 'no'
  *  - Match operations/events that forbid handles to be const -> mark then 'no'
  *
- *  - once the translation unit is finished, determine what can be const
+ *  - once the translation unit is finished, determine what can be const, by
+ *    just iterating over all keys and check if they map to 'true'.
  *    - values that can be const -> emit warning for their type and name
  *    - handles that can be const -> emit warning for the pointee type and name
+ *    - ignore the rest
  *
  * Caveats
  * =======
  *
- *  - values of templated types are tricky, because with an other
- *    instantiation the const-properties might not exist anymore
- *    -> remove const if one of this happens: operator call, method call
+ *  - values of templated types are tricky, because an other
+ *    instantiation might not have the same const-properties
+ *    -> remove const if one of this happens:
+ *      - operator call (overloaded operators)
+ *      - method call
+ *      - overloaded function call (normal functions)
  *
  * Open Questions
  * ==============
  *
- *  - what is a type does not provide a const overload for some operation
+ *  - what is if a type does not provide a const overload for some operation
  *    -> is every usage of this operation non-const? (operator[]) (Yes?!)
  *  - how to deal with range-for? -> the iterator var is just another variable
+ *  - is iterator creation already covered by the usual method-call and function
+ *    calls (should be!, but implicit calls in range-based for?)
+ *  - type conversions:
+ *    - one can overload the type conversion operation and modify a value of a
+ *      class -> implications?
+ *  - what about the 'mutable' keyword
  */
 
 void ConstCheck::registerMatchers(MatchFinder *Finder) {
@@ -275,38 +292,26 @@ void ConstCheck::valueTypeMatchers(MatchFinder *Finder) {
 }
 
 void ConstCheck::checkValueType(const MatchFinder::MatchResult &Result) {
+  bool Prohibited = false;
 
-  const auto *Variable = Result.Nodes.getNodeAs<VarDecl>("value-decl");
   // Assignment of any form prohibits the LHS to be const.
-  if (Result.Nodes.getNodeAs<BinaryOperator>("value-assignment")) {
-    ValueCanBeConst[Variable] = false;
-    return;
-  }
-
-  // Usage of the '++' or '--' operator modifies a variable.
-  if (Result.Nodes.getNodeAs<UnaryOperator>("value-unary-modification")) {
-    ValueCanBeConst[Variable] = false;
-    return;
-  }
-
+  Prohibited = prohibitConstValue<BinaryOperator>("value-assignment");
+  // Usage of the '++' or '--' operator modifies a value.
+  Prohibited |= prohibitConstValue<UnaryOperator>("value-unary-modification");
   // The address of the values has been taken and did not result in a
   // pointer to const.
-  if (Result.Nodes.getNodeAs<UnaryOperator>("value-address-to-non-const")) {
-    ValueCanBeConst[Variable] = false;
-    return;
-  }
-
+  Prohibited |= prohibitConstValue<UnaryOperator>("value-address-to-non-const");
   // A reference is initialized with a value.
-  if (Result.Nodes.getNodeAs<VarDecl>("value-non-const-reference")) {
-    ValueCanBeConst[Variable] = false;
-    return;
-  }
-
+  Prohibited |= prohibitConstValue<VarDecl>("value-non-const-reference");
   // A call where a parameter is a non-const reference.
-  if (Result.Nodes.getNodeAs<ParmVarDecl>("value-non-const-ref-call-param")) {
-    ValueCanBeConst[Variable] = false;
+  Prohibited |=
+      prohibitConstValue<ParmVarDecl>("value-non-const-ref-call-param");
+
+  // If the matchable targets did result in prohibiton, we can stop.
+  // Otherwise analysis that does not function with the same pattern must be
+  // applied.
+  if (Prohibited)
     return;
-  }
 
   // Analysis of the lambda is more difficult.
   // Offloaded into a separate function.
