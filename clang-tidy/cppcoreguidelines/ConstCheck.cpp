@@ -77,6 +77,7 @@ namespace cppcoreguidelines {
  * Handle Semantic
  * ===============
  *  - modification of the pointee prohibit constness
+ *  - Handles follow the typ of the pointee
  *
  * pointers
  * --------
@@ -130,10 +131,22 @@ namespace cppcoreguidelines {
  *    only to class members
  */
 
+void ConstCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
+  Options.store(Opts, "AnalyzeValues", AnalyzeValues);
+  Options.store(Opts, "AnalyzeHandles", AnalyzeHandles);
+  Options.store(Opts, "WarnPointersAsValues", WarnPointersAsValues);
+}
+
 void ConstCheck::registerMatchers(MatchFinder *Finder) {
-  // Ensure that all intersting variables are registered in our mapping.
-  variableRegistering(Finder);
-  valueTypeMatchers(Finder);
+  if (!getLangOpts().CPlusPlus)
+    return;
+
+  if (AnalyzeValues || AnalyzeHandles) {
+    // Ensure that all intersting variables are registered in our mapping.
+    variableRegistering(Finder);
+    valueTypeMatchers(Finder);
+    handleTypeMatchers(Finder);
+  }
 }
 
 void ConstCheck::check(const MatchFinder::MatchResult &Result) {
@@ -142,7 +155,7 @@ void ConstCheck::check(const MatchFinder::MatchResult &Result) {
 
   handleRegistration(Result);
   checkValueType(Result);
-  // checkHandleType(Result);
+  checkHandleType(Result);
 }
 
 // The decision which variable might be made const can only be made at the
@@ -160,20 +173,27 @@ void ConstCheck::variableRegistering(MatchFinder *Finder) {
       anyOf(hasAncestor(functionDecl(hasBody(compoundStmt()))),
             hasAncestor(lambdaExpr()));
 
-  // Match local variables, that could be const.
-  // Example: `int i = 10`, `int i` (will be used if program is correct)
-  Finder->addMatcher(varDecl(allOf(LocalVariable, hasInitializer(anything()),
-                                   unless(ConstType), unless(TemplateType),
-                                   unless(isImplicit()), ValueType))
-                         .bind("new-local-value"),
-                     this);
+  if (AnalyzeValues) {
+    // Match local variables, that could be const.
+    // Example: `int i = 10`, `int i` (will be used if program is correct)
+    Finder->addMatcher(varDecl(allOf(LocalVariable, hasInitializer(anything()),
+                                     unless(ConstType), unless(TemplateType),
+                                     unless(isImplicit()), ValueType))
+                           .bind("new-local-value"),
+                       this);
+  }
 
-  // Match local handle types, that are not const.
-  // Example: `int &ri`, `int * pi`.
-  Finder->addMatcher(varDecl(allOf(LocalVariable, HandleType,
-                                   unless(isImplicit()), unless(ConstType)))
-                         .bind("new-local-handle"),
-                     this);
+  if (AnalyzeHandles) {
+    // Match local handle types, that are not const.
+    // Example: `int &ri`, `int * pi`.
+    Finder->addMatcher(
+        varDecl(allOf(LocalVariable, hasInitializer(anything()),
+                      unless(hasType(references(isConstQualified()))),
+                      unless(hasType(pointsTo(isConstQualified()))),
+                      unless(TemplateType), unless(isImplicit()), HandleType))
+            .bind("new-local-handle"),
+        this);
+  }
 }
 
 void ConstCheck::handleRegistration(const MatchFinder::MatchResult &Result) {
@@ -181,6 +201,7 @@ void ConstCheck::handleRegistration(const MatchFinder::MatchResult &Result) {
   if (const auto *Variable =
           Result.Nodes.getNodeAs<VarDecl>("new-local-value")) {
     // std::cout << "Added new local value" << std::endl;
+    assert(AnalyzeValues && "Matched local value without analyzing them");
     if (ValueCanBeConst.find(Variable) == ValueCanBeConst.end()) {
       ValueCanBeConst[Variable] = true;
       return;
@@ -190,6 +211,7 @@ void ConstCheck::handleRegistration(const MatchFinder::MatchResult &Result) {
   if (const auto *Variable =
           Result.Nodes.getNodeAs<VarDecl>("new-local-handle")) {
     // std::cout << "Added new local handle" << std::endl;
+    assert(AnalyzeHandles && "Matched local handle without analyzing them");
     if (HandleCanBeConst.find(Variable) == HandleCanBeConst.end()) {
       HandleCanBeConst[Variable] = true;
       return;
@@ -214,8 +236,8 @@ void ConstCheck::valueTypeMatchers(MatchFinder *Finder) {
   // Match value, array and pointer access.
   // Pointer do have value and reference semantic.
   const auto ValueDeclRef = declRefExpr(
-      allOf(hasDeclaration(varDecl(unless(isImplicit())).bind("value-decl")),
-            IsValueType));
+      hasDeclaration(varDecl(unless(isImplicit())).bind("value-decl")));
+
   const auto ArrayAccess =
       arraySubscriptExpr(hasBase(ignoringImpCasts(ValueDeclRef)));
   const auto IsValueDeclRefExpr = anyOf(ArrayAccess, ValueDeclRef);
@@ -299,29 +321,28 @@ void ConstCheck::checkValueType(const MatchFinder::MatchResult &Res) {
   bool Prohibited = false;
 
   // Assignment of any form prohibits the LHS to be const.
-  Prohibited = notConstVal<BinaryOperator>(Res, "value-assignment");
+  Prohibited = notConst<BinaryOperator>(Res, "value-assignment");
   // Usage of the '++' or '--' operator modifies a value.
-  Prohibited |= notConstVal<UnaryOperator>(Res, "value-unary-modification");
+  Prohibited |= notConst<UnaryOperator>(Res, "value-unary-modification");
   // The address of the values has been taken and did not result in a
   // pointer to const.
-  Prohibited |= notConstVal<UnaryOperator>(Res, "value-address-to-non-const");
+  Prohibited |= notConst<UnaryOperator>(Res, "value-address-to-non-const");
   // A reference is initialized with a value.
-  Prohibited |= notConstVal<VarDecl>(Res, "value-non-const-reference");
+  Prohibited |= notConst<VarDecl>(Res, "value-non-const-reference");
   // A call where a parameter is a non-const reference.
-  Prohibited |= notConstVal<ParmVarDecl>(Res, "value-non-const-ref-call-param");
+  Prohibited |= notConst<ParmVarDecl>(Res, "value-non-const-ref-call-param");
   // A function returning a non-const reference prohibts its return value
   // to be const.
-  Prohibited |= notConstVal<FunctionDecl>(Res, "returns-non-const-ref");
+  Prohibited |= notConst<FunctionDecl>(Res, "returns-non-const-ref");
   // Calling a member function, that is not declared as const prohibts
   // constness of the value.
-  Prohibited |= notConstVal<CXXMemberCallExpr>(Res, "non-const-member-call");
+  Prohibited |= notConst<CXXMemberCallExpr>(Res, "non-const-member-call");
   // Calling an overloaded operator that is not declared as const probits
   // constness similar to member calls.
-  Prohibited |=
-      notConstVal<CXXOperatorCallExpr>(Res, "non-const-operator-call");
+  Prohibited |= notConst<CXXOperatorCallExpr>(Res, "non-const-operator-call");
   // Range-For can loop in a modifying way over the range. This is equivalent
   // to taking a reference/pointer to one of the elements of the range.
-  Prohibited |= notConstVal<CXXForRangeStmt>(Res, "non-const-range-for");
+  Prohibited |= notConst<CXXForRangeStmt>(Res, "non-const-range-for");
 
   // If the matchable targets did result in prohibiton, we can stop.
   // Otherwise analysis that does not function with the same pattern must be
@@ -342,49 +363,57 @@ void ConstCheck::invalidateRefCaptured(const LambdaExpr *Lambda) {
     if (capture.capturesVariable() &&
         capture.getCaptureKind() == LambdaCaptureKind::LCK_ByRef) {
       ValueCanBeConst[capture.getCapturedVar()] = false;
+      HandleCanBeConst[capture.getCapturedVar()] = false;
     }
   }
 }
 
+void ConstCheck::handleTypeMatchers(MatchFinder *Finder) {}
+
+void ConstCheck::checkHandleType(const MatchFinder::MatchResult &Result) {}
+
 void ConstCheck::diagnosePotentialConst() {
-  // Diagnose all potential values.
-  for (const auto it : ValueCanBeConst) {
-    bool VarCanBeConst = it.second;
-
-    if (VarCanBeConst) {
+  if (AnalyzeValues) {
+    for (const auto it : ValueCanBeConst) {
       const VarDecl *Variable = it.first;
+      bool VarCanBeConst = it.second;
+      bool VarIsPointer = Variable->getType()->isPointerType();
 
-      diag(Variable->getLocStart(),
-           "variable %0 of type %1 can be declared const")
-          << Variable << Variable->getType();
+      // Skip pointer warning for potential `const int * ->const<- value`.
+      if (VarIsPointer && !WarnPointersAsValues)
+        continue;
+
+      if (VarCanBeConst) {
+        diag(Variable->getLocStart(),
+             "variable %0 of type %1 can be declared const")
+            << Variable << Variable->getType();
+      }
     }
   }
 
-  /*
-  for (const auto it : HandleCanBeConst) {
-    bool HandleCanBeConst = it.second;
+  if (AnalyzeHandles) {
+    for (const auto it : HandleCanBeConst) {
+      bool HandleCanBeConst = it.second;
 
-    // Example: `int& ri` could be `const int& ri`.
-    if (HandleCanBeConst) {
-      const VarDecl *Variable = it.first;
+      // Example: `int& ri` could be `const int& ri`.
+      if (HandleCanBeConst) {
+        const VarDecl *Variable = it.first;
 
-      // Differentiate between pointers and references.
-      QualType HandleType = Variable->getType();
-      if (HandleType->isReferenceType()) {
-
-        diag(Variable->getLocStart(),
-             "reference type %0 of variable %1 can be declared const")
-            << HandleType << Variable;
-      } else if (HandleType->isPointerType()) {
-
-        diag(Variable->getLocStart(),
-             "pointee type %0 of variable %1 can be declared const")
-            << HandleType << Variable;
-      } else
-        llvm_unreachable("Expected handle type");
+        // Differentiate between pointers and references.
+        QualType HandleType = Variable->getType();
+        if (HandleType->isReferenceType()) {
+          diag(Variable->getLocStart(),
+               "reference variable %0 of type %1 can be declared const")
+              << Variable << HandleType;
+        } else if (HandleType->isPointerType()) {
+          diag(Variable->getLocStart(),
+               "pointer variable %0 of type %1 can be declared const")
+              << Variable << HandleType;
+        } else
+          llvm_unreachable("Expected handle type");
+      }
     }
   }
-  */
 }
 
 } // namespace cppcoreguidelines

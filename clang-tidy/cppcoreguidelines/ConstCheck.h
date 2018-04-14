@@ -26,7 +26,12 @@ namespace cppcoreguidelines {
 class ConstCheck : public ClangTidyCheck {
 public:
   ConstCheck(StringRef Name, ClangTidyContext *Context)
-      : ClangTidyCheck(Name, Context) {}
+      : ClangTidyCheck(Name, Context),
+        AnalyzeValues(Options.get("AnalyzeValues", 1)),
+        AnalyzeHandles(Options.get("AnalyzeHandles", 1)),
+        WarnPointersAsValues(Options.get("WarnPointersAsValues", 0)) {}
+
+  void storeOptions(ClangTidyOptions::OptionMap &Opts) override;
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
   void onEndOfTranslationUnit() override;
@@ -40,13 +45,14 @@ private:
   void invalidateRefCaptured(const LambdaExpr *Lambda);
 
   template <typename ASTElement>
-  bool notConstVal(const ast_matchers::MatchFinder::MatchResult &Result,
-                   StringRef matcher_bind) {
+  bool notConst(const ast_matchers::MatchFinder::MatchResult &Result,
+                StringRef matcher_bind) {
     if (Result.Nodes.getNodeAs<ASTElement>(matcher_bind)) {
       // std::cout << "Prohibting through " << std::string(matcher_bind)
-                // << std::endl;
+      // << std::endl;
       const auto *Variable = Result.Nodes.getNodeAs<VarDecl>("value-decl");
       ValueCanBeConst[Variable] = false;
+      HandleCanBeConst[Variable] = false;
       return true;
     }
     return false;
@@ -59,6 +65,10 @@ private:
 
   llvm::DenseMap<const VarDecl *, bool> ValueCanBeConst;
   llvm::DenseMap<const VarDecl *, bool> HandleCanBeConst;
+
+  const bool AnalyzeValues;
+  const bool AnalyzeHandles;
+  const bool WarnPointersAsValues;
 };
 
 } // namespace cppcoreguidelines

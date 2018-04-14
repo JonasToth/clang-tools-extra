@@ -1,4 +1,9 @@
-// RUN: %check_clang_tidy %s cppcoreguidelines-const %t
+// RUN: %check_clang_tidy %s cppcoreguidelines-const %t \
+// RUN: -config='{CheckOptions: \
+// RUN:  [{key: "cppcoreguidelines-const.AnalyzeValues", value: 1},\
+// RUN:   {key: "cppcoreguidelines-const.AnalyzeHandles", value: 0},\
+// RUN:   {key: "cppcoreguidelines-const.WarnPointersAsValues", value: 1}]}' \
+// RUN: --
 
 // ------- Provide test samples for primitive builtins ---------
 // - every 'p_*' variable is a 'potential_const_*' variable
