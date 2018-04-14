@@ -52,33 +52,27 @@ namespace cppcoreguidelines {
  *
  * objects
  * -------
- *  - there is no call to a non-const method
- *  - there is no call to an non-const overloaded operator
+ *  - there is no call to a non-const method                          + CHECK
+ *  - there is no call to an non-const overloaded operator            + CHECK
  *  - there is no non-const iterator created from this type
  *    (std::begin and friends)
  *
  * arrays
  * ------
- *  - there is no non-const operator[] access
+ *  - there is no non-const operator[] access                         + CHECK
  *  - there is no non-const handle creation of one of the elements
  *  - there is no non-const iterator created from this type
  *    (std::begin and friends)
  *
  * templated variables
  * -------------------
- *  - more dificult to reason about
- *  - everything from the untemplated sections apply here
- *
- *  - Used as argument to a function having a non-const overload
- *  - Method call that has a non-const overload
- *  - any call to operators, as they can be overloaded
- *
- *  -> Everything can be overloaded, only a call to a function, that
- *     requires a const value as argument is a safe const. That must have
- *     been declared const already
- *  -> Values in Templates can not be reasoned about.
- *
- *  Ignore it for now?
+ *  - one can not reason about templated variables, because every sensible
+ *    operation is overloadable and different instantiations will result
+ *    in types with different const-properties.
+ *  - Example: operator+(T& lhs, T& rhs) -> modification might occur for this
+ * type
+ *    -> this fordbids `val = val1 + val2` val1 and val2 to be const
+ *  - only concepts give possibility to infer constness of templated variables
  *
  * Handle Semantic
  * ===============
@@ -91,7 +85,8 @@ namespace cppcoreguidelines {
  * references
  * ----------
  *  - only handle semantic applies
- *  - references to templated types?
+ *  - references to templated types suffer from the same problems as templated
+ *    values
  *
  * forwarding reference
  * --------------------
@@ -125,16 +120,6 @@ namespace cppcoreguidelines {
  *    - handles that can be const -> emit warning for the pointee type and name
  *    - ignore the rest
  *
- * Caveats
- * =======
- *
- *  - values of templated types are tricky, because an other
- *    instantiation might not have the same const-properties
- *    -> remove const if one of this happens:
- *      - operator call (overloaded operators)
- *      - method call
- *      - overloaded function call (normal functions)
- *
  * Open Questions
  * ==============
  *
@@ -146,8 +131,8 @@ namespace cppcoreguidelines {
  *  - type conversions:
  *    - one can overload the type conversion operation and modify a value of a
  *      class -> implications?
- *  - what about the 'mutable' keyword
- *  - handles to templated types
+ *  - what about the 'mutable' keyword -> not considered now, because it applies
+ *    only to class members
  */
 
 void ConstCheck::registerMatchers(MatchFinder *Finder) {
@@ -185,21 +170,11 @@ void ConstCheck::variableRegistering(MatchFinder *Finder) {
       allOf(hasDeclaration(varDecl().bind("handle-decl")), IsHandleType));
 
   const auto ConstType = hasType(isConstQualified());
-  const auto TemplateType = hasType(templateTypeParmType());
+  const auto TemplateType = anyOf(hasType(templateTypeParmType()),
+                                  hasType(substTemplateTypeParmType()));
   const auto LocalVariable =
       anyOf(hasAncestor(functionDecl(hasBody(compoundStmt()))),
             hasAncestor(lambdaExpr()));
-
-  // Match global and namespace wide variables that will never be diagnosed.
-  // Global handles are not relevant, because this check does not analyze that
-  // for now.
-  /* Why is this necessary again?
-  Finder->addMatcher(varDecl(allOf(noneOf(hasAncestor(functionDecl()),
-                                          hasAncestor(lambdaExpr())),
-                                   hasInitializer(anything()), IsValueType))
-                         .bind("new-global-value"),
-                     this);
-  */
 
   // Match local variables, that could be const.
   // Example: `int i = 10`, `int i` (will be used if program is correct)
@@ -208,13 +183,6 @@ void ConstCheck::variableRegistering(MatchFinder *Finder) {
                     unless(ConstType), unless(TemplateType), IsValueType))
           .bind("new-local-value"),
       this);
-  // Match local constants.
-  // Example: `const int ri = 1`
-  /* Not necessary?!
-  Finder->addMatcher(varDecl(allOf(LocalVariable, ConstType, IsValueType))
-                         .bind("new-local-const-value"),
-                     this);
-  */
 
   // Match local handle types, that are not const.
   // Example: `int &ri`, `int * pi`.
@@ -248,10 +216,14 @@ void ConstCheck::valueTypeMatchers(MatchFinder *Finder) {
       anyOf(hasType(referenceType()), hasType(pointerType()));
   const auto IsValueType = unless(hasType(referenceType()));
 
-  // Match value and pointer access.
+  // Match value, array and pointer access.
   // Pointer do have value and reference semantic.
-  const auto IsValueDeclRefExpr = declRefExpr(
+  const auto ValueDeclRef = declRefExpr(
       allOf(hasDeclaration(varDecl().bind("value-decl")), IsValueType));
+  const auto ArrayAccess =
+      arraySubscriptExpr(hasBase(ignoringImpCasts(ValueDeclRef)));
+
+  const auto IsValueDeclRefExpr = anyOf(ArrayAccess, ValueDeclRef);
 
   // Classical assignment of any form (=, +=, <<=, ...) modifies the LHS
   // and prohibts it from being const.
@@ -302,6 +274,20 @@ void ConstCheck::valueTypeMatchers(MatchFinder *Finder) {
           .bind("returns-non-const-ref"),
       this);
 
+  // Check for direct method calls, that modify its object by declaration.
+  Finder->addMatcher(
+      cxxMemberCallExpr(allOf(on(IsValueDeclRefExpr),
+                              unless(callee(cxxMethodDecl(isConst())))))
+          .bind("non-const-member-call"),
+      this);
+
+  // Check for operator calls, that are non-const. E.g. operator=
+  Finder->addMatcher(
+      cxxOperatorCallExpr(allOf(hasArgument(0, IsValueDeclRefExpr),
+                                unless(callee(cxxMethodDecl(isConst())))))
+          .bind("non-const-operator-call"),
+      this);
+
   // Lambda expression can capture variables by reference which invalidates
   // the captured variables. Lambdas capture only the variables they actually
   // use!
@@ -325,6 +311,13 @@ void ConstCheck::checkValueType(const MatchFinder::MatchResult &Res) {
   // A function returning a non-const reference prohibts its return value
   // to be const.
   Prohibited |= notConstVal<FunctionDecl>(Res, "returns-non-const-ref");
+  // Calling a member function, that is not declared as const prohibts
+  // constness of the value.
+  Prohibited |= notConstVal<CXXMemberCallExpr>(Res, "non-const-member-call");
+  // Calling an overloaded operator that is not declared as const probits
+  // constness similar to member calls.
+  Prohibited |=
+      notConstVal<CXXOperatorCallExpr>(Res, "non-const-operator-call");
 
   // If the matchable targets did result in prohibiton, we can stop.
   // Otherwise analysis that does not function with the same pattern must be

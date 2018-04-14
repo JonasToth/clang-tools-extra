@@ -57,8 +57,8 @@ private:
 
   void diagnosePotentialConst();
 
-  std::unordered_map<const VarDecl *, bool> ValueCanBeConst;
-  std::unordered_map<const VarDecl *, bool> HandleCanBeConst;
+  llvm::DenseMap<const VarDecl *, bool> ValueCanBeConst;
+  llvm::DenseMap<const VarDecl *, bool> HandleCanBeConst;
 };
 
 } // namespace cppcoreguidelines
