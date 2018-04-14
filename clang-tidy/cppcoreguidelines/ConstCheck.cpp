@@ -54,14 +54,14 @@ namespace cppcoreguidelines {
  * -------
  *  - there is no call to a non-const method                          + CHECK
  *  - there is no call to an non-const overloaded operator            + CHECK
- *  - there is no non-const iterator created from this type
+ *  - there is no non-const iterator created from this type           + CHECK
  *    (std::begin and friends)
  *
  * arrays
  * ------
  *  - there is no non-const operator[] access                         + CHECK
- *  - there is no non-const handle creation of one of the elements
- *  - there is no non-const iterator created from this type
+ *  - there is no non-const handle creation of one of the elements    + CHECK
+ *  - there is no non-const iterator created from this type           + CHECK
  *    (std::begin and friends)
  *
  * templated variables
@@ -123,11 +123,6 @@ namespace cppcoreguidelines {
  * Open Questions
  * ==============
  *
- *  - what is if a type does not provide a const overload for some operation
- *    -> is every usage of this operation non-const? (operator[]) (Yes?!)
- *  - how to deal with range-for? -> the iterator var is just another variable
- *  - is iterator creation already covered by the usual method-call and function
- *    calls (should be!, but implicit calls in range-based for?)
  *  - type conversions:
  *    - one can overload the type conversion operation and modify a value of a
  *      class -> implications?
@@ -138,9 +133,7 @@ namespace cppcoreguidelines {
 void ConstCheck::registerMatchers(MatchFinder *Finder) {
   // Ensure that all intersting variables are registered in our mapping.
   variableRegistering(Finder);
-
   valueTypeMatchers(Finder);
-  // ----------------- matchers for pointer semantic ---------------------------
 }
 
 void ConstCheck::check(const MatchFinder::MatchResult &Result) {
@@ -157,18 +150,9 @@ void ConstCheck::check(const MatchFinder::MatchResult &Result) {
 void ConstCheck::onEndOfTranslationUnit() { diagnosePotentialConst(); }
 
 void ConstCheck::variableRegistering(MatchFinder *Finder) {
-  const auto IsHandleType =
+  const auto HandleType =
       anyOf(hasType(referenceType()), hasType(pointerType()));
-  const auto IsValueType = unless(hasType(referenceType()));
-
-  // Match value and pointer access.
-  // Pointer do have value and reference semantic.
-  const auto IsValueDeclRefExpr = declRefExpr(
-      allOf(hasDeclaration(varDecl().bind("var-decl")), IsValueType));
-  // Match pointer and reference access.
-  const auto IsHandleDeclRefExpr = declRefExpr(
-      allOf(hasDeclaration(varDecl().bind("handle-decl")), IsHandleType));
-
+  const auto ValueType = unless(hasType(referenceType()));
   const auto ConstType = hasType(isConstQualified());
   const auto TemplateType = anyOf(hasType(templateTypeParmType()),
                                   hasType(substTemplateTypeParmType()));
@@ -178,24 +162,25 @@ void ConstCheck::variableRegistering(MatchFinder *Finder) {
 
   // Match local variables, that could be const.
   // Example: `int i = 10`, `int i` (will be used if program is correct)
-  Finder->addMatcher(
-      varDecl(allOf(LocalVariable, hasInitializer(anything()),
-                    unless(ConstType), unless(TemplateType), IsValueType))
-          .bind("new-local-value"),
-      this);
+  Finder->addMatcher(varDecl(allOf(LocalVariable, hasInitializer(anything()),
+                                   unless(ConstType), unless(TemplateType),
+                                   unless(isImplicit()), ValueType))
+                         .bind("new-local-value"),
+                     this);
 
   // Match local handle types, that are not const.
   // Example: `int &ri`, `int * pi`.
-  Finder->addMatcher(
-      varDecl(allOf(LocalVariable, IsHandleType, unless(ConstType)))
-          .bind("new-local-handle"),
-      this);
+  Finder->addMatcher(varDecl(allOf(LocalVariable, HandleType,
+                                   unless(isImplicit()), unless(ConstType)))
+                         .bind("new-local-handle"),
+                     this);
 }
 
 void ConstCheck::handleRegistration(const MatchFinder::MatchResult &Result) {
   // Local variables can be declared as consts.
   if (const auto *Variable =
           Result.Nodes.getNodeAs<VarDecl>("new-local-value")) {
+    // std::cout << "Added new local value" << std::endl;
     if (ValueCanBeConst.find(Variable) == ValueCanBeConst.end()) {
       ValueCanBeConst[Variable] = true;
       return;
@@ -204,6 +189,7 @@ void ConstCheck::handleRegistration(const MatchFinder::MatchResult &Result) {
 
   if (const auto *Variable =
           Result.Nodes.getNodeAs<VarDecl>("new-local-handle")) {
+    // std::cout << "Added new local handle" << std::endl;
     if (HandleCanBeConst.find(Variable) == HandleCanBeConst.end()) {
       HandleCanBeConst[Variable] = true;
       return;
@@ -212,17 +198,26 @@ void ConstCheck::handleRegistration(const MatchFinder::MatchResult &Result) {
 }
 
 void ConstCheck::valueTypeMatchers(MatchFinder *Finder) {
+  // Matchers for the basic differntiation groups of types.
   const auto IsHandleType =
       anyOf(hasType(referenceType()), hasType(pointerType()));
   const auto IsValueType = unless(hasType(referenceType()));
 
+  // Matchers for non-const handles.
+  const auto IsRefenceToNonConstType =
+      hasType(references(qualType(unless(isConstQualified()))));
+  const auto IsPointerToNonConstType =
+      hasType(pointerType(pointee(unless(isConstQualified()))));
+  const auto IsNonConstHandleType =
+      anyOf(IsRefenceToNonConstType, IsPointerToNonConstType);
+
   // Match value, array and pointer access.
   // Pointer do have value and reference semantic.
   const auto ValueDeclRef = declRefExpr(
-      allOf(hasDeclaration(varDecl().bind("value-decl")), IsValueType));
+      allOf(hasDeclaration(varDecl(unless(isImplicit())).bind("value-decl")),
+            IsValueType));
   const auto ArrayAccess =
       arraySubscriptExpr(hasBase(ignoringImpCasts(ValueDeclRef)));
-
   const auto IsValueDeclRefExpr = anyOf(ArrayAccess, ValueDeclRef);
 
   // Classical assignment of any form (=, +=, <<=, ...) modifies the LHS
@@ -250,18 +245,17 @@ void ConstCheck::valueTypeMatchers(MatchFinder *Finder) {
           .bind("value-address-to-non-const"),
       this);
 
-  const auto RefenceNonConstValueType = hasType(references(
-      qualType(allOf(unless(referenceType()), unless(isConstQualified())))));
   // Check creation of references to this value.
-  Finder->addMatcher(varDecl(allOf(RefenceNonConstValueType,
-                                   hasInitializer(IsValueDeclRefExpr)))
-                         .bind("value-non-const-reference"),
-                     this);
+  Finder->addMatcher(
+      varDecl(allOf(IsNonConstHandleType, hasInitializer(IsValueDeclRefExpr),
+                    unless(isImplicit())))
+          .bind("value-non-const-reference"),
+      this);
 
   // Check function calls that bind by reference.
   Finder->addMatcher(
       callExpr(forEachArgumentWithParam(
-          IsValueDeclRefExpr, parmVarDecl(RefenceNonConstValueType)
+          IsValueDeclRefExpr, parmVarDecl(IsNonConstHandleType)
                                   .bind("value-non-const-ref-call-param"))),
       this);
 
@@ -286,6 +280,13 @@ void ConstCheck::valueTypeMatchers(MatchFinder *Finder) {
       cxxOperatorCallExpr(allOf(hasArgument(0, IsValueDeclRefExpr),
                                 unless(callee(cxxMethodDecl(isConst())))))
           .bind("non-const-operator-call"),
+      this);
+
+  // Check for range-for loops that declare non-const handles as loop variable.
+  Finder->addMatcher(
+      cxxForRangeStmt(allOf(hasLoopVariable(IsNonConstHandleType),
+                            hasRangeInit(IsValueDeclRefExpr)))
+          .bind("non-const-range-for"),
       this);
 
   // Lambda expression can capture variables by reference which invalidates
@@ -318,6 +319,9 @@ void ConstCheck::checkValueType(const MatchFinder::MatchResult &Res) {
   // constness similar to member calls.
   Prohibited |=
       notConstVal<CXXOperatorCallExpr>(Res, "non-const-operator-call");
+  // Range-For can loop in a modifying way over the range. This is equivalent
+  // to taking a reference/pointer to one of the elements of the range.
+  Prohibited |= notConstVal<CXXForRangeStmt>(Res, "non-const-range-for");
 
   // If the matchable targets did result in prohibiton, we can stop.
   // Otherwise analysis that does not function with the same pattern must be

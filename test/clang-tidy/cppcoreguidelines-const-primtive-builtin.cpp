@@ -164,9 +164,6 @@ void function_calling() {
   overloaded_arguments(&np_local3);
 }
 
-// Now comes the tricky part. Templates
-
-// deactivate delayed parsing
 template <typename T>
 void define_locals(T np_arg0, T &np_arg1, int np_arg2) {
   T np_local0 = 0;
@@ -343,4 +340,48 @@ void handle_from_array() {
 }
 
 void range_for() {
+  int np_local0[2] = {1, 2};
+  for (int &non_const_ref : np_local0) {
+  }
+
+  int np_local1[2] = {1, 2};
+  for (auto &non_const_ref : np_local1) {
+  }
+
+  int np_local2[2] = {1, 2};
+  for (auto &&non_const_ref : np_local2) {
+  }
+
+  int *np_local3[2] = {&np_local0[0], &np_local0[1]};
+  for (int *non_const_ptr : np_local3) {
+    // CHECK-MESSAGES: [[@LINE-1]]:8: warning: variable 'non_const_ptr' of type 'int *' can be declared const
+  }
+
+  int *np_local4[2] = {&np_local0[0], &np_local0[1]};
+  for (auto *non_const_ptr : np_local4) {
+    // CHECK-MESSAGES: [[@LINE-1]]:8: warning: variable 'non_const_ptr' of type 'int *' can be declared const
+  }
+
+  int p_local0[2] = {1, 2};
+  // CHECK-MESSAGES: [[@LINE-1]]:3: warning: variable 'p_local0' of type 'int [2]' can be declared const
+  for (int value : p_local0) {
+    // CHECK-MESSAGES: [[@LINE-1]]:8: warning: variable 'value' of type 'int' can be declared const
+  }
+
+  int p_local1[2] = {1, 2};
+  // CHECK-MESSAGES: [[@LINE-1]]:3: warning: variable 'p_local1' of type 'int [2]' can be declared const
+  for (const int &const_ref : p_local1) {
+  }
+
+  int *p_local2[2] = {&np_local0[0], &np_local0[1]};
+  // CHECK-MESSAGES: [[@LINE-1]]:3: warning: variable 'p_local2' of type 'int *[2]' can be declared const
+  for (const int *con_ptr : p_local2) {
+    // CHECK-MESSAGES: [[@LINE-1]]:8: warning: variable 'con_ptr' of type 'const int *' can be declared const
+  }
+
+  int *p_local3[2] = {nullptr, nullptr};
+  // CHECK-MESSAGES: [[@LINE-1]]:3: warning: variable 'p_local3' of type 'int *[2]' can be declared const
+  for (const auto *con_ptr : p_local3) {
+    // CHECK-MESSAGES: [[@LINE-1]]:8: warning: variable 'con_ptr' of type 'const int *' can be declared const
+  }
 }

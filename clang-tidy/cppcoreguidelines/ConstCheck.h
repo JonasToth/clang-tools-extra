@@ -43,8 +43,8 @@ private:
   bool notConstVal(const ast_matchers::MatchFinder::MatchResult &Result,
                    StringRef matcher_bind) {
     if (Result.Nodes.getNodeAs<ASTElement>(matcher_bind)) {
-      //std::cout << "Prohibting through " << std::string(matcher_bind)
-                //<< std::endl;
+      // std::cout << "Prohibting through " << std::string(matcher_bind)
+                // << std::endl;
       const auto *Variable = Result.Nodes.getNodeAs<VarDecl>("value-decl");
       ValueCanBeConst[Variable] = false;
       return true;
