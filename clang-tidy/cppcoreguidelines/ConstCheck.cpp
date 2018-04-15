@@ -79,6 +79,8 @@ namespace cppcoreguidelines {
  *  - modification of the pointee prohibit constness
  *  - Handles follow the typ of the pointee
  *
+ *  - no assignment to the target of the handle
+ *
  * pointers
  * --------
  *  - match both for value and handle semantic
@@ -144,8 +146,7 @@ void ConstCheck::registerMatchers(MatchFinder *Finder) {
   if (AnalyzeValues || AnalyzeHandles) {
     // Ensure that all intersting variables are registered in our mapping.
     variableRegistering(Finder);
-    valueTypeMatchers(Finder);
-    handleTypeMatchers(Finder);
+    modificationMatchers(Finder);
   }
 }
 
@@ -154,8 +155,7 @@ void ConstCheck::check(const MatchFinder::MatchResult &Result) {
     return;
 
   handleRegistration(Result);
-  checkValueType(Result);
-  checkHandleType(Result);
+  checkModification(Result);
 }
 
 // The decision which variable might be made const can only be made at the
@@ -219,7 +219,7 @@ void ConstCheck::handleRegistration(const MatchFinder::MatchResult &Result) {
   }
 }
 
-void ConstCheck::valueTypeMatchers(MatchFinder *Finder) {
+void ConstCheck::modificationMatchers(MatchFinder *Finder) {
   // Matchers for the basic differntiation groups of types.
   const auto IsHandleType =
       anyOf(hasType(referenceType()), hasType(pointerType()));
@@ -235,24 +235,25 @@ void ConstCheck::valueTypeMatchers(MatchFinder *Finder) {
 
   // Match value, array and pointer access.
   // Pointer do have value and reference semantic.
-  const auto ValueDeclRef = declRefExpr(
+  const auto VarDeclRef = declRefExpr(
       hasDeclaration(varDecl(unless(isImplicit())).bind("value-decl")));
-
   const auto ArrayAccess =
-      arraySubscriptExpr(hasBase(ignoringImpCasts(ValueDeclRef)));
-  const auto IsValueDeclRefExpr = anyOf(ArrayAccess, ValueDeclRef);
+      arraySubscriptExpr(hasBase(ignoringImpCasts(VarDeclRef)));
+  const auto PointerDeref = unaryOperator(allOf(
+      hasOperatorName("*"), hasUnaryOperand(ignoringImpCasts(VarDeclRef))));
+  const auto IsVarDeclRefExpr = anyOf(ArrayAccess, VarDeclRef, PointerDeref);
 
   // Classical assignment of any form (=, +=, <<=, ...) modifies the LHS
   // and prohibts it from being const.
   Finder->addMatcher(
-      binaryOperator(allOf(isAssignmentOperator(), hasLHS(IsValueDeclRefExpr)))
+      binaryOperator(allOf(isAssignmentOperator(), hasLHS(IsVarDeclRefExpr)))
           .bind("value-assignment"),
       this);
 
   // Usage of the '++' or '--' operator modifies a variable.
   Finder->addMatcher(
       unaryOperator(allOf(anyOf(hasOperatorName("++"), hasOperatorName("--")),
-                          hasUnaryOperand(IsValueDeclRefExpr)))
+                          hasUnaryOperand(IsVarDeclRefExpr)))
           .bind("value-unary-modification"),
       this);
 
@@ -263,13 +264,13 @@ void ConstCheck::valueTypeMatchers(MatchFinder *Finder) {
                           // because a pointer can get casted only in the 'add
                           // const' direction implicitly.
                           unless(hasParent(implicitCastExpr())),
-                          hasUnaryOperand(IsValueDeclRefExpr)))
+                          hasUnaryOperand(IsVarDeclRefExpr)))
           .bind("value-address-to-non-const"),
       this);
 
   // Check creation of references to this value.
   Finder->addMatcher(
-      varDecl(allOf(IsNonConstHandleType, hasInitializer(IsValueDeclRefExpr),
+      varDecl(allOf(IsNonConstHandleType, hasInitializer(IsVarDeclRefExpr),
                     unless(isImplicit())))
           .bind("value-non-const-reference"),
       this);
@@ -277,14 +278,14 @@ void ConstCheck::valueTypeMatchers(MatchFinder *Finder) {
   // Check function calls that bind by reference.
   Finder->addMatcher(
       callExpr(forEachArgumentWithParam(
-          IsValueDeclRefExpr, parmVarDecl(IsNonConstHandleType)
-                                  .bind("value-non-const-ref-call-param"))),
+          IsVarDeclRefExpr, parmVarDecl(IsNonConstHandleType)
+                                .bind("value-non-const-ref-call-param"))),
       this);
 
   // Check return values that reference a value.
   Finder->addMatcher(
       functionDecl(
-          allOf(hasDescendant(returnStmt(hasReturnValue(IsValueDeclRefExpr))),
+          allOf(hasDescendant(returnStmt(hasReturnValue(IsVarDeclRefExpr))),
                 returns(qualType(
                     references(qualType(unless(isConstQualified())))))))
           .bind("returns-non-const-ref"),
@@ -292,14 +293,14 @@ void ConstCheck::valueTypeMatchers(MatchFinder *Finder) {
 
   // Check for direct method calls, that modify its object by declaration.
   Finder->addMatcher(
-      cxxMemberCallExpr(allOf(on(IsValueDeclRefExpr),
-                              unless(callee(cxxMethodDecl(isConst())))))
+      cxxMemberCallExpr(
+          allOf(on(IsVarDeclRefExpr), unless(callee(cxxMethodDecl(isConst())))))
           .bind("non-const-member-call"),
       this);
 
   // Check for operator calls, that are non-const. E.g. operator=
   Finder->addMatcher(
-      cxxOperatorCallExpr(allOf(hasArgument(0, IsValueDeclRefExpr),
+      cxxOperatorCallExpr(allOf(hasArgument(0, IsVarDeclRefExpr),
                                 unless(callee(cxxMethodDecl(isConst())))))
           .bind("non-const-operator-call"),
       this);
@@ -307,7 +308,7 @@ void ConstCheck::valueTypeMatchers(MatchFinder *Finder) {
   // Check for range-for loops that declare non-const handles as loop variable.
   Finder->addMatcher(
       cxxForRangeStmt(allOf(hasLoopVariable(IsNonConstHandleType),
-                            hasRangeInit(IsValueDeclRefExpr)))
+                            hasRangeInit(IsVarDeclRefExpr)))
           .bind("non-const-range-for"),
       this);
 
@@ -317,7 +318,7 @@ void ConstCheck::valueTypeMatchers(MatchFinder *Finder) {
   Finder->addMatcher(lambdaExpr().bind("value-lambda"), this);
 }
 
-void ConstCheck::checkValueType(const MatchFinder::MatchResult &Res) {
+void ConstCheck::checkModification(const MatchFinder::MatchResult &Res) {
   bool Prohibited = false;
 
   // Assignment of any form prohibits the LHS to be const.
@@ -367,10 +368,6 @@ void ConstCheck::invalidateRefCaptured(const LambdaExpr *Lambda) {
     }
   }
 }
-
-void ConstCheck::handleTypeMatchers(MatchFinder *Finder) {}
-
-void ConstCheck::checkHandleType(const MatchFinder::MatchResult &Result) {}
 
 void ConstCheck::diagnosePotentialConst() {
   if (AnalyzeValues) {

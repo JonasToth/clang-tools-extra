@@ -40,8 +40,8 @@ private:
   void variableRegistering(ast_matchers::MatchFinder *Finder);
   void handleRegistration(const ast_matchers::MatchFinder::MatchResult &Result);
 
-  void valueTypeMatchers(ast_matchers::MatchFinder *Finder);
-  void checkValueType(const ast_matchers::MatchFinder::MatchResult &Result);
+  void modificationMatchers(ast_matchers::MatchFinder *Finder);
+  void checkModification(const ast_matchers::MatchFinder::MatchResult &Result);
   void invalidateRefCaptured(const LambdaExpr *Lambda);
 
   template <typename ASTElement>
@@ -57,9 +57,6 @@ private:
     }
     return false;
   }
-
-  void handleTypeMatchers(ast_matchers::MatchFinder *Finder);
-  void checkHandleType(const ast_matchers::MatchFinder::MatchResult &Result);
 
   void diagnosePotentialConst();
 
