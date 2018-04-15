@@ -52,6 +52,7 @@ namespace cppcoreguidelines {
  *
  * objects
  * -------
+ *  - there is no non-const access to a member
  *  - there is no call to a non-const method                          + CHECK
  *  - there is no call to an non-const overloaded operator            + CHECK
  *  - there is no non-const iterator created from this type           + CHECK
@@ -94,7 +95,7 @@ namespace cppcoreguidelines {
  * forwarding reference
  * --------------------
  *  - same as references?
- *
+ *  
  * Implementation strategy
  * =======================
  *
@@ -129,8 +130,9 @@ namespace cppcoreguidelines {
  *  - type conversions:
  *    - one can overload the type conversion operation and modify a value of a
  *      class -> implications?
- *  - what about the 'mutable' keyword -> not considered now, because it applies
- *    only to class members
+ *  - What about new, placement new and delete?!
+ *  - What about casts? If a value is used in a cast, should it not be const?!
+ *  - Ternary Operator?!
  */
 
 void ConstCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
@@ -235,13 +237,27 @@ void ConstCheck::modificationMatchers(MatchFinder *Finder) {
 
   // Match value, array and pointer access.
   // Pointer do have value and reference semantic.
+
+  // Any direct acces to a variable...
   const auto VarDeclRef = declRefExpr(
       hasDeclaration(varDecl(unless(isImplicit())).bind("value-decl")));
+
+  // ... any access through a index dereferencing ...
   const auto ArrayAccess =
       arraySubscriptExpr(hasBase(ignoringImpCasts(VarDeclRef)));
+
+  // ... any access through an enclosing object ...
+  const auto MemberAccess = memberExpr(hasObjectExpression(VarDeclRef));
+
+  // ... any access through dereferencing a pointer ...
   const auto PointerDeref = unaryOperator(allOf(
-      hasOperatorName("*"), hasUnaryOperand(ignoringImpCasts(VarDeclRef))));
-  const auto IsVarDeclRefExpr = anyOf(ArrayAccess, VarDeclRef, PointerDeref);
+      hasOperatorName("*"),
+      hasUnaryOperand(ignoringImpCasts(anyOf(VarDeclRef, MemberAccess)))));
+
+  // ... is combined regiserted as a potential way modify the value of a
+  // variable.
+  const auto IsVarDeclRefExpr =
+      anyOf(ArrayAccess, VarDeclRef, PointerDeref, MemberAccess);
 
   // Classical assignment of any form (=, +=, <<=, ...) modifies the LHS
   // and prohibts it from being const.

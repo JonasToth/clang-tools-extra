@@ -212,6 +212,15 @@ struct ConstNonConstClass {
   double nonConstMethod() {}
   double constMethod() const {}
   double modifyingMethod(double &np_arg0) const;
+
+  double NonConstMember;
+  const double ConstMember;
+
+  double &NonConstMemberRef;
+  const double &ConstMemberRef;
+
+  double *NonConstMemberPtr;
+  const double *ConstMemberPtr;
 };
 
 void direct_method_calls() {

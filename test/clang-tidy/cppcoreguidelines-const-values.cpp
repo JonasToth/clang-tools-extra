@@ -202,9 +202,18 @@ struct ConstNonConstClass {
   double nonConstMethod() {}
   double constMethod() const {}
   double modifyingMethod(double &np_arg0) const;
+
+  double NonConstMember;
+  const double ConstMember;
+
+  double &NonConstMemberRef;
+  const double &ConstMemberRef;
+
+  double *NonConstMemberPtr;
+  const double *ConstMemberPtr;
 };
 
-void direct_method_calls() {
+void direct_class_access() {
   ConstNonConstClass np_local0;
 
   np_local0.constMethod();
@@ -222,6 +231,21 @@ void direct_method_calls() {
   double np_local2;
   ConstNonConstClass p_local2(np_local2);
   // CHECK-MESSAGES: [[@LINE-1]]:3: warning: variable 'p_local2' of type 'ConstNonConstClass' can be declared const
+
+  ConstNonConstClass np_local3;
+  np_local3.NonConstMember = 42.;
+
+  ConstNonConstClass np_local4;
+  np_local4.NonConstMemberRef = 42.;
+
+  ConstNonConstClass np_local5;
+  *np_local5.NonConstMemberPtr = 42.;
+
+  ConstNonConstClass p_local3;
+  // CHECK-MESSAGES: [[@LINE-1]]:3: warning: variable 'p_local3' of type 'ConstNonConstClass' can be declared const
+  const double val0 = p_local3.NonConstMember;
+  const double val1 = p_local3.NonConstMemberRef;
+  const double val2 = *p_local3.NonConstMemberPtr;
 }
 
 struct OperatorsAsConstAsPossible {
