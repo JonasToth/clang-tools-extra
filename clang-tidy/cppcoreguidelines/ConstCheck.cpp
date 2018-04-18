@@ -202,12 +202,12 @@ void ConstCheck::check(const MatchFinder::MatchResult &Result) {
           Result.Nodes.getNodeAs<VarDecl>("new-local-value")) {
     assert(AnalyzeValues && "Matched local value without analyzing them");
 
-    // if (usedNonConst(Variable, Scope, Result))
-    // return;
-
-    if (!utils::decl_ref_expr::isOnlyUsedAsConst(*Variable, *Scope,
-                                                 *Result.Context))
+    if (usedNonConst(Variable, Scope, Result))
       return;
+
+    // if (!utils::decl_ref_expr::isOnlyUsedAsConst(*Variable, *Scope,
+    //*Result.Context))
+    // return;
 
     diag(Variable->getLocStart(),
          "variable %0 of type %1 can be declared const")
@@ -218,12 +218,12 @@ void ConstCheck::check(const MatchFinder::MatchResult &Result) {
           Result.Nodes.getNodeAs<VarDecl>("new-local-handle")) {
     assert(AnalyzeHandles && "Matched local handle without analyzing them");
 
-    // if (usedNonConst(Variable, Scope, Result))
-    // return;
-
-    if (!utils::decl_ref_expr::isOnlyUsedAsConst(*Variable, *Scope,
-                                                 *Result.Context))
+    if (usedNonConst(Variable, Scope, Result))
       return;
+
+    // if (!utils::decl_ref_expr::isOnlyUsedAsConst(*Variable, *Scope,
+    // *Result.Context))
+    // return;
 
     // Differentiate between pointers and references.
     QualType HandleType = Variable->getType();

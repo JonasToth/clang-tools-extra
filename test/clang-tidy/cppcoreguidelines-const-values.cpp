@@ -98,7 +98,9 @@ void function_inout_ref(int &inout);
 void function_in_ref(const int &in);
 
 void some_reference_taking() {
+  // FIXME False positive
   int np_local0 = 42;
+  // CHECK-MESSAGES: [[@LINE-1]]:3: warning: variable 'np_local0' of type 'int' can be declared const
   const int &r0_np_local0 = np_local0;
   int &r1_np_local0 = np_local0;
   r1_np_local0 = 43;
@@ -216,7 +218,9 @@ struct ConstNonConstClass {
 };
 
 void direct_class_access() {
+  // FIXME False positive
   ConstNonConstClass np_local0;
+  // CHECK-MESSAGES: [[@LINE-1]]:3: warning: variable 'np_local0' of type 'ConstNonConstClass' can be declared const
 
   np_local0.constMethod();
   np_local0.nonConstMethod();
@@ -240,14 +244,15 @@ void direct_class_access() {
   ConstNonConstClass np_local4;
   np_local4.NonConstMemberRef = 42.;
 
-  ConstNonConstClass np_local5;
-  *np_local5.NonConstMemberPtr = 42.;
-
   ConstNonConstClass p_local3;
   // CHECK-MESSAGES: [[@LINE-1]]:3: warning: variable 'p_local3' of type 'ConstNonConstClass' can be declared const
   const double val0 = p_local3.NonConstMember;
   const double val1 = p_local3.NonConstMemberRef;
   const double val2 = *p_local3.NonConstMemberPtr;
+
+  ConstNonConstClass p_local4;
+  // CHECK-MESSAGES: [[@LINE-1]]:3: warning: variable 'p_local4' of type 'ConstNonConstClass' can be declared const
+  *np_local4.NonConstMemberPtr = 42.;
 }
 
 struct OperatorsAsConstAsPossible {
@@ -337,6 +342,7 @@ void handle_from_array() {
 
   double np_local1[10] = {0., 1., 2., 3., 4., 5., 6., 7., 8., 9.};
   double &non_const_ref = np_local1[1];
+  non_const_ref = 42.;
 
   double np_local2[10] = {0., 1., 2., 3., 4., 5., 6., 7., 8., 9.};
   double *np_local3;
@@ -373,24 +379,33 @@ void handle_from_array() {
 void range_for() {
   int np_local0[2] = {1, 2};
   for (int &non_const_ref : np_local0) {
+    non_const_ref = 42;
   }
 
   int np_local1[2] = {1, 2};
   for (auto &non_const_ref : np_local1) {
+    non_const_ref = 43;
   }
 
   int np_local2[2] = {1, 2};
   for (auto &&non_const_ref : np_local2) {
+    non_const_ref = 44;
   }
 
+  // FIXME false positive
   int *np_local3[2] = {&np_local0[0], &np_local0[1]};
+  // CHECK-MESSAGES: [[@LINE-1]]:3: warning: variable 'np_local3' of type 'int *[2]' can be declared const
   for (int *non_const_ptr : np_local3) {
     // CHECK-MESSAGES: [[@LINE-1]]:8: warning: variable 'non_const_ptr' of type 'int *' can be declared const
+    *non_const_ptr = 45;
   }
 
+  // FIXME false positive
   int *np_local4[2] = {&np_local0[0], &np_local0[1]};
+  // CHECK-MESSAGES: [[@LINE-1]]:3: warning: variable 'np_local4' of type 'int *[2]' can be declared const
   for (auto *non_const_ptr : np_local4) {
     // CHECK-MESSAGES: [[@LINE-1]]:8: warning: variable 'non_const_ptr' of type 'int *' can be declared const
+    *non_const_ptr = 46;
   }
 
   int p_local0[2] = {1, 2};
