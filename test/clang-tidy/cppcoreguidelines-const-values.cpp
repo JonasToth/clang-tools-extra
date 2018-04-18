@@ -73,24 +73,25 @@ void function_inout_pointer(int *inout);
 void function_in_pointer(const int *in);
 
 void some_pointer_taking(int *out) {
-  int np_local0 = 42;
-  const int *const p0_np_local0 = &np_local0;
-  int *const p1_np_local0 = &np_local0;
-
-  int np_local1 = 42;
-  function_inout_pointer(&np_local1);
-
-  // Prevents const.
-  int np_local2 = 42;
-  out = &np_local2; // This returns and invalid address, its just about the AST
-
   int p_local0 = 42;
   // CHECK-MESSAGES: [[@LINE-1]]:3: warning: variable 'p_local0' of type 'int' can be declared const
   const int *const p0_p_local0 = &p_local0;
+  int *const p1_p_local0 = &p_local0;
+
+  int np_local0 = 42;
+  function_inout_pointer(&np_local0);
+
+  // Prevents const.
+  int np_local1 = 42;
+  out = &np_local1; // This returns and invalid address, its just about the AST
 
   int p_local1 = 42;
   // CHECK-MESSAGES: [[@LINE-1]]:3: warning: variable 'p_local1' of type 'int' can be declared const
-  function_in_pointer(&p_local1);
+  const int *const p0_p_local1 = &p_local1;
+
+  int p_local2 = 42;
+  // CHECK-MESSAGES: [[@LINE-1]]:3: warning: variable 'p_local2' of type 'int' can be declared const
+  function_in_pointer(&p_local2);
 }
 
 void function_inout_ref(int &inout);
@@ -100,6 +101,7 @@ void some_reference_taking() {
   int np_local0 = 42;
   const int &r0_np_local0 = np_local0;
   int &r1_np_local0 = np_local0;
+  r1_np_local0 = 43;
   const int &r2_np_local0 = r1_np_local0;
 
   int np_local1 = 42;

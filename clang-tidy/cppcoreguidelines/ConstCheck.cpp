@@ -8,6 +8,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "ConstCheck.h"
+#include "../utils/ASTUtils.h"
+#include "../utils/DeclRefExprUtils.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 
@@ -95,7 +97,7 @@ namespace cppcoreguidelines {
  * forwarding reference
  * --------------------
  *  - same as references?
- *  
+ *
  * Implementation strategy
  * =======================
  *
@@ -135,6 +137,22 @@ namespace cppcoreguidelines {
  *  - Ternary Operator?!
  */
 
+namespace {
+/// Return true if `UseExpr` has not been modified and false otherwise.
+bool calculateConst(const MatchFinder::MatchResult &R, const Expr *UseExpr) {
+  const Stmt *ScopeStmt = R.Nodes.getNodeAs<Stmt>("scope");
+  assert(ScopeStmt && "Local variable without attached scope");
+
+  using clang::tidy::utils::isModified;
+  using clang::tidy::utils::ExprModificationKind;
+
+  return isModified(*UseExpr, *ScopeStmt, R.Context) ==
+         ExprModificationKind::EMK_NotModified;
+}
+
+AST_MATCHER(VarDecl, isLocal) { return Node.isLocalVarDecl(); }
+} // namespace
+
 void ConstCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "AnalyzeValues", AnalyzeValues);
   Options.store(Opts, "AnalyzeHandles", AnalyzeHandles);
@@ -144,289 +162,104 @@ void ConstCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
 void ConstCheck::registerMatchers(MatchFinder *Finder) {
   if (!getLangOpts().CPlusPlus)
     return;
-
-  if (AnalyzeValues || AnalyzeHandles) {
-    // Ensure that all intersting variables are registered in our mapping.
-    variableRegistering(Finder);
-    modificationMatchers(Finder);
-  }
-}
-
-void ConstCheck::check(const MatchFinder::MatchResult &Result) {
-  if (!getLangOpts().CPlusPlus)
-    return;
-
-  handleRegistration(Result);
-  checkModification(Result);
-}
-
-// The decision which variable might be made const can only be made at the
-// end of each translation unit.
-void ConstCheck::onEndOfTranslationUnit() { diagnosePotentialConst(); }
-
-void ConstCheck::variableRegistering(MatchFinder *Finder) {
   const auto HandleType =
       anyOf(hasType(referenceType()), hasType(pointerType()));
   const auto ValueType = unless(hasType(referenceType()));
   const auto ConstType = hasType(isConstQualified());
   const auto TemplateType = anyOf(hasType(templateTypeParmType()),
                                   hasType(substTemplateTypeParmType()));
-  const auto LocalVariable =
-      anyOf(hasAncestor(functionDecl(hasBody(compoundStmt()))),
-            hasAncestor(lambdaExpr()));
 
   if (AnalyzeValues) {
     // Match local variables, that could be const.
     // Example: `int i = 10`, `int i` (will be used if program is correct)
-    Finder->addMatcher(varDecl(allOf(LocalVariable, hasInitializer(anything()),
-                                     unless(ConstType), unless(TemplateType),
-                                     unless(isImplicit()), ValueType))
-                           .bind("new-local-value"),
-                       this);
+
+    const auto LocalValDecl =
+        varDecl(allOf(hasAncestor(compoundStmt().bind("scope")), isLocal(),
+                      hasInitializer(anything()), unless(ConstType),
+                      unless(TemplateType), unless(isImplicit()), ValueType));
+    Finder->addMatcher(LocalValDecl.bind("new-local-value"), this);
   }
 
   if (AnalyzeHandles) {
     // Match local handle types, that are not const.
     // Example: `int &ri`, `int * pi`.
-    Finder->addMatcher(
-        varDecl(allOf(LocalVariable, hasInitializer(anything()),
+
+    const auto LocalHandleDecl =
+        varDecl(allOf(hasAncestor(compoundStmt().bind("scope")), isLocal(),
+                      hasInitializer(anything()),
                       unless(hasType(references(isConstQualified()))),
                       unless(hasType(pointsTo(isConstQualified()))),
-                      unless(TemplateType), unless(isImplicit()), HandleType))
-            .bind("new-local-handle"),
-        this);
+                      unless(TemplateType), unless(isImplicit()), HandleType));
+    Finder->addMatcher(LocalHandleDecl.bind("new-local-handle"), this);
   }
 }
+void ConstCheck::check(const MatchFinder::MatchResult &Result) {
+  if (!getLangOpts().CPlusPlus)
+    return;
+  const auto *Scope = Result.Nodes.getNodeAs<CompoundStmt>("scope");
 
-void ConstCheck::handleRegistration(const MatchFinder::MatchResult &Result) {
-  // Local variables can be declared as consts.
   if (const auto *Variable =
           Result.Nodes.getNodeAs<VarDecl>("new-local-value")) {
-    // std::cout << "Added new local value" << std::endl;
     assert(AnalyzeValues && "Matched local value without analyzing them");
-    if (ValueCanBeConst.find(Variable) == ValueCanBeConst.end()) {
-      ValueCanBeConst[Variable] = true;
+
+    // if (usedNonConst(Variable, Scope, Result))
+    // return;
+
+    if (!utils::decl_ref_expr::isOnlyUsedAsConst(*Variable, *Scope,
+                                                 *Result.Context))
       return;
-    }
+
+    diag(Variable->getLocStart(),
+         "variable %0 of type %1 can be declared const")
+        << Variable << Variable->getType();
   }
 
   if (const auto *Variable =
           Result.Nodes.getNodeAs<VarDecl>("new-local-handle")) {
-    // std::cout << "Added new local handle" << std::endl;
     assert(AnalyzeHandles && "Matched local handle without analyzing them");
-    if (HandleCanBeConst.find(Variable) == HandleCanBeConst.end()) {
-      HandleCanBeConst[Variable] = true;
+
+    // if (usedNonConst(Variable, Scope, Result))
+    // return;
+
+    if (!utils::decl_ref_expr::isOnlyUsedAsConst(*Variable, *Scope,
+                                                 *Result.Context))
       return;
-    }
+
+    // Differentiate between pointers and references.
+    QualType HandleType = Variable->getType();
+    if (HandleType->isReferenceType())
+      diag(Variable->getLocStart(),
+           "reference variable %0 of type %1 can be declared const")
+          << Variable << HandleType;
+    else if (HandleType->isPointerType())
+      diag(Variable->getLocStart(),
+           "pointer variable %0 of type %1 can be declared const")
+          << Variable << HandleType;
+    else
+      llvm_unreachable("Expected handle type");
   }
 }
 
-void ConstCheck::modificationMatchers(MatchFinder *Finder) {
-  // Matchers for the basic differntiation groups of types.
-  const auto IsHandleType =
-      anyOf(hasType(referenceType()), hasType(pointerType()));
-  const auto IsValueType = unless(hasType(referenceType()));
+bool ConstCheck::usedNonConst(const VarDecl *Variable,
+                              const CompoundStmt *Scope,
+                              const MatchFinder::MatchResult &Result) {
 
-  // Matchers for non-const handles.
-  const auto IsRefenceToNonConstType =
-      hasType(references(qualType(unless(isConstQualified()))));
-  const auto IsPointerToNonConstType =
-      hasType(pointerType(pointee(unless(isConstQualified()))));
-  const auto IsNonConstHandleType =
-      anyOf(IsRefenceToNonConstType, IsPointerToNonConstType);
+  // find usage of that variable
+  // if a declRefExpr is found -> analyze
+  // else -> constant
+  const auto Usage = match(
+      findAll(declRefExpr(hasDeclaration(equalsNode(Variable))).bind("use")),
+      *Scope, *Result.Context);
+  const auto *UseExpr = selectFirst<Expr>("use", Usage);
 
-  // Match value, array and pointer access.
-  // Pointer do have value and reference semantic.
-
-  // Any direct acces to a variable...
-  const auto VarDeclRef = declRefExpr(
-      hasDeclaration(varDecl(unless(isImplicit())).bind("value-decl")));
-
-  // ... any access through a index dereferencing ...
-  const auto ArrayAccess =
-      arraySubscriptExpr(hasBase(ignoringImpCasts(VarDeclRef)));
-
-  // ... any access through an enclosing object ...
-  const auto MemberAccess = memberExpr(hasObjectExpression(VarDeclRef));
-
-  // ... any access through dereferencing a pointer ...
-  const auto PointerDeref = unaryOperator(allOf(
-      hasOperatorName("*"),
-      hasUnaryOperand(ignoringImpCasts(anyOf(VarDeclRef, MemberAccess)))));
-
-  // ... is combined regiserted as a potential way modify the value of a
-  // variable.
-  const auto IsVarDeclRefExpr =
-      anyOf(ArrayAccess, VarDeclRef, PointerDeref, MemberAccess);
-
-  // Classical assignment of any form (=, +=, <<=, ...) modifies the LHS
-  // and prohibts it from being const.
-  Finder->addMatcher(
-      binaryOperator(allOf(isAssignmentOperator(), hasLHS(IsVarDeclRefExpr)))
-          .bind("value-assignment"),
-      this);
-
-  // Usage of the '++' or '--' operator modifies a variable.
-  Finder->addMatcher(
-      unaryOperator(allOf(anyOf(hasOperatorName("++"), hasOperatorName("--")),
-                          hasUnaryOperand(IsVarDeclRefExpr)))
-          .bind("value-unary-modification"),
-      this);
-
-  // Check the address operator.
-  Finder->addMatcher(
-      unaryOperator(allOf(hasOperatorName("&"),
-                          // Checking for the ImplicitCastExpr is enough,
-                          // because a pointer can get casted only in the 'add
-                          // const' direction implicitly.
-                          unless(hasParent(implicitCastExpr())),
-                          hasUnaryOperand(IsVarDeclRefExpr)))
-          .bind("value-address-to-non-const"),
-      this);
-
-  // Check creation of references to this value.
-  Finder->addMatcher(
-      varDecl(allOf(IsNonConstHandleType, hasInitializer(IsVarDeclRefExpr),
-                    unless(isImplicit())))
-          .bind("value-non-const-reference"),
-      this);
-
-  // Check function calls that bind by reference.
-  Finder->addMatcher(
-      callExpr(forEachArgumentWithParam(
-          IsVarDeclRefExpr, parmVarDecl(IsNonConstHandleType)
-                                .bind("value-non-const-ref-call-param"))),
-      this);
-
-  // Check return values that reference a value.
-  Finder->addMatcher(
-      functionDecl(
-          allOf(hasDescendant(returnStmt(hasReturnValue(IsVarDeclRefExpr))),
-                returns(qualType(
-                    references(qualType(unless(isConstQualified())))))))
-          .bind("returns-non-const-ref"),
-      this);
-
-  // Check for direct method calls, that modify its object by declaration.
-  Finder->addMatcher(
-      cxxMemberCallExpr(
-          allOf(on(IsVarDeclRefExpr), unless(callee(cxxMethodDecl(isConst())))))
-          .bind("non-const-member-call"),
-      this);
-
-  // Check for operator calls, that are non-const. E.g. operator=
-  Finder->addMatcher(
-      cxxOperatorCallExpr(allOf(hasArgument(0, IsVarDeclRefExpr),
-                                unless(callee(cxxMethodDecl(isConst())))))
-          .bind("non-const-operator-call"),
-      this);
-
-  // Check for range-for loops that declare non-const handles as loop variable.
-  Finder->addMatcher(
-      cxxForRangeStmt(allOf(hasLoopVariable(IsNonConstHandleType),
-                            hasRangeInit(IsVarDeclRefExpr)))
-          .bind("non-const-range-for"),
-      this);
-
-  // Lambda expression can capture variables by reference which invalidates
-  // the captured variables. Lambdas capture only the variables they actually
-  // use!
-  Finder->addMatcher(lambdaExpr().bind("value-lambda"), this);
-}
-
-void ConstCheck::checkModification(const MatchFinder::MatchResult &Res) {
-  bool Prohibited = false;
-
-  // Assignment of any form prohibits the LHS to be const.
-  Prohibited = notConst<BinaryOperator>(Res, "value-assignment");
-  // Usage of the '++' or '--' operator modifies a value.
-  Prohibited |= notConst<UnaryOperator>(Res, "value-unary-modification");
-  // The address of the values has been taken and did not result in a
-  // pointer to const.
-  Prohibited |= notConst<UnaryOperator>(Res, "value-address-to-non-const");
-  // A reference is initialized with a value.
-  Prohibited |= notConst<VarDecl>(Res, "value-non-const-reference");
-  // A call where a parameter is a non-const reference.
-  Prohibited |= notConst<ParmVarDecl>(Res, "value-non-const-ref-call-param");
-  // A function returning a non-const reference prohibts its return value
-  // to be const.
-  Prohibited |= notConst<FunctionDecl>(Res, "returns-non-const-ref");
-  // Calling a member function, that is not declared as const prohibts
-  // constness of the value.
-  Prohibited |= notConst<CXXMemberCallExpr>(Res, "non-const-member-call");
-  // Calling an overloaded operator that is not declared as const probits
-  // constness similar to member calls.
-  Prohibited |= notConst<CXXOperatorCallExpr>(Res, "non-const-operator-call");
-  // Range-For can loop in a modifying way over the range. This is equivalent
-  // to taking a reference/pointer to one of the elements of the range.
-  Prohibited |= notConst<CXXForRangeStmt>(Res, "non-const-range-for");
-
-  // If the matchable targets did result in prohibiton, we can stop.
-  // Otherwise analysis that does not function with the same pattern must be
-  // applied.
-  if (Prohibited)
-    return;
-
-  // Analysis of the lambda is more difficult.
-  // Offloaded into a separate function.
-  if (const auto *Lambda = Res.Nodes.getNodeAs<LambdaExpr>("value-lambda")) {
-    invalidateRefCaptured(Lambda);
-    return;
+  // The declared variables was used in non-const conserving way and can not
+  // be declared as const.
+  if (UseExpr && !calculateConst(Result, UseExpr)) {
+    diag(UseExpr->getLocStart(), "Investigating starting with this use",
+         DiagnosticIDs::Note);
+    return true;
   }
-}
-
-void ConstCheck::invalidateRefCaptured(const LambdaExpr *Lambda) {
-  for (const auto capture : Lambda->captures()) {
-    if (capture.capturesVariable() &&
-        capture.getCaptureKind() == LambdaCaptureKind::LCK_ByRef) {
-      ValueCanBeConst[capture.getCapturedVar()] = false;
-      HandleCanBeConst[capture.getCapturedVar()] = false;
-    }
-  }
-}
-
-void ConstCheck::diagnosePotentialConst() {
-  if (AnalyzeValues) {
-    for (const auto it : ValueCanBeConst) {
-      const VarDecl *Variable = it.first;
-      bool VarCanBeConst = it.second;
-      bool VarIsPointer = Variable->getType()->isPointerType();
-
-      // Skip pointer warning for potential `const int * ->const<- value`.
-      if (VarIsPointer && !WarnPointersAsValues)
-        continue;
-
-      if (VarCanBeConst) {
-        diag(Variable->getLocStart(),
-             "variable %0 of type %1 can be declared const")
-            << Variable << Variable->getType();
-      }
-    }
-  }
-
-  if (AnalyzeHandles) {
-    for (const auto it : HandleCanBeConst) {
-      bool HandleCanBeConst = it.second;
-
-      // Example: `int& ri` could be `const int& ri`.
-      if (HandleCanBeConst) {
-        const VarDecl *Variable = it.first;
-
-        // Differentiate between pointers and references.
-        QualType HandleType = Variable->getType();
-        if (HandleType->isReferenceType()) {
-          diag(Variable->getLocStart(),
-               "reference variable %0 of type %1 can be declared const")
-              << Variable << HandleType;
-        } else if (HandleType->isPointerType()) {
-          diag(Variable->getLocStart(),
-               "pointer variable %0 of type %1 can be declared const")
-              << Variable << HandleType;
-        } else
-          llvm_unreachable("Expected handle type");
-      }
-    }
-  }
+  return false;
 }
 
 } // namespace cppcoreguidelines

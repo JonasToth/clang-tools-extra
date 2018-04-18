@@ -34,35 +34,10 @@ public:
   void storeOptions(ClangTidyOptions::OptionMap &Opts) override;
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
-  void onEndOfTranslationUnit() override;
 
 private:
-  void variableRegistering(ast_matchers::MatchFinder *Finder);
-  void handleRegistration(const ast_matchers::MatchFinder::MatchResult &Result);
-
-  void modificationMatchers(ast_matchers::MatchFinder *Finder);
-  void checkModification(const ast_matchers::MatchFinder::MatchResult &Result);
-  void invalidateRefCaptured(const LambdaExpr *Lambda);
-
-  template <typename ASTElement>
-  bool notConst(const ast_matchers::MatchFinder::MatchResult &Result,
-                StringRef matcher_bind) {
-    if (Result.Nodes.getNodeAs<ASTElement>(matcher_bind)) {
-      // std::cout << "Prohibting through " << std::string(matcher_bind)
-      // << std::endl;
-      const auto *Variable = Result.Nodes.getNodeAs<VarDecl>("value-decl");
-      ValueCanBeConst[Variable] = false;
-      HandleCanBeConst[Variable] = false;
-      return true;
-    }
-    return false;
-  }
-
-  void diagnosePotentialConst();
-
-  llvm::DenseMap<const VarDecl *, bool> ValueCanBeConst;
-  llvm::DenseMap<const VarDecl *, bool> HandleCanBeConst;
-
+  bool usedNonConst(const VarDecl *Variable, const CompoundStmt *Scope,
+                    const ast_matchers::MatchFinder::MatchResult &Result);
   const bool AnalyzeValues;
   const bool AnalyzeHandles;
   const bool WarnPointersAsValues;
