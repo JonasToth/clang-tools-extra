@@ -159,6 +159,8 @@ void ConstCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "WarnPointersAsValues", WarnPointersAsValues);
 }
 
+// FIXME The analysis is equal for values and references.
+// Only pointers need special treatment for the pointee.
 void ConstCheck::registerMatchers(MatchFinder *Finder) {
   if (!getLangOpts().CPlusPlus)
     return;
@@ -169,6 +171,15 @@ void ConstCheck::registerMatchers(MatchFinder *Finder) {
   const auto TemplateType = anyOf(hasType(templateTypeParmType()),
                                   hasType(substTemplateTypeParmType()));
 
+  // FIXME hasAncestor(compoundStmt()) is incorrect for
+  // void f() {
+  //    int i;
+  //    {
+  //    int j;
+  //    i++;
+  //    }
+  // }
+  // Go to functionDecl and take its anchestor compoundStmt
   if (AnalyzeValues) {
     // Match local variables, that could be const.
     // Example: `int i = 10`, `int i` (will be used if program is correct)
