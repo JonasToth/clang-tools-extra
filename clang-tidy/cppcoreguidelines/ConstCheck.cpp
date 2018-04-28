@@ -8,8 +8,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "ConstCheck.h"
-#include "../utils/ASTUtils.h"
-#include "../utils/DeclRefExprUtils.h"
+// #include "../utils/ASTUtils.h"
+// #include "../utils/DeclRefExprUtils.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 
@@ -138,93 +138,54 @@ namespace cppcoreguidelines {
  */
 
 namespace {
-/// Return true if `UseExpr` has not been modified and false otherwise.
-bool calculateConst(const MatchFinder::MatchResult &R, const Expr *UseExpr) {
-  const Stmt *ScopeStmt = R.Nodes.getNodeAs<Stmt>("scope");
-  assert(ScopeStmt && "Local variable without attached scope");
-
-  using clang::tidy::utils::isModified;
-  using clang::tidy::utils::ExprModificationKind;
-
-  return isModified(*UseExpr, *ScopeStmt, R.Context) ==
-         ExprModificationKind::EMK_NotModified;
-}
-
 AST_MATCHER(VarDecl, isLocal) { return Node.isLocalVarDecl(); }
 } // namespace
 
 void ConstCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
-  Options.store(Opts, "AnalyzeValues", AnalyzeValues);
-  Options.store(Opts, "AnalyzeHandles", AnalyzeHandles);
   Options.store(Opts, "WarnPointersAsValues", WarnPointersAsValues);
 }
 
-// FIXME The analysis is equal for values and references.
-// Only pointers need special treatment for the pointee.
 void ConstCheck::registerMatchers(MatchFinder *Finder) {
   if (!getLangOpts().CPlusPlus)
     return;
-  const auto HandleType =
-      anyOf(hasType(referenceType()), hasType(pointerType()));
-  const auto ValueType = unless(hasType(referenceType()));
   const auto ConstType = hasType(isConstQualified());
+  const auto ConstReference = hasType(references(isConstQualified()));
   const auto TemplateType = anyOf(hasType(templateTypeParmType()),
                                   hasType(substTemplateTypeParmType()));
 
-  // FIXME hasAncestor(compoundStmt()) is incorrect for
-  // void f() {
-  //    int i;
-  //    {
-  //    int j;
-  //    i++;
-  //    }
-  // }
-  // Go to functionDecl and take its anchestor compoundStmt
-  if (AnalyzeValues) {
-    // Match local variables, that could be const.
-    // Example: `int i = 10`, `int i` (will be used if program is correct)
+  // Match local variables, that could be const.
+  // Example: `int i = 10`, `int i` (will be used if program is correct)
+  const auto LocalValDecl = varDecl(allOf(
+      isLocal(), hasInitializer(anything()), unless(ConstType),
+      unless(ConstReference), unless(TemplateType), unless(isImplicit())));
 
-    const auto LocalValDecl =
-        varDecl(allOf(hasAncestor(compoundStmt().bind("scope")), isLocal(),
-                      hasInitializer(anything()), unless(ConstType),
-                      unless(TemplateType), unless(isImplicit()), ValueType));
-    Finder->addMatcher(LocalValDecl.bind("new-local-value"), this);
-  }
-
-  if (AnalyzeHandles) {
-    // Match local handle types, that are not const.
-    // Example: `int &ri`, `int * pi`.
-
-    const auto LocalHandleDecl =
-        varDecl(allOf(hasAncestor(compoundStmt().bind("scope")), isLocal(),
-                      hasInitializer(anything()),
-                      unless(hasType(references(isConstQualified()))),
-                      unless(hasType(pointsTo(isConstQualified()))),
-                      unless(TemplateType), unless(isImplicit()), HandleType));
-    Finder->addMatcher(LocalHandleDecl.bind("new-local-handle"), this);
-  }
+  // Match the function scope for which the analysis of all local variables
+  // shall be run.
+  const auto FunctionScope =
+      functionDecl(allOf(hasBody(compoundStmt().bind("scope")),
+                         findAll(LocalValDecl.bind("new-local-value"))));
+  Finder->addMatcher(FunctionScope, this);
 }
+
 void ConstCheck::check(const MatchFinder::MatchResult &Result) {
   if (!getLangOpts().CPlusPlus)
     return;
+
   const auto *Scope = Result.Nodes.getNodeAs<CompoundStmt>("scope");
+  registerScope(Scope, Result.Context);
 
-  if (const auto *Variable =
-          Result.Nodes.getNodeAs<VarDecl>("new-local-value")) {
-    assert(AnalyzeValues && "Matched local value without analyzing them");
+  const auto *Variable = Result.Nodes.getNodeAs<VarDecl>("new-local-value");
+  assert(Variable && "Did not match local variable definition");
 
-    if (usedNonConst(Variable, Scope, Result))
-      return;
+  if (Variable->getType()->isPointerType() && !WarnPointersAsValues)
+    return;
 
-    // if (!utils::decl_ref_expr::isOnlyUsedAsConst(*Variable, *Scope,
-    //*Result.Context))
-    // return;
+  if (usedNonConst(Variable, Scope, Result))
+    return;
 
-    diag(Variable->getLocStart(),
-         "variable %0 of type %1 can be declared const")
-        << Variable << Variable->getType();
-  }
-
+  diag(Variable->getLocStart(), "variable %0 of type %1 can be declared const")
+      << Variable << Variable->getType();
+#if 0
   if (const auto *Variable =
           Result.Nodes.getNodeAs<VarDecl>("new-local-handle")) {
     assert(AnalyzeHandles && "Matched local handle without analyzing them");
@@ -249,6 +210,14 @@ void ConstCheck::check(const MatchFinder::MatchResult &Result) {
     else
       llvm_unreachable("Expected handle type");
   }
+#endif
+}
+
+void ConstCheck::registerScope(const CompoundStmt *Scope, ASTContext *Context) {
+  if (Scopes.find(Scope) == Scopes.end()) {
+    Scopes.insert(std::make_pair(
+        Scope, llvm::make_unique<utils::ExprMutationAnalyzer>(Scope, Context)));
+  }
 }
 
 bool ConstCheck::usedNonConst(const VarDecl *Variable,
@@ -265,9 +234,9 @@ bool ConstCheck::usedNonConst(const VarDecl *Variable,
 
   // The declared variables was used in non-const conserving way and can not
   // be declared as const.
-  if (UseExpr && !calculateConst(Result, UseExpr)) {
-    diag(UseExpr->getLocStart(), "Investigating starting with this use",
-         DiagnosticIDs::Note);
+  if (UseExpr && Scopes[Scope]->isMutated(UseExpr)) {
+    // diag(UseExpr->getLocStart(), "Investigating starting with this use",
+    // DiagnosticIDs::Note);
     return true;
   }
   return false;

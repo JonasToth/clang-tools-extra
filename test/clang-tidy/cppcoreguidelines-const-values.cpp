@@ -1,9 +1,4 @@
-// RUN: %check_clang_tidy %s cppcoreguidelines-const %t \
-// RUN: -config='{CheckOptions: \
-// RUN:  [{key: "cppcoreguidelines-const.AnalyzeValues", value: 1},\
-// RUN:   {key: "cppcoreguidelines-const.AnalyzeHandles", value: 0},\
-// RUN:   {key: "cppcoreguidelines-const.WarnPointersAsValues", value: 1}]}' \
-// RUN: --
+// RUN: %check_clang_tidy %s cppcoreguidelines-const %t
 
 // ------- Provide test samples for primitive builtins ---------
 // - every 'p_*' variable is a 'potential_const_*' variable
@@ -38,6 +33,18 @@ void some_function(double np_arg0, wchar_t np_arg1) {
   --np_local5;
   int np_local6 = 4;
   np_local6--;
+}
+
+void nested_scopes() {
+  int p_local0 = 2;
+  // CHECK-MESSAGES: [[@LINE-1]]:3: warning: variable 'p_local0' of type 'int' can be declared const
+  int np_local0 = 42;
+
+  {
+    int p_local1 = 42;
+    // CHECK-MESSAGES: [[@LINE-1]]:5: warning: variable 'p_local1' of type 'int' can be declared const
+    np_local0 *= 2;
+  }
 }
 
 void some_lambda_environment_capture_all_by_reference(double np_arg0) {
@@ -337,8 +344,7 @@ void non_const_handle(double *np_local0);
 void handle_from_array() {
   // Non-const handle from non-const array forbids declaring the array as const
   double np_local0[10] = {0., 1., 2., 3., 4., 5., 6., 7., 8., 9.};
-  double *p_local0 = &np_local0[1];
-  // CHECK-MESSAGES: [[@LINE-1]]:3: warning: variable 'p_local0' of type 'double *' can be declared const
+  double *p_local0 = &np_local0[1]; // Could be `double *const`, but warning deactivated by default
 
   double np_local1[10] = {0., 1., 2., 3., 4., 5., 6., 7., 8., 9.};
   double &non_const_ref = np_local1[1];
@@ -356,8 +362,7 @@ void handle_from_array() {
   // Constant handles are ok
   double p_local1[10] = {0., 1., 2., 3., 4., 5., 6., 7., 8., 9.};
   // CHECK-MESSAGES: [[@LINE-1]]:3: warning: variable 'p_local1' of type 'double [10]' can be declared const
-  const double *p_local2 = &p_local1[2];
-  // CHECK-MESSAGES: [[@LINE-1]]:3: warning: variable 'p_local2' of type 'const double *' can be declared const
+  const double *p_local2 = &p_local1[2]; // Could be `const double *const`, but warning deactivated by default
 
   double p_local3[10] = {0., 1., 2., 3., 4., 5., 6., 7., 8., 9.};
   // CHECK-MESSAGES: [[@LINE-1]]:3: warning: variable 'p_local3' of type 'double [10]' can be declared const
@@ -396,7 +401,6 @@ void range_for() {
   int *np_local3[2] = {&np_local0[0], &np_local0[1]};
   // CHECK-MESSAGES: [[@LINE-1]]:3: warning: variable 'np_local3' of type 'int *[2]' can be declared const
   for (int *non_const_ptr : np_local3) {
-    // CHECK-MESSAGES: [[@LINE-1]]:8: warning: variable 'non_const_ptr' of type 'int *' can be declared const
     *non_const_ptr = 45;
   }
 
@@ -404,7 +408,6 @@ void range_for() {
   int *np_local4[2] = {&np_local0[0], &np_local0[1]};
   // CHECK-MESSAGES: [[@LINE-1]]:3: warning: variable 'np_local4' of type 'int *[2]' can be declared const
   for (auto *non_const_ptr : np_local4) {
-    // CHECK-MESSAGES: [[@LINE-1]]:8: warning: variable 'non_const_ptr' of type 'int *' can be declared const
     *non_const_ptr = 46;
   }
 
@@ -422,12 +425,10 @@ void range_for() {
   int *p_local2[2] = {&np_local0[0], &np_local0[1]};
   // CHECK-MESSAGES: [[@LINE-1]]:3: warning: variable 'p_local2' of type 'int *[2]' can be declared const
   for (const int *con_ptr : p_local2) {
-    // CHECK-MESSAGES: [[@LINE-1]]:8: warning: variable 'con_ptr' of type 'const int *' can be declared const
   }
 
   int *p_local3[2] = {nullptr, nullptr};
   // CHECK-MESSAGES: [[@LINE-1]]:3: warning: variable 'p_local3' of type 'int *[2]' can be declared const
   for (const auto *con_ptr : p_local3) {
-    // CHECK-MESSAGES: [[@LINE-1]]:8: warning: variable 'con_ptr' of type 'const int *' can be declared const
   }
 }

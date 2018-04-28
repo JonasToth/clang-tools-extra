@@ -11,11 +11,15 @@
 #define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_CPPCOREGUIDELINES_CONSTCHECK_H
 
 #include "../ClangTidy.h"
-#include <iostream>
-#include <unordered_map>
+#include "../utils/ExprMutationAnalyzer.h"
 
 namespace clang {
 namespace tidy {
+
+namespace utils {
+class ExprMutationAnalyzer;
+}
+
 namespace cppcoreguidelines {
 
 /// This check warns for every variable, that could be declared as const, but
@@ -27,8 +31,6 @@ class ConstCheck : public ClangTidyCheck {
 public:
   ConstCheck(StringRef Name, ClangTidyContext *Context)
       : ClangTidyCheck(Name, Context),
-        AnalyzeValues(Options.get("AnalyzeValues", 1)),
-        AnalyzeHandles(Options.get("AnalyzeHandles", 1)),
         WarnPointersAsValues(Options.get("WarnPointersAsValues", 0)) {}
 
   void storeOptions(ClangTidyOptions::OptionMap &Opts) override;
@@ -36,10 +38,13 @@ public:
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
 
 private:
+  void registerScope(const CompoundStmt *Scope, ASTContext *Context);
   bool usedNonConst(const VarDecl *Variable, const CompoundStmt *Scope,
                     const ast_matchers::MatchFinder::MatchResult &Result);
-  const bool AnalyzeValues;
-  const bool AnalyzeHandles;
+
+  using MutationAnalyzer = std::unique_ptr<utils::ExprMutationAnalyzer>;
+  llvm::DenseMap<const CompoundStmt *, MutationAnalyzer> Scopes;
+
   const bool WarnPointersAsValues;
 };
 
