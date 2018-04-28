@@ -85,12 +85,19 @@ void some_pointer_taking(int *out) {
   const int *const p0_p_local0 = &p_local0;
   int *const p1_p_local0 = &p_local0;
 
+  // FIXME false positive
   int np_local0 = 42;
-  function_inout_pointer(&np_local0);
+  // CHECK-MESSAGES: [[@LINE-1]]:3: warning: variable 'np_local0' of type 'int' can be declared const
+  const int *const p0_np_local0 = &np_local0;
+  int *const p1_np_local0 = &np_local0;
+  *p1_np_local0 = 43;
+
+  int np_local1 = 42;
+  function_inout_pointer(&np_local1);
 
   // Prevents const.
-  int np_local1 = 42;
-  out = &np_local1; // This returns and invalid address, its just about the AST
+  int np_local2 = 42;
+  out = &np_local2; // This returns and invalid address, its just about the AST
 
   int p_local1 = 42;
   // CHECK-MESSAGES: [[@LINE-1]]:3: warning: variable 'p_local1' of type 'int' can be declared const
@@ -262,6 +269,20 @@ void direct_class_access() {
   *np_local4.NonConstMemberPtr = 42.;
 }
 
+void class_access_array() {
+  // FIXME array access was modifying
+  ConstNonConstClass np_local0[2];
+  // CHECK-MESSAGES: [[@LINE-1]]:3: warning: variable 'np_local0' of type 'ConstNonConstClass [2]' can be declared const
+  np_local0[0].constMethod();
+  np_local0[1].constMethod();
+  np_local0[1].nonConstMethod();
+
+  ConstNonConstClass p_local0[2];
+  // CHECK-MESSAGES: [[@LINE-1]]:3: warning: variable 'p_local0' of type 'ConstNonConstClass [2]' can be declared const
+  p_local0[0].constMethod();
+  np_local0[1].constMethod();
+}
+
 struct OperatorsAsConstAsPossible {
   OperatorsAsConstAsPossible &operator+=(const OperatorsAsConstAsPossible &rhs);
   OperatorsAsConstAsPossible operator+(const OperatorsAsConstAsPossible &rhs) const;
@@ -397,16 +418,17 @@ void range_for() {
     non_const_ref = 44;
   }
 
-  // FIXME false positive
+  // FIXME the warning message is suboptimal. It could be defined as
+  // `int *const np_local3[2]` because the pointers are not reseated.
+  // But this is not easily deducable from the warning.
   int *np_local3[2] = {&np_local0[0], &np_local0[1]};
   // CHECK-MESSAGES: [[@LINE-1]]:3: warning: variable 'np_local3' of type 'int *[2]' can be declared const
   for (int *non_const_ptr : np_local3) {
     *non_const_ptr = 45;
   }
 
-  // FIXME false positive
-  int *np_local4[2] = {&np_local0[0], &np_local0[1]};
-  // CHECK-MESSAGES: [[@LINE-1]]:3: warning: variable 'np_local4' of type 'int *[2]' can be declared const
+  // FIXME same as above, but silenced
+  int *const np_local4[2] = {&np_local0[0], &np_local0[1]};
   for (auto *non_const_ptr : np_local4) {
     *non_const_ptr = 46;
   }
@@ -431,4 +453,66 @@ void range_for() {
   // CHECK-MESSAGES: [[@LINE-1]]:3: warning: variable 'p_local3' of type 'int *[2]' can be declared const
   for (const auto *con_ptr : p_local3) {
   }
+}
+
+inline void *operator new(decltype(sizeof(void *)), void *p) { return p; }
+
+struct Value {
+};
+void placement_new() {
+  Value Mem;
+  Value *V = new (&Mem) Value;
+}
+
+struct ModifyingConversion {
+  operator int() { return 15; }
+};
+struct NonModifyingConversion {
+  operator int() const { return 15; }
+};
+void conversion_operators() {
+  ModifyingConversion np_local0;
+  NonModifyingConversion p_local0;
+  // CHECK-MESSAGES: [[@LINE-1]]:3: warning: variable 'p_local0' of type 'NonModifyingConversion' can be declared const
+
+  int np_local1 = np_local0;
+  np_local1 = p_local0;
+}
+
+void casts() {
+  decltype(sizeof(void *)) p_local0 = 42;
+  // CHECK-MESSAGES: [[@LINE-1]]:3: warning: variable 'p_local0' of type 'decltype(sizeof(void *))' (aka 'unsigned long') can be declared const
+  auto np_local0 = reinterpret_cast<void *>(p_local0);
+  np_local0 = nullptr;
+
+  int p_local1 = 43;
+  // CHECK-MESSAGES: [[@LINE-1]]:3: warning: variable 'p_local1' of type 'int' can be declared const
+  short p_local2 = static_cast<short>(p_local1);
+  // CHECK-MESSAGES: [[@LINE-1]]:3: warning: variable 'p_local2' of type 'short' can be declared const
+
+  int np_local1 = p_local2;
+  int &np_local2 = static_cast<int &>(np_local1);
+  np_local2 = 5;
+}
+
+void ternary_operator() {
+  int np_local0 = 1, np_local1 = 2;
+  int &np_local2 = true ? np_local0 : np_local1;
+  np_local2 = 2;
+
+  int p_local0 = 3, np_local3 = 5;
+  // CHECK-MESSAGES: [[@LINE-1]]:3: warning: variable 'p_local0' of type 'int' can be declared const
+  const int &np_local4 = true ? p_local0 : ++np_local3;
+
+  // FIXME false positive
+  int np_local5[3] = {1, 2, 3};
+  // CHECK-MESSAGES: [[@LINE-1]]:3: warning: variable 'np_local5' of type 'int [3]' can be declared const [cppcoreguidelines-const]
+  int &np_local6 = np_local5[1] < np_local5[2] ? np_local5[0] : np_local5[2];
+  np_local6 = 42;
+
+  // FIXME false positive
+  int np_local7[3] = {1, 2, 3};
+  // CHECK-MESSAGES: [[@LINE-1]]:3: warning: variable 'np_local7' of type 'int [3]' can be declared const [cppcoreguidelines-const]
+  int *np_local8 = np_local7[1] < np_local7[2] ? &np_local7[0] : &np_local7[2];
+  *np_local8 = 42;
 }

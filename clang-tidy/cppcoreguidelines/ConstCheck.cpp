@@ -126,15 +126,6 @@ namespace cppcoreguidelines {
  *    - handles that can be const -> emit warning for the pointee type and name
  *    - ignore the rest
  *
- * Open Questions
- * ==============
- *
- *  - type conversions:
- *    - one can overload the type conversion operation and modify a value of a
- *      class -> implications?
- *  - What about new, placement new and delete?!
- *  - What about casts? If a value is used in a cast, should it not be const?!
- *  - Ternary Operator?!
  */
 
 namespace {
@@ -142,6 +133,8 @@ AST_MATCHER(VarDecl, isLocal) { return Node.isLocalVarDecl(); }
 } // namespace
 
 void ConstCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
+  Options.store(Opts, "AnalyzeValues", AnalyzeValues);
+  Options.store(Opts, "AnalyzeReferences", AnalyzeReferences);
   Options.store(Opts, "WarnPointersAsValues", WarnPointersAsValues);
 }
 
@@ -180,7 +173,10 @@ void ConstCheck::check(const MatchFinder::MatchResult &Result) {
   if (Variable->getType()->isPointerType() && !WarnPointersAsValues)
     return;
 
-  if (usedNonConst(Variable, Scope, Result))
+  if (Variable->getType()->isReferenceType() && !AnalyzeReferences)
+    return;
+
+  if (usedNonConst(Variable, Scope, Result) || !AnalyzeValues)
     return;
 
   diag(Variable->getLocStart(), "variable %0 of type %1 can be declared const")

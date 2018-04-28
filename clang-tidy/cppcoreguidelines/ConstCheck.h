@@ -31,6 +31,8 @@ class ConstCheck : public ClangTidyCheck {
 public:
   ConstCheck(StringRef Name, ClangTidyContext *Context)
       : ClangTidyCheck(Name, Context),
+        AnalyzeValues(Options.get("AnalyzeValues", 1)),
+        AnalyzeReferences(Options.get("AnalyzeReferences", 1)),
         WarnPointersAsValues(Options.get("WarnPointersAsValues", 0)) {}
 
   void storeOptions(ClangTidyOptions::OptionMap &Opts) override;
@@ -45,6 +47,8 @@ private:
   using MutationAnalyzer = std::unique_ptr<utils::ExprMutationAnalyzer>;
   llvm::DenseMap<const CompoundStmt *, MutationAnalyzer> Scopes;
 
+  const bool AnalyzeValues;
+  const bool AnalyzeReferences;
   const bool WarnPointersAsValues;
 };
 
