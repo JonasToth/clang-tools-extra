@@ -80,24 +80,21 @@ void function_inout_pointer(int *inout);
 void function_in_pointer(const int *in);
 
 void some_pointer_taking(int *out) {
-  int p_local0 = 42;
-  // CHECK-MESSAGES: [[@LINE-1]]:3: warning: variable 'p_local0' of type 'int' can be declared const
-  const int *const p0_p_local0 = &p_local0;
-  int *const p1_p_local0 = &p_local0;
-
-  // FIXME false positive
   int np_local0 = 42;
-  // CHECK-MESSAGES: [[@LINE-1]]:3: warning: variable 'np_local0' of type 'int' can be declared const
   const int *const p0_np_local0 = &np_local0;
   int *const p1_np_local0 = &np_local0;
-  *p1_np_local0 = 43;
 
   int np_local1 = 42;
-  function_inout_pointer(&np_local1);
+  const int *const p0_np_local1 = &np_local1;
+  int *const p1_np_local1 = &np_local1;
+  *p1_np_local0 = 43;
+
+  int np_local2 = 42;
+  function_inout_pointer(&np_local2);
 
   // Prevents const.
-  int np_local2 = 42;
-  out = &np_local2; // This returns and invalid address, its just about the AST
+  int np_local3 = 42;
+  out = &np_local3; // This returns and invalid address, its just about the AST
 
   int p_local1 = 42;
   // CHECK-MESSAGES: [[@LINE-1]]:3: warning: variable 'p_local1' of type 'int' can be declared const
@@ -112,9 +109,7 @@ void function_inout_ref(int &inout);
 void function_in_ref(const int &in);
 
 void some_reference_taking() {
-  // FIXME False positive
   int np_local0 = 42;
-  // CHECK-MESSAGES: [[@LINE-1]]:3: warning: variable 'np_local0' of type 'int' can be declared const
   const int &r0_np_local0 = np_local0;
   int &r1_np_local0 = np_local0;
   r1_np_local0 = 43;
@@ -232,9 +227,7 @@ struct ConstNonConstClass {
 };
 
 void direct_class_access() {
-  // FIXME False positive
   ConstNonConstClass np_local0;
-  // CHECK-MESSAGES: [[@LINE-1]]:3: warning: variable 'np_local0' of type 'ConstNonConstClass' can be declared const
 
   np_local0.constMethod();
   np_local0.nonConstMethod();
@@ -270,9 +263,7 @@ void direct_class_access() {
 }
 
 void class_access_array() {
-  // FIXME array access was modifying
   ConstNonConstClass np_local0[2];
-  // CHECK-MESSAGES: [[@LINE-1]]:3: warning: variable 'np_local0' of type 'ConstNonConstClass [2]' can be declared const
   np_local0[0].constMethod();
   np_local0[1].constMethod();
   np_local0[1].nonConstMethod();
@@ -504,15 +495,11 @@ void ternary_operator() {
   // CHECK-MESSAGES: [[@LINE-1]]:3: warning: variable 'p_local0' of type 'int' can be declared const
   const int &np_local4 = true ? p_local0 : ++np_local3;
 
-  // FIXME false positive
   int np_local5[3] = {1, 2, 3};
-  // CHECK-MESSAGES: [[@LINE-1]]:3: warning: variable 'np_local5' of type 'int [3]' can be declared const [cppcoreguidelines-const]
   int &np_local6 = np_local5[1] < np_local5[2] ? np_local5[0] : np_local5[2];
   np_local6 = 42;
 
-  // FIXME false positive
   int np_local7[3] = {1, 2, 3};
-  // CHECK-MESSAGES: [[@LINE-1]]:3: warning: variable 'np_local7' of type 'int [3]' can be declared const [cppcoreguidelines-const]
   int *np_local8 = np_local7[1] < np_local7[2] ? &np_local7[0] : &np_local7[2];
   *np_local8 = 42;
 }

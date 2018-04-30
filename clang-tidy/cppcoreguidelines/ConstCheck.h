@@ -41,8 +41,6 @@ public:
 
 private:
   void registerScope(const CompoundStmt *Scope, ASTContext *Context);
-  bool usedNonConst(const VarDecl *Variable, const CompoundStmt *Scope,
-                    const ast_matchers::MatchFinder::MatchResult &Result);
 
   using MutationAnalyzer = std::unique_ptr<utils::ExprMutationAnalyzer>;
   llvm::DenseMap<const CompoundStmt *, MutationAnalyzer> Scopes;

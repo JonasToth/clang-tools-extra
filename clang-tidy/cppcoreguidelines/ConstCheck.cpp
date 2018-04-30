@@ -176,7 +176,7 @@ void ConstCheck::check(const MatchFinder::MatchResult &Result) {
   if (Variable->getType()->isReferenceType() && !AnalyzeReferences)
     return;
 
-  if (usedNonConst(Variable, Scope, Result) || !AnalyzeValues)
+  if (!AnalyzeValues || Scopes[Scope]->isMutated(Variable))
     return;
 
   diag(Variable->getLocStart(), "variable %0 of type %1 can be declared const")
@@ -214,28 +214,6 @@ void ConstCheck::registerScope(const CompoundStmt *Scope, ASTContext *Context) {
     Scopes.insert(std::make_pair(
         Scope, llvm::make_unique<utils::ExprMutationAnalyzer>(Scope, Context)));
   }
-}
-
-bool ConstCheck::usedNonConst(const VarDecl *Variable,
-                              const CompoundStmt *Scope,
-                              const MatchFinder::MatchResult &Result) {
-
-  // find usage of that variable
-  // if a declRefExpr is found -> analyze
-  // else -> constant
-  const auto Usage = match(
-      findAll(declRefExpr(hasDeclaration(equalsNode(Variable))).bind("use")),
-      *Scope, *Result.Context);
-  const auto *UseExpr = selectFirst<Expr>("use", Usage);
-
-  // The declared variables was used in non-const conserving way and can not
-  // be declared as const.
-  if (UseExpr && Scopes[Scope]->isMutated(UseExpr)) {
-    // diag(UseExpr->getLocStart(), "Investigating starting with this use",
-    // DiagnosticIDs::Note);
-    return true;
-  }
-  return false;
 }
 
 } // namespace cppcoreguidelines
