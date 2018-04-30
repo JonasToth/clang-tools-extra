@@ -503,3 +503,55 @@ void ternary_operator() {
   int *np_local8 = np_local7[1] < np_local7[2] ? &np_local7[0] : &np_local7[2];
   *np_local8 = 42;
 }
+
+// taken from http://www.cplusplus.com/reference/type_traits/integral_constant/
+template <typename T, T v>
+struct integral_constant {
+  static constexpr T value = v;
+  using value_type = T;
+  using type = integral_constant<T, v>;
+  constexpr operator T() { return v; }
+};
+
+template <typename T>
+struct is_integral : integral_constant<bool, false> {};
+template <>
+struct is_integral<int> : integral_constant<bool, true> {};
+
+template <typename T>
+struct not_integral : integral_constant<bool, false> {};
+template <>
+struct not_integral<double> : integral_constant<bool, true> {};
+
+// taken from http://www.cplusplus.com/reference/type_traits/enable_if/
+template <bool Cond, typename T = void>
+struct enable_if {};
+
+template <typename T>
+struct enable_if<true, T> { using type = T; };
+
+template <typename T>
+struct TMPClass {
+  T alwaysConst() const { return T{}; }
+
+  template <typename T2 = T, typename = typename enable_if<typename is_integral<T2>::value>::type>
+  T sometimesConst() const { return T{}; }
+
+  template <typename T2 = T, typename = typename enable_if<typename not_integral<T2>::value>::type>
+  T sometimesConst() { return T{}; }
+};
+
+void meta_type() {
+  TMPClass<int> p_local0;
+  // CHECK-MESSAGES: [[@LINE-1]]:3: warning: variable 'p_local0' of type 'TMPClass<int>' can be declared const
+  p_local0.alwaysConst();
+  p_local0.sometimesConst();
+
+  TMPClass<double> p_local1;
+  // CHECK-MESSAGES: [[@LINE-1]]:3: warning: variable 'p_local1' of type 'TMPClass<double>' can be declared const
+  p_local1.alwaysConst();
+
+  TMPClass<double> np_local0;
+  np_local0.alwaysConst();
+  np_local0.sometimesConst();
+}
