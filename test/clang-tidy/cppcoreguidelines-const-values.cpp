@@ -534,10 +534,10 @@ template <typename T>
 struct TMPClass {
   T alwaysConst() const { return T{}; }
 
-  template <typename T2 = T, typename = typename enable_if<typename is_integral<T2>::value>::type>
+  template <typename T2 = T, typename = typename enable_if<is_integral<T2>::value>::type>
   T sometimesConst() const { return T{}; }
 
-  template <typename T2 = T, typename = typename enable_if<typename not_integral<T2>::value>::type>
+  template <typename T2 = T, typename = typename enable_if<not_integral<T2>::value>::type>
   T sometimesConst() { return T{}; }
 };
 
