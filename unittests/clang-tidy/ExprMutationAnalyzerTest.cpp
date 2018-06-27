@@ -13,6 +13,7 @@
 #include "clang/Tooling/Tooling.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include <cctype>
 
 namespace clang {
 namespace tidy {
@@ -547,6 +548,60 @@ TEST(ExprMutationAnalyzerTest, RangeForNonArrayByConstRef) {
   const auto Results =
       match(withEnclosingCompound(declRefTo("x")), AST->getASTContext());
   EXPECT_FALSE(isMutated(Results, AST.get()));
+}
+
+TEST(ExprMutationAnalyzerTest, UnevaluatedExpressions) {
+  auto AST = tooling::buildASTFromCode(
+      "void f() { int x, y; decltype(x = 10) z = y; }");
+  auto Results =
+      match(withEnclosingCompound(declRefTo("x")), AST->getASTContext());
+  EXPECT_FALSE(isMutated(Results, AST.get()));
+
+  AST = tooling::buildASTFromCode(
+      "void f() { int x, y; __typeof(x = 10) z = y; }");
+  Results = match(withEnclosingCompound(declRefTo("x")), AST->getASTContext());
+  EXPECT_FALSE(isMutated(Results, AST.get()));
+
+  AST = tooling::buildASTFromCode(
+      "void f() { int x, y; __typeof__(x = 10) z = y; }");
+  Results = match(withEnclosingCompound(declRefTo("x")), AST->getASTContext());
+  EXPECT_FALSE(isMutated(Results, AST.get()));
+
+  AST = tooling::buildASTFromCode("void f() { int x; sizeof(x = 10); }");
+  Results = match(withEnclosingCompound(declRefTo("x")), AST->getASTContext());
+  EXPECT_FALSE(isMutated(Results, AST.get()));
+
+  AST = tooling::buildASTFromCode("void f() { int x; alignof(x = 10); }");
+  Results = match(withEnclosingCompound(declRefTo("x")), AST->getASTContext());
+  EXPECT_FALSE(isMutated(Results, AST.get()));
+
+  AST = tooling::buildASTFromCode("void f() { int x; noexcept(x = 10); }");
+  Results = match(withEnclosingCompound(declRefTo("x")), AST->getASTContext());
+  EXPECT_FALSE(isMutated(Results, AST.get()));
+
+  AST = tooling::buildASTFromCode("namespace std { class type_info; }"
+                                  "void f() { int x; typeid(x = 10); }");
+  Results = match(withEnclosingCompound(declRefTo("x")), AST->getASTContext());
+  EXPECT_FALSE(isMutated(Results, AST.get()));
+
+  AST = tooling::buildASTFromCode(
+      "void f() { int x; _Generic(x = 10, int: 0, default: 1); }");
+  Results = match(withEnclosingCompound(declRefTo("x")), AST->getASTContext());
+  EXPECT_FALSE(isMutated(Results, AST.get()));
+}
+
+TEST(ExprMutationAnalyzerTest, NotUnevaluatedExpressions) {
+  auto AST = tooling::buildASTFromCode("void f() { int x; sizeof(int[x++]); }");
+  auto Results =
+      match(withEnclosingCompound(declRefTo("x")), AST->getASTContext());
+  EXPECT_THAT(mutatedBy(Results, AST.get()), ElementsAre("x++"));
+
+  AST = tooling::buildASTFromCode(
+      "namespace std { class type_info; }"
+      "struct A { virtual ~A(); }; struct B : A {};"
+      "struct X { A& f(); }; void f() { X x; typeid(x.f()); }");
+  Results = match(withEnclosingCompound(declRefTo("x")), AST->getASTContext());
+  EXPECT_THAT(mutatedBy(Results, AST.get()), ElementsAre("x.f()"));
 }
 
 } // namespace test

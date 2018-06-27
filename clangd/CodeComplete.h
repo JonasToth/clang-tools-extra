@@ -25,6 +25,7 @@
 #include "clang/Tooling/CompilationDatabase.h"
 
 namespace clang {
+class NamedDecl;
 class PCHContainerOperations;
 namespace clangd {
 
@@ -52,9 +53,19 @@ struct CodeCompleteOptions {
   /// For example, private members are usually inaccessible.
   bool IncludeIneligibleResults = false;
 
+  /// Combine overloads into a single completion item where possible.
+  bool BundleOverloads = false;
+
   /// Limit the number of results returned (0 means no limit).
   /// If more results are available, we set CompletionList.isIncomplete.
   size_t Limit = 0;
+
+  /// A visual indicator to prepend to the completion label to indicate whether
+  /// completion result would trigger an #include insertion or not.
+  struct IncludeInsertionIndicator {
+    std::string Insert = "•";
+    std::string NoInsert = " ";
+  } IncludeIndicator;
 
   // Populated internally by clangd, do not set.
   /// If `Index` is set, it is used to augment the code completion
@@ -82,6 +93,17 @@ SignatureHelp signatureHelp(PathRef FileName,
                             IntrusiveRefCntPtr<vfs::FileSystem> VFS,
                             std::shared_ptr<PCHContainerOperations> PCHs);
 
+// For index-based completion, we only consider:
+//   * symbols in namespaces or translation unit scopes (e.g. no class
+//     members, no locals)
+//   * enum constants in unscoped enum decl (e.g. "red" in "enum {red};")
+//   * primary templates (no specializations)
+// For the other cases, we let Clang do the completion because it does not
+// need any non-local information and it will be much better at following
+// lookup rules. Other symbols still appear in the index for other purposes,
+// like workspace/symbols or textDocument/definition, but are not used for code
+// completion.
+bool isIndexedForCodeCompletion(const NamedDecl &ND, ASTContext &ASTCtx);
 } // namespace clangd
 } // namespace clang
 

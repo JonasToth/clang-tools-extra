@@ -62,6 +62,9 @@ Improvements to clang-tidy
 
   FIXME: add release notes.
 
+- The checks profiling info can now be stored as JSON files for futher
+  post-processing and analysis.
+
 - New module `abseil` for checks related to the `Abseil <https://abseil.io>`_
   library.
 
@@ -194,6 +197,10 @@ Improvements to clang-tidy
   <clang-tidy/checks/hicpp-avoid-goto>` to :doc:`cppcoreguidelines-avoid-goto
   <clang-tidy/checks/cppcoreguidelines-avoid-goto>`
   added.
+
+- Removed the `google-readability-redundant-smartptr-get` alias of the
+  :doc:`readability-redundant-smartptr-get
+  <clang-tidy/checks/readability-redundant-smartptr-get>` check.
 
 - The 'misc-forwarding-reference-overload' check was renamed to :doc:`bugprone-forwarding-reference-overload
   <clang-tidy/checks/bugprone-forwarding-reference-overload>`

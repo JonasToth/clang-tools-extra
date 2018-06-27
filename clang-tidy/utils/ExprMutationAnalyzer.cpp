@@ -9,6 +9,7 @@
 #include "ExprMutationAnalyzer.h"
 
 #include "clang/ASTMatchers/ASTMatchFinder.h"
+#include "llvm/ADT/STLExtras.h"
 
 namespace clang {
 namespace tidy {
@@ -18,17 +19,32 @@ using namespace ast_matchers;
 namespace {
 
 AST_MATCHER_P(LambdaExpr, hasCaptureInit, const Expr *, E) {
-  for (const auto *Init : Node.capture_inits()) {
-    if (Init == E)
-      return true;
-  }
-  return false;
+  return llvm::is_contained(Node.capture_inits(), E);
 }
 
 AST_MATCHER_P(CXXForRangeStmt, hasRangeStmt,
               ast_matchers::internal::Matcher<DeclStmt>, InnerMatcher) {
   const DeclStmt *const Range = Node.getRangeStmt();
   return InnerMatcher.matches(*Range, Finder, Builder);
+}
+
+const ast_matchers::internal::VariadicDynCastAllOfMatcher<Stmt, CXXTypeidExpr>
+    cxxTypeidExpr;
+
+AST_MATCHER(CXXTypeidExpr, isPotentiallyEvaluated) {
+  return Node.isPotentiallyEvaluated();
+}
+
+const ast_matchers::internal::VariadicDynCastAllOfMatcher<Stmt, CXXNoexceptExpr>
+    cxxNoexceptExpr;
+
+const ast_matchers::internal::VariadicDynCastAllOfMatcher<Stmt,
+                                                          GenericSelectionExpr>
+    genericSelectionExpr;
+
+AST_MATCHER_P(GenericSelectionExpr, hasControllingExpr,
+              ast_matchers::internal::Matcher<Expr>, InnerMatcher) {
+  return InnerMatcher.matches(*Node.getControllingExpr(), Finder, Builder);
 }
 
 const auto nonConstReferenceType = [] {
@@ -39,9 +55,11 @@ const auto nonConstReferenceType = [] {
 
 const Stmt *ExprMutationAnalyzer::findMutation(const Expr *Exp) {
   const auto Memoized = Results.find(Exp);
-  if (Memoized != Results.end()) {
+  if (Memoized != Results.end())
     return Memoized->second;
-  }
+
+  if (isUnevaluated(Exp))
+    return Results[Exp] = nullptr;
 
   for (const auto &Finder : {&ExprMutationAnalyzer::findDirectMutation,
                              &ExprMutationAnalyzer::findMemberMutation,
@@ -56,6 +74,37 @@ const Stmt *ExprMutationAnalyzer::findMutation(const Expr *Exp) {
   return Results[Exp] = nullptr;
 }
 
+bool ExprMutationAnalyzer::isUnevaluated(const Expr *Exp) {
+  return selectFirst<Expr>(
+             "expr",
+             match(
+                 findAll(
+                     expr(equalsNode(Exp),
+                          anyOf(
+                              // `Exp` is part of the underlying expression of
+                              // decltype/typeof if it has an ancestor of
+                              // typeLoc.
+                              hasAncestor(typeLoc(unless(
+                                  hasAncestor(unaryExprOrTypeTraitExpr())))),
+                              hasAncestor(expr(anyOf(
+                                  // `UnaryExprOrTypeTraitExpr` is unevaluated
+                                  // unless it's sizeof on VLA.
+                                  unaryExprOrTypeTraitExpr(unless(sizeOfExpr(
+                                      hasArgumentOfType(variableArrayType())))),
+                                  // `CXXTypeidExpr` is unevaluated unless it's
+                                  // applied to an expression of glvalue of
+                                  // polymorphic class type.
+                                  cxxTypeidExpr(
+                                      unless(isPotentiallyEvaluated())),
+                                  // The controlling expression of
+                                  // `GenericSelectionExpr` is unevaluated.
+                                  genericSelectionExpr(hasControllingExpr(
+                                      hasDescendant(equalsNode(Exp)))),
+                                  cxxNoexceptExpr())))))
+                         .bind("expr")),
+                 *Stm, *Context)) != nullptr;
+}
+
 const Stmt *
 ExprMutationAnalyzer::findExprMutation(ArrayRef<BoundNodes> Matches) {
   for (const auto &Nodes : Matches) {
@@ -68,7 +117,7 @@ ExprMutationAnalyzer::findExprMutation(ArrayRef<BoundNodes> Matches) {
 const Stmt *
 ExprMutationAnalyzer::findDeclMutation(ArrayRef<BoundNodes> Matches) {
   for (const auto &DeclNodes : Matches) {
-    if (const auto *S = findDeclMutation(DeclNodes.getNodeAs<Decl>("decl")))
+    if (const Stmt *S = findDeclMutation(DeclNodes.getNodeAs<Decl>("decl")))
       return S;
   }
   return nullptr;
@@ -209,4 +258,3 @@ const Stmt *ExprMutationAnalyzer::findReferenceMutation(const Expr *Exp) {
 } // namespace utils
 } // namespace tidy
 } // namespace clang
-

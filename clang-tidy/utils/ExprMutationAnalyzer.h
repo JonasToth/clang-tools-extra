@@ -31,6 +31,8 @@ public:
   const Stmt *findMutation(const Expr *Exp);
 
 private:
+  bool isUnevaluated(const Expr *Exp);
+
   const Stmt *findExprMutation(ArrayRef<ast_matchers::BoundNodes> Matches);
   const Stmt *findDeclMutation(ArrayRef<ast_matchers::BoundNodes> Matches);
   const Stmt *findDeclMutation(const Decl *Dec);
