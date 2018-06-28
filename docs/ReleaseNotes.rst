@@ -57,11 +57,6 @@ The improvements are...
 Improvements to clang-tidy
 --------------------------
 
-- New :doc:`cppcoreguidelines-const
-  <clang-tidy/checks/cppcoreguidelines-const>` check
-
-  Suggest adding ``const`` to unmodified local variables.
-
 - The checks profiling info can now be stored as JSON files for futher
   post-processing and analysis.
 
@@ -106,6 +101,11 @@ Improvements to clang-tidy
   The usage of ``goto`` for control flow is error prone and should be replaced
   with looping constructs. Every backward jump is rejected. Forward jumps are
   only allowed in nested loops.
+
+- New :doc:`cppcoreguidelines-const
+  <clang-tidy/checks/cppcoreguidelines-const>` check
+
+  Suggest adding ``const`` to unmodified local variables.
 
 - New :doc:`cppcoreguidelines-narrowing-conversions
   <clang-tidy/checks/cppcoreguidelines-narrowing-conversions>` check
