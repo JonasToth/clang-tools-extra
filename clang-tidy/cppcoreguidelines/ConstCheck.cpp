@@ -22,6 +22,9 @@ namespace tidy {
 namespace cppcoreguidelines {
 
 /*
+ * NOTE: This massive comment will be removed before committing. It serves as
+ * notebook on what to keep an eye on for now.
+ *
  * General Thoughts
  * ================
  *
@@ -141,6 +144,7 @@ void ConstCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
 void ConstCheck::registerMatchers(MatchFinder *Finder) {
   if (!getLangOpts().CPlusPlus)
     return;
+
   const auto ConstType = hasType(isConstQualified());
   const auto ConstReference = hasType(references(isConstQualified()));
   const auto TemplateType = anyOf(hasType(templateTypeParmType()),
@@ -165,53 +169,35 @@ void ConstCheck::check(const MatchFinder::MatchResult &Result) {
     return;
 
   const auto *Scope = Result.Nodes.getNodeAs<CompoundStmt>("scope");
+  assert(Scope && "Did not match scope for local variable");
   registerScope(Scope, Result.Context);
 
   const auto *Variable = Result.Nodes.getNodeAs<VarDecl>("new-local-value");
   assert(Variable && "Did not match local variable definition");
 
-  if (Variable->getType()->isPointerType() && !WarnPointersAsValues)
-    return;
-
+  // Each variable can only in one category: Value, Pointer, Reference.
+  // Analysis can be controlled for every category.
   if (Variable->getType()->isReferenceType() && !AnalyzeReferences)
     return;
 
-  if (!AnalyzeValues || Scopes[Scope]->isMutated(Variable))
+  if (Variable->getType()->isPointerType() && !WarnPointersAsValues)
     return;
 
+  if (!AnalyzeValues)
+    return;
+
+  // Offload const-analysis to utility function.
+  if (ScopesCache[Scope]->isMutated(Variable))
+    return;
+
+  // TODO Implement automatic code transformation to add the const.
   diag(Variable->getLocStart(), "variable %0 of type %1 can be declared const")
       << Variable << Variable->getType();
-#if 0
-  if (const auto *Variable =
-          Result.Nodes.getNodeAs<VarDecl>("new-local-handle")) {
-    assert(AnalyzeHandles && "Matched local handle without analyzing them");
-
-    if (usedNonConst(Variable, Scope, Result))
-      return;
-
-    // if (!utils::decl_ref_expr::isOnlyUsedAsConst(*Variable, *Scope,
-    // *Result.Context))
-    // return;
-
-    // Differentiate between pointers and references.
-    QualType HandleType = Variable->getType();
-    if (HandleType->isReferenceType())
-      diag(Variable->getLocStart(),
-           "reference variable %0 of type %1 can be declared const")
-          << Variable << HandleType;
-    else if (HandleType->isPointerType())
-      diag(Variable->getLocStart(),
-           "pointer variable %0 of type %1 can be declared const")
-          << Variable << HandleType;
-    else
-      llvm_unreachable("Expected handle type");
-  }
-#endif
 }
 
 void ConstCheck::registerScope(const CompoundStmt *Scope, ASTContext *Context) {
-  if (Scopes.find(Scope) == Scopes.end()) {
-    Scopes.insert(std::make_pair(
+  if (ScopesCache.find(Scope) == ScopesCache.end()) {
+    ScopesCache.insert(std::make_pair(
         Scope, llvm::make_unique<utils::ExprMutationAnalyzer>(Scope, Context)));
   }
 }

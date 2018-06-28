@@ -43,7 +43,7 @@ private:
   void registerScope(const CompoundStmt *Scope, ASTContext *Context);
 
   using MutationAnalyzer = std::unique_ptr<utils::ExprMutationAnalyzer>;
-  llvm::DenseMap<const CompoundStmt *, MutationAnalyzer> Scopes;
+  llvm::DenseMap<const CompoundStmt *, MutationAnalyzer> ScopesCache;
 
   const bool AnalyzeValues;
   const bool AnalyzeReferences;

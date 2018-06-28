@@ -60,7 +60,7 @@ Improvements to clang-tidy
 - New :doc:`cppcoreguidelines-const
   <clang-tidy/checks/cppcoreguidelines-const>` check
 
-  FIXME: add release notes.
+  Suggest adding ``const`` to unmodified local variables.
 
 - The checks profiling info can now be stored as JSON files for futher
   post-processing and analysis.
