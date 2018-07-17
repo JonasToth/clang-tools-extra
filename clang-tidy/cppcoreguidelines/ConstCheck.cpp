@@ -8,12 +8,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "ConstCheck.h"
-// #include "../utils/ASTUtils.h"
-// #include "../utils/DeclRefExprUtils.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
-
-#include <iostream>
 
 using namespace clang::ast_matchers;
 
