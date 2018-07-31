@@ -18,6 +18,7 @@
 #include "SyncAPI.h"
 #include "TestFS.h"
 #include "index/MemIndex.h"
+#include "clang/Sema/CodeCompleteConsumer.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Testing/Support/Error.h"
 #include "gmock/gmock.h"
@@ -475,11 +476,12 @@ TEST(CompletionTest, ScopedWithFilter) {
 }
 
 TEST(CompletionTest, ReferencesAffectRanking) {
-  auto Results = completions("int main() { abs^ }", {ns("absl"), func("abs")});
-  EXPECT_THAT(Results.Completions, HasSubsequence(Named("abs"), Named("absl")));
+  auto Results = completions("int main() { abs^ }", {ns("absl"), func("absb")});
+  EXPECT_THAT(Results.Completions, HasSubsequence(Named("absb"), Named("absl")));
   Results = completions("int main() { abs^ }",
-                        {withReferences(10000, ns("absl")), func("abs")});
-  EXPECT_THAT(Results.Completions, HasSubsequence(Named("absl"), Named("abs")));
+                        {withReferences(10000, ns("absl")), func("absb")});
+  EXPECT_THAT(Results.Completions,
+              HasSubsequence(Named("absl"), Named("absb")));
 }
 
 TEST(CompletionTest, GlobalQualified) {
@@ -1307,6 +1309,33 @@ TEST(CompletionTest, IgnoreRecoveryResults) {
           }
       )cpp");
   EXPECT_THAT(Results.Completions, UnorderedElementsAre(Named("NotRecovered")));
+}
+
+TEST(CompletionTest, ScopeOfClassFieldInConstructorInitializer) {
+  auto Results = completions(
+      R"cpp(
+        namespace ns {
+          class X { public: X(); int x_; };
+          X::X() : x_^(0) {}
+        }
+      )cpp");
+  EXPECT_THAT(Results.Completions,
+              UnorderedElementsAre(AllOf(Scope("ns::X::"), Named("x_"))));
+}
+
+TEST(CompletionTest, CodeCompletionContext) {
+  auto Results = completions(
+      R"cpp(
+        namespace ns {
+          class X { public: X(); int x_; };
+          void f() {
+            X x;
+            x.^;
+          }
+        }
+      )cpp");
+
+  EXPECT_THAT(Results.Context, CodeCompletionContext::CCC_DotMemberAccess);
 }
 
 } // namespace

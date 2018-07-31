@@ -12,13 +12,13 @@
 #include "Path.h"
 #include "Trace.h"
 #include "index/SymbolYAML.h"
+#include "clang/Basic/Version.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Program.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/raw_ostream.h"
-#include "clang/Basic/Version.h"
 #include <cstdlib>
 #include <iostream>
 #include <memory>
@@ -40,7 +40,7 @@ std::unique_ptr<SymbolIndex> buildStaticIndex(llvm::StringRef YamlSymbolFile) {
     llvm::errs() << "Can't open " << YamlSymbolFile << "\n";
     return nullptr;
   }
-  auto Slab = SymbolsFromYAML(Buffer.get()->getBuffer());
+  auto Slab = symbolsFromYAML(Buffer.get()->getBuffer());
   SymbolSlab::Builder SymsBuilder;
   for (auto Sym : Slab)
     SymsBuilder.insert(Sym);
@@ -156,6 +156,13 @@ static llvm::cl::opt<bool>
                 llvm::cl::desc("Show origins of completion items"),
                 llvm::cl::init(clangd::CodeCompleteOptions().ShowOrigins),
                 llvm::cl::Hidden);
+
+static llvm::cl::opt<bool> HeaderInsertionDecorators(
+    "header-insertion-decorators",
+    llvm::cl::desc("Prepend a circular dot or space before the completion "
+                   "label, depending on wether "
+                   "an include line will be inserted or not."),
+    llvm::cl::init(true));
 
 static llvm::cl::opt<Path> YamlSymbolFile(
     "yaml-symbol-file",
@@ -276,6 +283,10 @@ int main(int argc, char *argv[]) {
   CCOpts.Limit = LimitResults;
   CCOpts.BundleOverloads = CompletionStyle != Detailed;
   CCOpts.ShowOrigins = ShowOrigins;
+  if (!HeaderInsertionDecorators) {
+    CCOpts.IncludeIndicator.Insert.clear();
+    CCOpts.IncludeIndicator.NoInsert.clear();
+  }
 
   // Initialize and run ClangdLSPServer.
   ClangdLSPServer LSPServer(Out, CCOpts, CompileCommandsDirPath, Opts);
