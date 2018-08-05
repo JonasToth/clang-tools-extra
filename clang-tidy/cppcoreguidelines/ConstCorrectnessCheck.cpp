@@ -144,9 +144,9 @@ void ConstCorrectnessCheck::registerMatchers(MatchFinder *Finder) {
 
   // Match local variables which could be const.
   // Example: `int i = 10`, `int i` (will be used if program is correct)
-  const auto LocalValDecl = varDecl(unless(anyOf(
+  const auto LocalValDecl = varDecl(allOf(
       isLocal(), hasInitializer(anything()), unless(ConstType),
-      unless(ConstReference), unless(TemplateType), unless(isImplicit()))));
+      unless(ConstReference), unless(TemplateType), unless(isImplicit())));
 
   // Match the function scope for which the analysis of all local variables
   // shall be run.
@@ -185,7 +185,7 @@ void ConstCorrectnessCheck::check(const MatchFinder::MatchResult &Result) {
 }
 
 void ConstCorrectnessCheck::registerScope(const CompoundStmt *LocalScope,
-                               ASTContext *Context) {
+                                          ASTContext *Context) {
   if (ScopesCache.find(LocalScope) == ScopesCache.end()) {
     ScopesCache.insert(std::make_pair(
         LocalScope,
