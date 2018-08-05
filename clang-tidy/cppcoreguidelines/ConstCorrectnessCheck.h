@@ -1,4 +1,4 @@
-//===--- ConstCheck.h - clang-tidy-------------------------------*- C++ -*-===//
+//===--- ConstCorrectnessCheck.h - clang-tidy--------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,18 +7,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_CPPCOREGUIDELINES_CONSTCHECK_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_CPPCOREGUIDELINES_CONSTCHECK_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_CPPCOREGUIDELINES_CONSTCORRECTNESSCHECK_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_CPPCOREGUIDELINES_CONSTCORRECTNESSCHECK_H
 
 #include "../ClangTidy.h"
 #include "../utils/ExprMutationAnalyzer.h"
 
 namespace clang {
 namespace tidy {
-
-namespace utils {
-class ExprMutationAnalyzer;
-}
 
 namespace cppcoreguidelines {
 
@@ -27,9 +23,9 @@ namespace cppcoreguidelines {
 ///
 /// For the user-facing documentation see:
 /// http://clang.llvm.org/extra/clang-tidy/checks/cppcoreguidelines-const.html
-class ConstCheck : public ClangTidyCheck {
+class ConstCorrectnessCheck : public ClangTidyCheck {
 public:
-  ConstCheck(StringRef Name, ClangTidyContext *Context)
+  ConstCorrectnessCheck(StringRef Name, ClangTidyContext *Context)
       : ClangTidyCheck(Name, Context),
         AnalyzeValues(Options.get("AnalyzeValues", 1)),
         AnalyzeReferences(Options.get("AnalyzeReferences", 1)),
@@ -40,7 +36,7 @@ public:
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
 
 private:
-  void registerScope(const CompoundStmt *Scope, ASTContext *Context);
+  void registerScope(const CompoundStmt *LocalScope, ASTContext *Context);
 
   using MutationAnalyzer = std::unique_ptr<utils::ExprMutationAnalyzer>;
   llvm::DenseMap<const CompoundStmt *, MutationAnalyzer> ScopesCache;
@@ -54,4 +50,4 @@ private:
 } // namespace tidy
 } // namespace clang
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_CPPCOREGUIDELINES_CONSTCHECK_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_CPPCOREGUIDELINES_CONSTCORRECTNESSCHECK_H

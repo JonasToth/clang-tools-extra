@@ -1,4 +1,4 @@
-//===--- ConstCheck.cpp - clang-tidy---------------------------------------===//
+//===--- ConstCorrectnessCheck.cpp - clang-tidy----------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "ConstCheck.h"
+#include "ConstCorrectnessCheck.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 
@@ -124,33 +124,29 @@ namespace cppcoreguidelines {
  *    - values that can be const -> emit warning for their type and name
  *    - handles that can be const -> emit warning for the pointee type and name
  *    - ignore the rest
- *
  */
 
 namespace {
 AST_MATCHER(VarDecl, isLocal) { return Node.isLocalVarDecl(); }
 } // namespace
 
-void ConstCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
+void ConstCorrectnessCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "AnalyzeValues", AnalyzeValues);
   Options.store(Opts, "AnalyzeReferences", AnalyzeReferences);
   Options.store(Opts, "WarnPointersAsValues", WarnPointersAsValues);
 }
 
-void ConstCheck::registerMatchers(MatchFinder *Finder) {
-  if (!getLangOpts().CPlusPlus)
-    return;
-
+void ConstCorrectnessCheck::registerMatchers(MatchFinder *Finder) {
   const auto ConstType = hasType(isConstQualified());
   const auto ConstReference = hasType(references(isConstQualified()));
   const auto TemplateType = anyOf(hasType(templateTypeParmType()),
                                   hasType(substTemplateTypeParmType()));
 
-  // Match local variables, that could be const.
+  // Match local variables which could be const.
   // Example: `int i = 10`, `int i` (will be used if program is correct)
-  const auto LocalValDecl = varDecl(allOf(
+  const auto LocalValDecl = varDecl(unless(anyOf(
       isLocal(), hasInitializer(anything()), unless(ConstType),
-      unless(ConstReference), unless(TemplateType), unless(isImplicit())));
+      unless(ConstReference), unless(TemplateType), unless(isImplicit()))));
 
   // Match the function scope for which the analysis of all local variables
   // shall be run.
@@ -160,13 +156,10 @@ void ConstCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(FunctionScope, this);
 }
 
-void ConstCheck::check(const MatchFinder::MatchResult &Result) {
-  if (!getLangOpts().CPlusPlus)
-    return;
-
-  const auto *Scope = Result.Nodes.getNodeAs<CompoundStmt>("scope");
-  assert(Scope && "Did not match scope for local variable");
-  registerScope(Scope, Result.Context);
+void ConstCorrectnessCheck::check(const MatchFinder::MatchResult &Result) {
+  const auto *LocalScope = Result.Nodes.getNodeAs<CompoundStmt>("scope");
+  assert(LocalScope && "Did not match scope for local variable");
+  registerScope(LocalScope, Result.Context);
 
   const auto *Variable = Result.Nodes.getNodeAs<VarDecl>("new-local-value");
   assert(Variable && "Did not match local variable definition");
@@ -183,18 +176,20 @@ void ConstCheck::check(const MatchFinder::MatchResult &Result) {
     return;
 
   // Offload const-analysis to utility function.
-  if (ScopesCache[Scope]->isMutated(Variable))
+  if (ScopesCache[LocalScope]->isMutated(Variable))
     return;
 
-  // TODO Implement automatic code transformation to add the const.
+  // TODO Implement automatic code transformation to add the 'const'.
   diag(Variable->getLocStart(), "variable %0 of type %1 can be declared const")
       << Variable << Variable->getType();
 }
 
-void ConstCheck::registerScope(const CompoundStmt *Scope, ASTContext *Context) {
-  if (ScopesCache.find(Scope) == ScopesCache.end()) {
+void ConstCorrectnessCheck::registerScope(const CompoundStmt *LocalScope,
+                               ASTContext *Context) {
+  if (ScopesCache.find(LocalScope) == ScopesCache.end()) {
     ScopesCache.insert(std::make_pair(
-        Scope, llvm::make_unique<utils::ExprMutationAnalyzer>(Scope, Context)));
+        LocalScope,
+        llvm::make_unique<utils::ExprMutationAnalyzer>(LocalScope, Context)));
   }
 }
 

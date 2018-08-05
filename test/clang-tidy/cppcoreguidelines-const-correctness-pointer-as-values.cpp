@@ -1,7 +1,7 @@
-// RUN: %check_clang_tidy %s cppcoreguidelines-const %t \
+// RUN: %check_clang_tidy %s cppcoreguidelines-const-correctness %t \
 // RUN: -config='{CheckOptions: \
-// RUN:  [{key: "cppcoreguidelines-const.AnalyzeValues", value: 1},\
-// RUN:   {key: "cppcoreguidelines-const.WarnPointersAsValues", value: 1}]}' \
+// RUN:  [{key: "cppcoreguidelines-const-correctness.AnalyzeValues", value: 1},\
+// RUN:   {key: "cppcoreguidelines-const-correctness.WarnPointersAsValues", value: 1}]}' \
 // RUN: --
 
 void potential_const_pointer() {

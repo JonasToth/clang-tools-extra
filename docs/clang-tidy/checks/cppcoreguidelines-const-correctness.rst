@@ -1,7 +1,7 @@
-.. title:: clang-tidy - cppcoreguidelines-const
+.. title:: clang-tidy - cppcoreguidelines-constcorrectness
 
-cppcoreguidelines-const
-=======================
+cppcoreguidelines-constcorrectness
+==================================
 
 This check implements detection of local variables that could be declared as
 ``const``, but are not. Declaring variables as ``const`` is required by many
