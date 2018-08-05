@@ -25,7 +25,7 @@ namespace cppcoreguidelines {
  * ================
  *
  * For now: Only local variables are considered. Globals/namespace variables,
- * paramters and class members are not analyzed.
+ * parameters and class members are not analyzed.
  * Parameters have a check already: readability-non-const-parameter
  *
  *
