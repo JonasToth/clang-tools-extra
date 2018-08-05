@@ -57,7 +57,11 @@ The improvements are...
 Improvements to clang-tidy
 --------------------------
 
-The improvements are...
+
+- New :doc:`cppcoreguidelines-const-correctness
+  <clang-tidy/checks/cppcoreguidelines-const-correctness>` check.
+
+  Suggest adding ``const`` to unmodified local variables.
 
 Improvements to include-fixer
 -----------------------------
