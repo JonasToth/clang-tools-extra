@@ -18,8 +18,7 @@ namespace tidy {
 
 namespace cppcoreguidelines {
 
-/// This check warns for every variable, that could be declared as const, but
-/// isn't.
+/// This check warns on variables which could be declared const but are not.
 ///
 /// For the user-facing documentation see:
 /// http://clang.llvm.org/extra/clang-tidy/checks/cppcoreguidelines-const.html

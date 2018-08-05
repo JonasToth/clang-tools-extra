@@ -1,15 +1,15 @@
-.. title:: clang-tidy - cppcoreguidelines-constcorrectness
+.. title:: clang-tidy - cppcoreguidelines-const-correctness
 
-cppcoreguidelines-constcorrectness
-==================================
+cppcoreguidelines-const-correctness
+===================================
 
-This check implements detection of local variables that could be declared as
+This check implements detection of local variables which could be declared as
 ``const``, but are not. Declaring variables as ``const`` is required by many
-coding guidelines for example
+coding guidelines, such as:
 `CppCoreGuidelines ES.25 <https://github.com/isocpp/CppCoreGuidelines/blob/master/CppCoreGuidelines.md#es25-declare-an-object-const-or-constexpr-unless-you-want-to-modify-its-value-later-on>`_
 and `High Integrity C++ 7.1.2 <http://www.codingstandard.com/rule/7-1-2-use-const-whenever-possible/>`_.
 
-Please note that this analysis is type based only. Variables that are not modified
+Please note that this analysis is type-based only. Variables that are not modified
 but non-const handles might escape out of the scope are not diagnosed as potential
 ``const``.
 
