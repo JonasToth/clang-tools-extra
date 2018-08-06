@@ -29,6 +29,7 @@ namespace cppcoreguidelines {
  * Parameters have a check already: readability-non-const-parameter
  *
  *
+ * TODO Add support for Obj-C object pointers.
  * Handle = either a pointer or reference
  * Value  = everything else (Type variable_name;)
  *
@@ -142,6 +143,7 @@ void ConstCorrectnessCheck::registerMatchers(MatchFinder *Finder) {
   const auto TemplateType = anyOf(hasType(templateTypeParmType()),
                                   hasType(substTemplateTypeParmType()));
 
+  // FIXME Investigate the DeMorgan-simplification for the logical expression.
   // Match local variables which could be const.
   // Example: `int i = 10`, `int i` (will be used if program is correct)
   const auto LocalValDecl = varDecl(allOf(
@@ -180,7 +182,8 @@ void ConstCorrectnessCheck::check(const MatchFinder::MatchResult &Result) {
     return;
 
   // TODO Implement automatic code transformation to add the 'const'.
-  diag(Variable->getLocStart(), "variable %0 of type %1 can be declared const")
+  diag(Variable->getLocStart(),
+       "variable %0 of type %1 can be declared 'const'")
       << Variable << Variable->getType();
 }
 
