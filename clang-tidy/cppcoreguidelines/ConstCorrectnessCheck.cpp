@@ -174,7 +174,9 @@ void ConstCorrectnessCheck::check(const MatchFinder::MatchResult &Result) {
   if (Variable->getType()->isPointerType() && !WarnPointersAsValues)
     return;
 
-  if (!AnalyzeValues)
+  if (!(Variable->getType()->isReferenceType() ||
+        Variable->getType()->isPointerType()) &&
+      !AnalyzeValues)
     return;
 
   // Offload const-analysis to utility function.
