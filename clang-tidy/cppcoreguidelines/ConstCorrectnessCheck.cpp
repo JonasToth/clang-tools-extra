@@ -46,6 +46,7 @@ namespace cppcoreguidelines {
  *    - no non-const capture by reference in a lambda                 + CHECK
  *  - it is not returned as non-const handle from a function          + CHECK
  *  - it address is not assigned to an out pointer parameter          + CHECK
+ *  - Lambdas follow value semantics, but should be ignored           + CHECK
  *
  * primitive Builtins
  * ----------------
@@ -146,9 +147,10 @@ void ConstCorrectnessCheck::registerMatchers(MatchFinder *Finder) {
   // FIXME Investigate the DeMorgan-simplification for the logical expression.
   // Match local variables which could be const.
   // Example: `int i = 10`, `int i` (will be used if program is correct)
-  const auto LocalValDecl = varDecl(allOf(
-      isLocal(), hasInitializer(anything()), unless(ConstType),
-      unless(ConstReference), unless(TemplateType), unless(isImplicit())));
+  const auto LocalValDecl =
+      varDecl(allOf(isLocal(), hasInitializer(anything()), unless(ConstType),
+                    unless(ConstReference), unless(TemplateType),
+                    unless(isImplicit()), unless(lambdaExpr())));
 
   // Match the function scope for which the analysis of all local variables
   // shall be run.
