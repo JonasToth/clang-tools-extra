@@ -148,9 +148,11 @@ void ConstCorrectnessCheck::registerMatchers(MatchFinder *Finder) {
   // Match local variables which could be const.
   // Example: `int i = 10`, `int i` (will be used if program is correct)
   const auto LocalValDecl =
-      varDecl(allOf(isLocal(), hasInitializer(anything()), unless(ConstType),
-                    unless(ConstReference), unless(TemplateType),
-                    unless(isImplicit()), unless(lambdaExpr())));
+      varDecl(allOf(isLocal(), hasInitializer(anything()),
+                    unless(hasInitializer(cxxConstructExpr(
+                        hasDeclaration(cxxRecordDecl(isLambda()))))),
+                    unless(ConstType), unless(ConstReference),
+                    unless(TemplateType), unless(isImplicit())));
 
   // Match the function scope for which the analysis of all local variables
   // shall be run.
@@ -186,7 +188,7 @@ void ConstCorrectnessCheck::check(const MatchFinder::MatchResult &Result) {
     return;
 
   // TODO Implement automatic code transformation to add the 'const'.
-  diag(Variable->getLocStart(),
+  diag(Variable->getBeginLoc(),
        "variable %0 of type %1 can be declared 'const'")
       << Variable << Variable->getType();
 }
