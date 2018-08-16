@@ -79,6 +79,7 @@ Clang-Tidy Checks
    cert-msc51-cpp
    cert-oop11-cpp (redirects to performance-move-constructor-init) <cert-oop11-cpp>
    cppcoreguidelines-avoid-goto
+   cppcoreguidelines-avoid-magic-numbers (redirects to readability-magic-numbers) <cppcoreguidelines-avoid-magic-numbers>
    cppcoreguidelines-c-copy-assignment-signature (redirects to misc-unconventional-assign-operator) <cppcoreguidelines-c-copy-assignment-signature>
    cppcoreguidelines-const-correctness
    cppcoreguidelines-interfaces-global-init
@@ -219,6 +220,7 @@ Clang-Tidy Checks
    readability-identifier-naming
    readability-implicit-bool-conversion
    readability-inconsistent-declaration-parameter-name
+   readability-magic-numbers
    readability-misleading-indentation
    readability-misplaced-array-index
    readability-named-parameter

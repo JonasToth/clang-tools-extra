@@ -11,6 +11,7 @@
 #include "../ClangTidyModule.h"
 #include "../ClangTidyModuleRegistry.h"
 #include "../misc/UnconventionalAssignOperatorCheck.h"
+#include "../readability/MagicNumbersCheck.h"
 #include "AvoidGotoCheck.h"
 #include "ConstCorrectnessCheck.h"
 #include "InterfacesGlobalInitCheck.h"
@@ -44,6 +45,8 @@ public:
         "cppcoreguidelines-const-correctness");
     CheckFactories.registerCheck<InterfacesGlobalInitCheck>(
         "cppcoreguidelines-interfaces-global-init");
+    CheckFactories.registerCheck<readability::MagicNumbersCheck>(
+        "cppcoreguidelines-avoid-magic-numbers");
     CheckFactories.registerCheck<NarrowingConversionsCheck>(
         "cppcoreguidelines-narrowing-conversions");
     CheckFactories.registerCheck<NoMallocCheck>("cppcoreguidelines-no-malloc");
