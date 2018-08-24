@@ -57,12 +57,31 @@ The improvements are...
 Improvements to clang-tidy
 --------------------------
 
-- New `cppcoreguidelines-mixed-int-arithmetic
-  <http://clang.llvm.org/extra/clang-tidy/checks/cppcoreguidelines-mixed-int-arithmetic.html>`_ check
+- New :doc:`abseil-duration-division
+  <clang-tidy/checks/abseil-duration-division>` check.
+
+  Checks for uses of ``absl::Duration`` division that is done in a
+  floating-point context, and recommends the use of a function that
+  returns a floating-point value.
+
+- New :doc:`abseil-faster-strsplit-delimiter
+  <clang-tidy/checks/abseil-faster-strsplit-delimiter>` check.
+
+  Finds instances of ``absl::StrSplit()`` or ``absl::MaxSplits()`` where the
+  delimiter is a single character string literal and replaces with a character.
+
+- New :doc:`cppcoreguidelines-mixed-int-arithmetic
+  <http://clang.llvm.org/extra/clang-tidy/checks/cppcoreguidelines-mixed-int-arithmetic.html>` check.
 
   Finds cases where unsigned and signed integers are used together in arithmetic expressions.
   Unsigned integers wrap to 0 when overflowing while the behaviour of signed integers
   is undefined in this case. The combination leads to possibly unexpected results.
+
+- New :doc:`readability-magic-numbers
+  <clang-tidy/checks/readability-magic-numbers>` check.
+
+  Detects usage of magic numbers, numbers that are used as literals instead of
+  introduced via constants or symbols.
 
 Improvements to include-fixer
 -----------------------------

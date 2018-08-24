@@ -1,11 +1,11 @@
-//===--- XRefs.cpp ----------------------------------------------*- C++-*-===//
+//===--- XRefs.cpp -----------------------------------------------*- C++-*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
 // This file is distributed under the University of Illinois Open Source
 // License. See LICENSE.TXT for details.
 //
-//===---------------------------------------------------------------------===//
+//===----------------------------------------------------------------------===//
 #include "XRefs.h"
 #include "AST.h"
 #include "Logger.h"
@@ -192,7 +192,7 @@ makeLocation(ParsedAST &AST, const SourceRange &ValSourceRange) {
   Range R = {Begin, End};
   Location L;
 
-  auto FilePath = getAbsoluteFilePath(F, SourceMgr);
+  auto FilePath = getRealPath(F, SourceMgr);
   if (!FilePath) {
     log("failed to get path!");
     return llvm::None;
@@ -200,15 +200,6 @@ makeLocation(ParsedAST &AST, const SourceRange &ValSourceRange) {
   L.uri = URIForFile(*FilePath);
   L.range = R;
   return L;
-}
-
-// Get the symbol ID for a declaration, if possible.
-llvm::Optional<SymbolID> getSymbolID(const Decl *D) {
-  llvm::SmallString<128> USR;
-  if (index::generateUSRForDecl(D, USR)) {
-    return None;
-  }
-  return SymbolID(USR);
 }
 
 } // namespace
@@ -220,7 +211,7 @@ std::vector<Location> findDefinitions(ParsedAST &AST, Position Pos,
   std::vector<Location> Result;
   // Handle goto definition for #include.
   for (auto &Inc : AST.getIncludeStructure().MainFileIncludes) {
-    if (!Inc.Resolved.empty() && Inc.R.contains(Pos))
+    if (!Inc.Resolved.empty() && Inc.R.start.line == Pos.line)
       Result.push_back(Location{URIForFile{Inc.Resolved}, {}});
   }
   if (!Result.empty())
@@ -295,7 +286,7 @@ std::vector<Location> findDefinitions(ParsedAST &AST, Position Pos,
     std::string HintPath;
     const FileEntry *FE =
         SourceMgr.getFileEntryForID(SourceMgr.getMainFileID());
-    if (auto Path = getAbsoluteFilePath(FE, SourceMgr))
+    if (auto Path = getRealPath(FE, SourceMgr))
       HintPath = *Path;
     // Query the index and populate the empty slot.
     Index->lookup(
@@ -549,7 +540,7 @@ public:
   //- auto& i = 1;
   bool VisitDeclaratorDecl(DeclaratorDecl *D) {
     if (!D->getTypeSourceInfo() ||
-        D->getTypeSourceInfo()->getTypeLoc().getLocStart() != SearchedLocation)
+        D->getTypeSourceInfo()->getTypeLoc().getBeginLoc() != SearchedLocation)
       return true;
 
     auto DeclT = D->getType();
