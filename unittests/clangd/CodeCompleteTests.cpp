@@ -55,10 +55,16 @@ MATCHER_P(SigHelpLabeled, Label, "") { return arg.label == Label; }
 MATCHER_P(Kind, K, "") { return arg.Kind == K; }
 MATCHER_P(Doc, D, "") { return arg.Documentation == D; }
 MATCHER_P(ReturnType, D, "") { return arg.ReturnType == D; }
-MATCHER_P(InsertInclude, IncludeHeader, "") {
-  return arg.Header == IncludeHeader && bool(arg.HeaderInsertion);
+MATCHER_P(HasInclude, IncludeHeader, "") {
+  return !arg.Includes.empty() && arg.Includes[0].Header == IncludeHeader;
 }
-MATCHER(InsertInclude, "") { return bool(arg.HeaderInsertion); }
+MATCHER_P(InsertInclude, IncludeHeader, "") {
+  return !arg.Includes.empty() && arg.Includes[0].Header == IncludeHeader &&
+         bool(arg.Includes[0].Insertion);
+}
+MATCHER(InsertInclude, "") {
+  return !arg.Includes.empty() && bool(arg.Includes[0].Insertion);
+}
 MATCHER_P(SnippetSuffix, Text, "") { return arg.SnippetSuffix == Text; }
 MATCHER_P(Origin, OriginSet, "") { return arg.Origin == OriginSet; }
 
@@ -71,12 +77,13 @@ Matcher<const std::vector<CodeCompletion> &> Has(std::string Name,
   return Contains(AllOf(Named(std::move(Name)), Kind(K)));
 }
 MATCHER(IsDocumented, "") { return !arg.Documentation.empty(); }
+MATCHER(Deprecated, "") { return arg.Deprecated; }
 
 std::unique_ptr<SymbolIndex> memIndex(std::vector<Symbol> Symbols) {
   SymbolSlab::Builder Slab;
   for (const auto &Sym : Symbols)
     Slab.insert(Sym);
-  return MemIndex::build(std::move(Slab).build());
+  return MemIndex::build(std::move(Slab).build(), RefSlab());
 }
 
 CodeCompleteResult completions(ClangdServer &Server, StringRef TestCode,
@@ -155,7 +162,7 @@ Symbol sym(StringRef QName, index::SymbolKind Kind, StringRef USRFormat) {
   USR += Regex("^.*$").sub(USRFormat, Sym.Name); // e.g. func -> @F@func#
   Sym.ID = SymbolID(USR);
   Sym.SymInfo.Kind = Kind;
-  Sym.IsIndexedForCodeCompletion = true;
+  Sym.Flags |= Symbol::IndexedForCodeCompletion;
   Sym.Origin = SymbolOrigin::Static;
   return Sym;
 }
@@ -564,12 +571,10 @@ TEST(CompletionTest, IncludeInsertionPreprocessorIntegrationTests) {
 
   IgnoreDiagnostics DiagConsumer;
   ClangdServer Server(CDB, FS, DiagConsumer, ClangdServer::optsForTest());
-  Symbol::Details Scratch;
   auto BarURI = URI::createFile(BarHeader).toString();
   Symbol Sym = cls("ns::X");
   Sym.CanonicalDeclaration.FileURI = BarURI;
-  Scratch.IncludeHeader = BarURI;
-  Sym.Detail = &Scratch;
+  Sym.IncludeHeaders.emplace_back(BarURI, 1);
   // Shoten include path based on search dirctory and insert.
   auto Results = completions(Server,
                              R"cpp(
@@ -595,16 +600,14 @@ TEST(CompletionTest, NoIncludeInsertionWhenDeclFoundInFile) {
 
   IgnoreDiagnostics DiagConsumer;
   ClangdServer Server(CDB, FS, DiagConsumer, ClangdServer::optsForTest());
-  Symbol::Details Scratch;
   Symbol SymX = cls("ns::X");
   Symbol SymY = cls("ns::Y");
   std::string BarHeader = testPath("bar.h");
   auto BarURI = URI::createFile(BarHeader).toString();
   SymX.CanonicalDeclaration.FileURI = BarURI;
   SymY.CanonicalDeclaration.FileURI = BarURI;
-  Scratch.IncludeHeader = "<bar>";
-  SymX.Detail = &Scratch;
-  SymY.Detail = &Scratch;
+  SymX.IncludeHeaders.emplace_back("<bar>", 1);
+  SymY.IncludeHeaders.emplace_back("<bar>", 1);
   // Shoten include path based on search dirctory and insert.
   auto Results = completions(Server,
                              R"cpp(
@@ -718,9 +721,11 @@ TEST(CompletionTest, Documentation) {
 TEST(CompletionTest, GlobalCompletionFiltering) {
 
   Symbol Class = cls("XYZ");
-  Class.IsIndexedForCodeCompletion = false;
+  Class.Flags = static_cast<Symbol::SymbolFlag>(
+      Class.Flags & ~(Symbol::IndexedForCodeCompletion));
   Symbol Func = func("XYZ::foooo");
-  Func.IsIndexedForCodeCompletion = false;
+  Func.Flags = static_cast<Symbol::SymbolFlag>(
+      Func.Flags & ~(Symbol::IndexedForCodeCompletion));
 
   auto Results = completions(R"(//      void f() {
       XYZ::foooo^
@@ -825,8 +830,7 @@ TEST(CompletionTest, IgnoreCompleteInExcludedPPBranchWithRecoveryContext) {
 
   EXPECT_TRUE(Results.Completions.empty());
 }
-
-SignatureHelp signatures(StringRef Text,
+SignatureHelp signatures(StringRef Text, Position Point,
                          std::vector<Symbol> IndexSymbols = {}) {
   std::unique_ptr<SymbolIndex> Index;
   if (!IndexSymbols.empty())
@@ -840,9 +844,14 @@ SignatureHelp signatures(StringRef Text,
 
   ClangdServer Server(CDB, FS, DiagConsumer, Opts);
   auto File = testPath("foo.cpp");
+  runAddDocument(Server, File, Text);
+  return cantFail(runSignatureHelp(Server, File, Point));
+}
+
+SignatureHelp signatures(StringRef Text,
+                         std::vector<Symbol> IndexSymbols = {}) {
   Annotations Test(Text);
-  runAddDocument(Server, File, Test.code());
-  return cantFail(runSignatureHelp(Server, File, Test.point()));
+  return signatures(Test.code(), Test.point(), std::move(IndexSymbols));
 }
 
 MATCHER_P(ParamsAre, P, "") {
@@ -907,11 +916,60 @@ TEST(SignatureHelpTest, ActiveArg) {
   EXPECT_EQ(1, Results.activeParameter);
 }
 
+TEST(SignatureHelpTest, OpeningParen) {
+  llvm::StringLiteral Tests[] = {// Recursive function call.
+                                 R"cpp(
+    int foo(int a, int b, int c);
+    int main() {
+      foo(foo $p^( foo(10, 10, 10), ^ )));
+    })cpp",
+                                 // Functional type cast.
+                                 R"cpp(
+    struct Foo {
+      Foo(int a, int b, int c);
+    };
+    int main() {
+      Foo $p^( 10, ^ );
+    })cpp",
+                                 // New expression.
+                                 R"cpp(
+    struct Foo {
+      Foo(int a, int b, int c);
+    };
+    int main() {
+      new Foo $p^( 10, ^ );
+    })cpp",
+                                 // Macro expansion.
+                                 R"cpp(
+    int foo(int a, int b, int c);
+    #define FOO foo(
+
+    int main() {
+      // Macro expansions.
+      $p^FOO 10, ^ );
+    })cpp",
+                                 // Macro arguments.
+                                 R"cpp(
+    int foo(int a, int b, int c);
+    int main() {
+    #define ID(X) X
+      ID(foo $p^( foo(10), ^ ))
+    })cpp"};
+
+  for (auto Test : Tests) {
+    Annotations Code(Test);
+    EXPECT_EQ(signatures(Code.code(), Code.point()).argListStart,
+              Code.point("p"))
+        << "Test source:" << Test;
+  }
+}
+
 class IndexRequestCollector : public SymbolIndex {
 public:
   bool
   fuzzyFind(const FuzzyFindRequest &Req,
             llvm::function_ref<void(const Symbol &)> Callback) const override {
+    std::lock_guard<std::mutex> Lock(Mut);
     Requests.push_back(Req);
     return true;
   }
@@ -919,21 +977,23 @@ public:
   void lookup(const LookupRequest &,
               llvm::function_ref<void(const Symbol &)>) const override {}
 
-  void findOccurrences(const OccurrencesRequest &Req,
-                       llvm::function_ref<void(const SymbolOccurrence &)>
-                           Callback) const override {}
+  void refs(const RefsRequest &,
+            llvm::function_ref<void(const Ref &)>) const override {}
 
   // This is incorrect, but IndexRequestCollector is not an actual index and it
   // isn't used in production code.
   size_t estimateMemoryUsage() const override { return 0; }
 
   const std::vector<FuzzyFindRequest> consumeRequests() const {
+    std::lock_guard<std::mutex> Lock(Mut);
     auto Reqs = std::move(Requests);
     Requests = {};
     return Reqs;
   }
 
 private:
+  // We need a mutex to handle async fuzzy find requests.
+  mutable std::mutex Mut;
   mutable std::vector<FuzzyFindRequest> Requests;
 };
 
@@ -1127,11 +1187,9 @@ TEST(CompletionTest, OverloadBundling) {
       UnorderedElementsAre(Labeled("GFuncC(…)"), Labeled("GFuncD(int)")));
 
   // Differences in header-to-insert suppress bundling.
-  Symbol::Details Detail;
   std::string DeclFile = URI::createFile(testPath("foo")).toString();
   NoArgsGFunc.CanonicalDeclaration.FileURI = DeclFile;
-  Detail.IncludeHeader = "<foo>";
-  NoArgsGFunc.Detail = &Detail;
+  NoArgsGFunc.IncludeHeaders.emplace_back("<foo>", 1);
   EXPECT_THAT(
       completions(Context + "int y = GFunc^", {NoArgsGFunc}, Opts).Completions,
       UnorderedElementsAre(AllOf(Named("GFuncC"), InsertInclude("<foo>")),
@@ -1298,7 +1356,9 @@ TEST(CompletionTest, Render) {
   C.RequiredQualifier = "Foo::";
   C.Scope = "ns::Foo::";
   C.Documentation = "This is x().";
-  C.Header = "\"foo.h\"";
+  C.Includes.emplace_back();
+  auto &Include = C.Includes.back();
+  Include.Header = "\"foo.h\"";
   C.Kind = CompletionItemKind::Method;
   C.Score.Total = 1.0;
   C.Origin = SymbolOrigin::AST | SymbolOrigin::Static;
@@ -1317,13 +1377,14 @@ TEST(CompletionTest, Render) {
   EXPECT_EQ(R.documentation, "This is x().");
   EXPECT_THAT(R.additionalTextEdits, IsEmpty());
   EXPECT_EQ(R.sortText, sortText(1.0, "x"));
+  EXPECT_FALSE(R.deprecated);
 
   Opts.EnableSnippets = true;
   R = C.render(Opts);
   EXPECT_EQ(R.insertText, "Foo::x(${0:bool})");
   EXPECT_EQ(R.insertTextFormat, InsertTextFormat::Snippet);
 
-  C.HeaderInsertion.emplace();
+  Include.Insertion.emplace();
   R = C.render(Opts);
   EXPECT_EQ(R.label, "^Foo::x(bool) const");
   EXPECT_THAT(R.additionalTextEdits, Not(IsEmpty()));
@@ -1335,6 +1396,10 @@ TEST(CompletionTest, Render) {
   C.BundleSize = 2;
   R = C.render(Opts);
   EXPECT_EQ(R.detail, "[2 overloads]\n\"foo.h\"");
+
+  C.Deprecated = true;
+  R = C.render(Opts);
+  EXPECT_TRUE(R.deprecated);
 }
 
 TEST(CompletionTest, IgnoreRecoveryResults) {
@@ -1612,13 +1677,10 @@ TEST(SignatureHelpTest, InstantiatedSignatures) {
 }
 
 TEST(SignatureHelpTest, IndexDocumentation) {
-  Symbol::Details DocDetails;
-  DocDetails.Documentation = "Doc from the index";
-
   Symbol Foo0 = sym("foo", index::SymbolKind::Function, "@F@\\0#");
-  Foo0.Detail = &DocDetails;
+  Foo0.Documentation = "Doc from the index";
   Symbol Foo1 = sym("foo", index::SymbolKind::Function, "@F@\\0#I#");
-  Foo1.Detail = &DocDetails;
+  Foo1.Documentation = "Doc from the index";
   Symbol Foo2 = sym("foo", index::SymbolKind::Function, "@F@\\0#I#I#");
 
   StringRef Sig0 = R"cpp(
@@ -1713,6 +1775,21 @@ TEST(CompletionTest, SuggestOverrides) {
                     Not(Contains(Labeled("void vfunc(bool param) override")))));
 }
 
+TEST(CompletionTest, OverridesNonIdentName) {
+  // Check the completions call does not crash.
+  completions(R"cpp(
+    struct Base {
+      virtual ~Base() = 0;
+      virtual operator int() = 0;
+      virtual Base& operator+(Base&) = 0;
+    };
+
+    struct Derived : Base {
+      ^
+    };
+  )cpp");
+}
+
 TEST(SpeculateCompletionFilter, Filters) {
   Annotations F(R"cpp($bof^
       $bol^
@@ -1780,6 +1857,64 @@ TEST(CompletionTest, EnableSpeculativeIndexRequest) {
   // request after sema.
   auto Reqs3 = Requests.consumeRequests();
   ASSERT_EQ(Reqs3.size(), 2u);
+}
+
+TEST(CompletionTest, InsertTheMostPopularHeader) {
+  std::string DeclFile = URI::createFile(testPath("foo")).toString();
+  Symbol sym = func("Func");
+  sym.CanonicalDeclaration.FileURI = DeclFile;
+  sym.IncludeHeaders.emplace_back("\"foo.h\"", 2);
+  sym.IncludeHeaders.emplace_back("\"bar.h\"", 1000);
+
+  auto Results = completions("Fun^", {sym}).Completions;
+  assert(!Results.empty());
+  EXPECT_THAT(Results[0], AllOf(Named("Func"), InsertInclude("\"bar.h\"")));
+  EXPECT_EQ(Results[0].Includes.size(), 2u);
+}
+
+TEST(CompletionTest, NoInsertIncludeIfOnePresent) {
+  MockFSProvider FS;
+  MockCompilationDatabase CDB;
+
+  std::string FooHeader = testPath("foo.h");
+  FS.Files[FooHeader] = "";
+
+  IgnoreDiagnostics DiagConsumer;
+  ClangdServer Server(CDB, FS, DiagConsumer, ClangdServer::optsForTest());
+
+  std::string DeclFile = URI::createFile(testPath("foo")).toString();
+  Symbol sym = func("Func");
+  sym.CanonicalDeclaration.FileURI = DeclFile;
+  sym.IncludeHeaders.emplace_back("\"foo.h\"", 2);
+  sym.IncludeHeaders.emplace_back("\"bar.h\"", 1000);
+
+  EXPECT_THAT(
+      completions(Server, "#include \"foo.h\"\nFun^", {sym}).Completions,
+      UnorderedElementsAre(
+          AllOf(Named("Func"), HasInclude("\"foo.h\""), Not(InsertInclude()))));
+}
+
+TEST(CompletionTest, MergeMacrosFromIndexAndSema) {
+  Symbol Sym;
+  Sym.Name = "Clangd_Macro_Test";
+  Sym.ID = SymbolID("c:foo.cpp@8@macro@Clangd_Macro_Test");
+  Sym.SymInfo.Kind = index::SymbolKind::Macro;
+  Sym.Flags |= Symbol::IndexedForCodeCompletion;
+  EXPECT_THAT(completions("#define Clangd_Macro_Test\nClangd_Macro_T^", {Sym})
+                  .Completions,
+              UnorderedElementsAre(Named("Clangd_Macro_Test")));
+}
+
+TEST(CompletionTest, DeprecatedResults) {
+  std::string Body = R"cpp(
+    void TestClangd();
+    void TestClangc() __attribute__((deprecated("", "")));
+  )cpp";
+
+  EXPECT_THAT(
+      completions(Body + "int main() { TestClang^ }").Completions,
+      UnorderedElementsAre(AllOf(Named("TestClangd"), Not(Deprecated())),
+                           AllOf(Named("TestClangc"), Deprecated())));
 }
 
 } // namespace
