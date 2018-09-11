@@ -19,8 +19,10 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/JSON.h"
 #include "llvm/Support/StringSaver.h"
 #include <array>
+#include <limits>
 #include <mutex>
 #include <string>
 #include <tuple>
@@ -435,7 +437,9 @@ struct FuzzyFindRequest {
   std::vector<std::string> Scopes;
   /// \brief The number of top candidates to return. The index may choose to
   /// return more than this, e.g. if it doesn't know which candidates are best.
-  size_t MaxCandidateCount = UINT_MAX;
+  // FIXME: Use llvm::Optional; semantically, the absence of MaxCandidateCount
+  // is equivalent to setting this field to default value as below.
+  uint32_t MaxCandidateCount = std::numeric_limits<uint32_t>::max();
   /// If set to true, only symbols for completion support will be considered.
   bool RestrictForCodeCompletion = false;
   /// Contextually relevant files (e.g. the file we're code-completing in).
@@ -450,6 +454,8 @@ struct FuzzyFindRequest {
   }
   bool operator!=(const FuzzyFindRequest &Req) const { return !(*this == Req); }
 };
+bool fromJSON(const llvm::json::Value &Value, FuzzyFindRequest &Request);
+llvm::json::Value toJSON(const FuzzyFindRequest &Request);
 
 struct LookupRequest {
   llvm::DenseSet<SymbolID> IDs;
