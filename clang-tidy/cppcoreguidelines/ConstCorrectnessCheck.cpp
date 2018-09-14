@@ -147,12 +147,10 @@ void ConstCorrectnessCheck::registerMatchers(MatchFinder *Finder) {
   // FIXME Investigate the DeMorgan-simplification for the logical expression.
   // Match local variables which could be const.
   // Example: `int i = 10`, `int i` (will be used if program is correct)
-  const auto LocalValDecl =
-      varDecl(allOf(isLocal(), hasInitializer(anything()),
-                    unless(hasInitializer(cxxConstructExpr(
-                        hasDeclaration(cxxRecordDecl(isLambda()))))),
-                    unless(ConstType), unless(ConstReference),
-                    unless(TemplateType), unless(isImplicit())));
+  const auto LocalValDecl = varDecl(allOf(
+      isLocal(), hasInitializer(anything()),
+      unless(hasType(cxxRecordDecl(isLambda()))), unless(ConstType),
+      unless(ConstReference), unless(TemplateType), unless(isImplicit())));
 
   // Match the function scope for which the analysis of all local variables
   // shall be run.
@@ -198,7 +196,7 @@ void ConstCorrectnessCheck::registerScope(const CompoundStmt *LocalScope,
   if (ScopesCache.find(LocalScope) == ScopesCache.end()) {
     ScopesCache.insert(std::make_pair(
         LocalScope,
-        llvm::make_unique<utils::ExprMutationAnalyzer>(LocalScope, Context)));
+        llvm::make_unique<utils::ExprMutationAnalyzer>(*LocalScope, *Context)));
   }
 }
 
