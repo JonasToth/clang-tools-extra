@@ -196,7 +196,7 @@ void ConstCorrectnessCheck::registerScope(const CompoundStmt *LocalScope,
   if (ScopesCache.find(LocalScope) == ScopesCache.end()) {
     ScopesCache.insert(std::make_pair(
         LocalScope,
-        llvm::make_unique<utils::ExprMutationAnalyzer>(*LocalScope, *Context)));
+        llvm::make_unique<ExprMutationAnalyzer>(*LocalScope, *Context)));
   }
 }
 

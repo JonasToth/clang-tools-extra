@@ -11,7 +11,7 @@
 #define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_CPPCOREGUIDELINES_CONSTCORRECTNESSCHECK_H
 
 #include "../ClangTidy.h"
-#include "Analysis/Analyses/ExprMutationAnalyzer.h"
+#include "clang/Analysis/Analyses/ExprMutationAnalyzer.h"
 
 namespace clang {
 namespace tidy {
@@ -37,7 +37,7 @@ public:
 private:
   void registerScope(const CompoundStmt *LocalScope, ASTContext *Context);
 
-  using MutationAnalyzer = std::unique_ptr<utils::ExprMutationAnalyzer>;
+  using MutationAnalyzer = std::unique_ptr<ExprMutationAnalyzer>;
   llvm::DenseMap<const CompoundStmt *, MutationAnalyzer> ScopesCache;
 
   const bool AnalyzeValues;
