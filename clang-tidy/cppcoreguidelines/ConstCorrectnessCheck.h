@@ -11,7 +11,7 @@
 #define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_CPPCOREGUIDELINES_CONSTCORRECTNESSCHECK_H
 
 #include "../ClangTidy.h"
-#include "../utils/ExprMutationAnalyzer.h"
+#include "Analysis/Analyses/ExprMutationAnalyzer.h"
 
 namespace clang {
 namespace tidy {
