@@ -280,6 +280,13 @@ clang-tidy -header-filter=^/project/git/.* -checks=-*,hicpp-* -export-fixes /tmp
         self.assertEqual(generated_diag,
                          "\n".join(excerpt.splitlines()[12:]))
 
+        # Pretend that the next clang-tidy invocation returns its data
+        # and the parser shall deduplicate this one as well. This time
+        # no new data is expected.
+        pp.reset_parser()
+        pp.parse_string(excerpt)
+        self.assertEqual(len(pp.get_diags()), 0)
+
 
 if __name__ == "__main__":
     unittest.main()
