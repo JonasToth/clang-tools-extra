@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import unittest
-from run_clang_tidy import Diagnostic, DiagEssence, Deduplication
+from run_clang_tidy import Diagnostic, Deduplication
 from run_clang_tidy import ParseClangTidyDiagnostics, _is_valid_diag_match
 
 
@@ -13,80 +13,16 @@ class TestDiagnostics(unittest.TestCase):
         d = Diagnostic("/home/user/project/my_file.h", 24, 4,
                        "warning: Do not do this thing [warning-category]")
         self.assertIsNotNone(d)
-
-        de = DiagEssence("/home/user/project/my_file.h", 24, 4,
-                         "warning: Do not do this thing [warning-category]",
-                         "\n      MyCodePiece();"
-                         "\n      ^")
-        self.assertIsNotNone(de)
+        self.assertEqual(str(d),
+                         "/home/user/project/my_file.h:24:4: warning: Do not do this thing [warning-category]")
 
         d.add_additional_line("      MyCodePiece();")
         d.add_additional_line("      ^")
 
-        self.assertEqual(d.get_essence().__hash__(), de.__hash__())
-        self.assertEqual(d.get_essence(), de)
-
-    def test_comparisons(self):
-        de1 = DiagEssence("/home/user/project/my_file.h", 24, 4,
-                          "warning: Do not do this thing [warning-category]",
-                          "      MyCodePiece();\n"
-                          "      ^\n")
-        de2 = DiagEssence("/home/user/project/my_file.h", 24, 4,
-                          "warning: Do not do this thing [warning-category]",
-                          "      MyCodePiece();\n"
-                          "      ^\n")
-        self.assertEqual(de1.__hash__(), de2.__hash__())
-        self.assertEqual(de1, de2)
-
-        # Changing location information must influence the hash.
-        de3 = DiagEssence("/home/user/project/my_file.h", 24, 5,
-                          "warning: Do not do this thing [warning-category]",
-                          "      MyCodePiece();\n"
-                          "      ^\n")
-        self.assertNotEqual(de1.__hash__(), de3.__hash__())
-        self.assertNotEqual(de1, de3)
-
-        de4 = DiagEssence("/home/user/project/my_file.h", 1, 4,
-                          "warning: Do not do this thing [warning-category]",
-                          "      MyCodePiece();\n"
-                          "      ^\n")
-        self.assertNotEqual(de1.__hash__(), de4.__hash__())
-        self.assertNotEqual(de1, de4)
-
-        de5 = DiagEssence("/home/user/project/another_file.h", 24, 4,
-                          "warning: Do not do this thing [warning-category]",
-                          "      MyCodePiece();\n"
-                          "      ^\n")
-        self.assertNotEqual(de1.__hash__(), de5.__hash__())
-        self.assertNotEqual(de1, de5)
-
-        # Keeping the location the same but changing the diagnostic messages
-        # Does *NOT* have an influence on the hash.
-        de6 = DiagEssence("/home/user/project/my_file.h", 24, 4,
-                          "warning: Do not do this thing [other-category]",
-                          "      MyCodePiece();\n"
-                          "      ^\n")
-        self.assertEqual(de1.__hash__(), de6.__hash__())
-        self.assertNotEqual(de1, de6)
-
-        de7 = DiagEssence("/home/user/project/my_file.h", 24, 4,
-                          "warning: Different message [warning-category]",
-                          "      MyCodePiece();\n"
-                          "      ^\n")
-        self.assertEqual(de1.__hash__(), de7.__hash__())
-        self.assertNotEqual(de1, de7)
-
-        de8 = DiagEssence("/home/user/project/my_file.h", 24, 4,
-                          "warning: Do not do this thing [warning-category]",
-                          "      MyCodePiece<Template>();\n")
-        self.assertEqual(de1.__hash__(), de8.__hash__())
-        self.assertNotEqual(de1, de8)
-
-        de9 = DiagEssence("/home/user/project/my_file.h", 24, 4,
-                          "warning: Do not do this thing [warning-category]",
-                          "")
-        self.assertEqual(de1.__hash__(), de9.__hash__())
-        self.assertNotEqual(de1, de8)
+        self.assertEqual(str(d),
+                         "/home/user/project/my_file.h:24:4: warning: Do not do this thing [warning-category]"
+                         "\n      MyCodePiece();"
+                         "\n      ^")
 
 
 class TestDeduplication(unittest.TestCase):
@@ -97,30 +33,21 @@ class TestDeduplication(unittest.TestCase):
 
     def test_dedup(self):
         dedup = Deduplication()
+        d = Diagnostic("/home/user/project/my_file.h", 24, 4,
+                       "warning: Do not do this thing [warning-category]")
+        self.assertTrue(dedup.insert_and_query(d))
+        self.assertFalse(dedup.insert_and_query(d))
 
-        de1 = DiagEssence("/home/user/project/my_file.h", 24, 4,
-                          "warning: Do not do this thing [warning-category]",
-                          "      MyCodePiece();\n"
-                          "      ^\n")
-        self.assertTrue(dedup.insert_and_query(de1))
-        self.assertFalse(dedup.insert_and_query(de1))
+        d2 = Diagnostic("/home/user/project/my_file.h", 24, 4,
+                        "warning: Do not do this thing [warning-category]")
+        d2.add_additional_line("      MyCodePiece();")
+        d2.add_additional_line("      ^")
+        self.assertTrue(dedup.insert_and_query(d2))
+        self.assertFalse(dedup.insert_and_query(d2))
 
-        # Create a diagnostic with the same hash that is not equal.
-        de2 = DiagEssence("/home/user/project/my_file.h", 24, 4,
-                          "warning: Do not do this thing [mess-with-equality]",
-                          "      MyCodePiece();\n"
-                          "      ^\n")
-        self.assertTrue(dedup.insert_and_query(de2))
-        self.assertFalse(dedup.insert_and_query(de2))
-
-        # Create a diagnostic with a different hash and insert it.
-        de3 = DiagEssence("/home/user/project/mess_with_hash.h", 24, 5,
-                          "warning: Do not do this thing [mess-with-equality]",
-                          "      MyCodePiece();\n"
-                          "      ^\n")
-        self.assertTrue(dedup.insert_and_query(de3))
-        self.assertFalse(dedup.insert_and_query(de3))
-
+        d3 = Diagnostic("/home/user/project/my_file.h", 24, 4,
+                        "warning: Do not do this thing [warning-category]")
+        self.assertFalse(dedup.insert_and_query(d3))
 
 class TestLinewiseParsing(unittest.TestCase):
     def test_construction(self):
