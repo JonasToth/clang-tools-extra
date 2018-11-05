@@ -2,8 +2,8 @@
 # -*- coding: utf-8 -*-
 
 import unittest
-from utility import Diagnostic, DiagEssence, Deduplication
-from utility import ParseClangTidyDiagnostics, _is_valid_diag_match
+from run_clang_tidy import Diagnostic, DiagEssence, Deduplication
+from run_clang_tidy import ParseClangTidyDiagnostics, _is_valid_diag_match
 
 
 class TestDiagnostics(unittest.TestCase):
