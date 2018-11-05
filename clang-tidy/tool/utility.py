@@ -9,10 +9,11 @@ import sys
 
 log.basicConfig(level=log.INFO)
 
-# TODO: `DiagEssence` and `Diagnostic` could be merged into one class that
-# provides a 'compress()'-method that calculates the hashes which is called
-# before being stored in a `set`. This could result in less code but the same
-# memory footprint. Take a look at it!
+# TODO: `DiagEssence` and `Diagnostic` could maybe be merged into one class
+# that provides a 'compress()'-method that calculates the hashes which is
+# called before being stored in a `set`. This could result in less code but the
+# same memory footprint.
+
 
 class DiagEssence(object):
     """
@@ -111,7 +112,8 @@ class Diagnostic(object):
         `diag` will contain all warning/error/note information until the first
         line-break. These are very uncommon, but CSA's PaddingChecker
         emits a multi-line warning containing the optimal layout of a record.
-        These additional lines must be added after creation of the `Diagnostic`.
+        These additional lines must be added after creation of the
+        `Diagnostic`.
         """
         self._path = path
         self._line = line
@@ -121,12 +123,17 @@ class Diagnostic(object):
 
     def add_additional_line(self, line: str):
         """Store more additional information line per line while parsing."""
-        self._additional += line
+        self._additional += "\n" + line
 
     def get_essence(self):
         """Return an object `DiagEssence` from this instance."""
         return DiagEssence(self._path, self._line, self._column, self._diag,
                            self._additional)
+
+    def __str__(self):
+        """Transform the object back into a raw diagnostic."""
+        return self._path + ":" + str(self._line) + ":" + str(self._column)\
+                          + ": " + self._diag + self._additional
 
 
 class Deduplication(object):
@@ -154,158 +161,86 @@ class Deduplication(object):
         return False
 
 
-class ParseBBOutput(object):
-    """
-    This class parses the full buildbot output and extract the diagnostics
-    for each enabled check.
-    It deduplicates the diagnostics as well.
-    """
+def _is_valid_diag_match(match_groups):
+    return all(g is not None for g in match_groups)
+
+
+def _diag_from_match(match_groups):
+    return Diagnostic(
+        str(match_groups[0]), int(match_groups[1]), int(match_groups[2]),
+        str(match_groups[3]) + ": " + str(match_groups[4]))
+
+
+class ParseClangTidyDiagnostics(object):
+    """This class is a stateful parser for `clang-tidy` diagnostic output."""
 
     def __init__(self):
-        super(ParseBBOutput, self).__init__()
+        super(ParseClangTidyDiagnostics, self).__init__()
+        self._diag_re = re.compile(
+            r"^(.+):(\d+):(\d+): (error|warning): (.*)$")
+        self._current_diag = None
 
-        self.__diagnostic_regex = re.compile(
-            r"^(.+): (error|warning|note): ([^\[]+) ?(\[([^,]+).*\])?$")
-        self.__known_ct_noise_output = re.compile(
-            r"^(Suppressed|Use -header-filter|clang-apply|\d+ warnings|$)")
+        self._dedup = Deduplication()
+        self._uniq_diags = list()
 
-        # State of the parser to control what to look for next
-        # At the beginning, run-clang-tidy.py writes the list of enabled
-        # checks.
-        self.__expect_enabled_checks = True
-        self.__expect_check_name = False
+    def reset_parser(self):
+        """Clean all data from the parser and restore a clean state."""
+        self._current_diag = None
+        self._dedup = Deduplication()
+        self._uniq_diags = list()
 
-        # Then it prints diagnostics followed from one or multiple lines
-        # of pointers into the code and/or fix-it's (ignored now).
-        self.__expect_warnings = False
-        self.__current_finding_check = None
-        self.__current_finding = None
-
-        # List of enabled checks.
-        self.__enabled_checks = list()
-        self.__all_findings = Findings()
-
-    def parse_file(self, filename):
-        with open(filename, "r") as input_file:
-            lines = list(map(lambda l: l.rstrip(), input_file.readlines()))
-
-        self.parse_lines(lines)
-
-    def parse_string(self, input):
-        self.parse_lines(list(map(lambda l: l.rstrip(), input.splitlines())))
-
-    def parse_lines(self, line_list):
-        assert self.__expect_enabled_checks, "Not in start state"
-        for line in line_list:
-            self.parse_line(line)
-
-    def parse_line(self, line):
+    def get_diags(self):
         """
-        Returns True if it expects more output, otherwise False.
+        Returns a list of diagnostics that can be emitted after parsing the
+        full output of a clang-tidy invocation.
+        The list contains no duplicates.
         """
+        return self._uniq_diags
+
+    def parse_string(self, input_str):
+        """Parse a string like captured stdout."""
+        self._parse_lines(input_str.splitlines())
+
+    def _parse_line(self, line):
+        """Parses on line into internal state, returns nothing."""
         log.debug("New line: %s", line)
-        if self.__expect_enabled_checks and line == "Enabled checks:":
-            log.debug("Found start of Enabled checks:")
-            self.__expect_enabled_checks = False
-            self.__expect_check_name = True
-            return True
+        match = self._diag_re.match(line)
 
-        if self.__expect_check_name:
-            if line:
-                log.debug("Enabled check found: %s", line.strip())
-                self.__enabled_checks.append(line.strip())
-            else:
-                self.__expect_check_name = False
-                self.__expect_warnings = True
-                log.debug("Read in all enabled checks, expect warnings")
-            return True
+        # A new diagnostic is found (either error or warning).
+        if match and _is_valid_diag_match(match.groups()):
+            self._handle_new_diag(match.groups())
 
-        if line.startswith("Applying fixes ..."):
-            return False
+        # There was no new diagnostic but a previous diagnostic is in flight.
+        # Interpret this situation as additional output like notes or
+        # code-pointers from the diagnostic that is in flight.
+        elif not match and self._current_diag:
+            self._current_diag.add_additional_line(line)
 
-        if self.__expect_warnings:
-            potential_match = self.__diagnostic_regex.match(line)
-            g = (None, None, None, None, None)
-            if potential_match:
-                g = potential_match.groups()
-            (severity, location, msg, category_tag, category) = g
+        # There was no diagnostic in flight and this line did not create a
+        # new one. This situation should not occur, but might happen if
+        # clang-tidy emits information before warnings start.
+        else:
+            return
 
-            if potential_match:
-                log.debug("Found a direct diagnostic message:")
-                log.debug("%s; %s; %s", severity, location, msg)
+    def _handle_new_diag(self, match_groups):
+        # The current in-flight diagnostic was not emitted before, therefor
+        # it should be stored as a new unique diagnostic.
+        self._register_diag()
+        self._current_diag = _diag_from_match(match_groups)
 
-                diag = None
-                # Warning of the following form found:
-                # /location.h:6:13: warning: blaa [hicpp-dont]
-                if category_tag and severity and location and msg:
-                    assert category, "Tag found, category to be extracted"
-                    # should be a warning/error, as it contains a category
-                    diag = CheckDiagnostic(severity, location, msg, category)
+    def _register_diag(self):
+        if self._current_diag and \
+           self._dedup.insert_and_query(self._current_diag.get_essence()):
+            self._uniq_diags.append(self._current_diag)
 
-                    # It might be a new warning. In this case the previous
-                    # warning must be registered, as there is no
-                    # additional information to it.
-                    if self.__current_finding:
-                        log.debug("Registering current finding: %s",
-                                  self.__current_finding_check)
-                        assert self.__current_finding_check, \
-                            "Finding needs category"
-                        # insert the previous diagnostic first
-                        self.__all_findings.register_finding(
-                            self.__current_finding_check,
-                            self.__current_finding)
-                        self.__current_finding_check = None
-                        self.__current_finding = None
+    def _parse_lines(self, line_list):
+        assert self._current_diag is None, \
+               "Parser not in a clean state to restart parsing"
+        for line in line_list:
+            self._parse_line(line.rstrip())
+        # Register the last diagnostic after all input is parsed.
+        self._register_diag()
 
-                    log.debug("Start new Finding: %s", category)
-                    # Store the finding as the current finding, as the
-                    # potential old finding is already inserted in all
-                    # findings.
-                    self.__current_finding = FindingDiagnostic(diag)
-                    self.__current_finding_check = category
-
-                # Message in the following form found
-                # /location.h:6:13: note: blaa
-                elif severity and location and msg:
-                    log.debug("Found note-like diag")
-                    if self.__current_finding:
-                        diag = CheckDiagnostic(severity, location, msg)
-                        log.debug("Adding more to finding: %s", line)
-                        self.__current_finding.add_diagnostic(diag)
-                # Spurious match
-                else:
-                    pass
-                return True
-
-            if self.__known_ct_noise_output.match(line):
-                # Noise, that clang-tidy outputs (e.g. how many warnings
-                # were generated).
-                # It could be the breaking condition, that's why there is
-                # no continuation. But the line itself is ignored here.
-                log.debug("Me Orc, Me Spam, No Mod, No Ban")
-
-                if self.__current_finding:
-                    assert self.__current_finding_check, \
-                           "Check-name required"
-                    log.debug("Register finding before ignoring, %s",
-                              self.__current_finding_check)
-                    self.__all_findings.register_finding(
-                        self.__current_finding_check, self.__current_finding)
-                    self.__current_finding = None
-                    self.__current_finding_check = None
-                return True
-
-            # Found a code-hint that can be added to the current
-            # Diagnostic record.
-            if self.__current_finding:
-                log.debug("Adding code-hint to diag: %s", line)
-                self.__current_finding.get_diagnostics()[-1].add_code_hints(
-                    line)
-            return True
-        return True
-
-    def get_enabled_checks(self):
-        return self.__enabled_checks
-
-    def get_findings(self):
-        return self.__all_findings
+    def _parse_file(self, filename):
+        with open(filename, "r") as input_file:
+            self._parse_lines(input_file.readlines())
