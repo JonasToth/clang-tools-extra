@@ -3,11 +3,7 @@
 
 from __future__ import print_function
 
-import logging as log
 import re
-import sys
-
-log.basicConfig(level=log.INFO)
 
 # TODO: `DiagEssence` and `Diagnostic` could maybe be merged into one class
 # that provides a 'compress()'-method that calculates the hashes which is
@@ -100,9 +96,7 @@ class Diagnostic(object):
     This class represents a parsed diagnostic message coming from clang-tidy
     output. While parsing the raw output each new diagnostic will incrementally
     build a temporary object of this class. Once the end of the diagnotic
-    message is found the `DiagEssence` is calculated and deduplicated. If
-    there was no equivalent `DiagEssence` stored before the diagnostic is
-    emitted to `sys.stdout` and the `DiagEssence` is stored.
+    message is found the `DiagEssence` is calculated and deduplicated.
     """
 
     def __init__(self, path: str, line: int, column: int, diag: str):
@@ -172,7 +166,11 @@ def _diag_from_match(match_groups):
 
 
 class ParseClangTidyDiagnostics(object):
-    """This class is a stateful parser for `clang-tidy` diagnostic output."""
+    """
+    This class is a stateful parser for `clang-tidy` diagnostic output.
+    The parser collects all unique diagnostics that can be emitted after
+    deduplication.
+    """
 
     def __init__(self):
         super(ParseClangTidyDiagnostics, self).__init__()
@@ -184,9 +182,14 @@ class ParseClangTidyDiagnostics(object):
         self._uniq_diags = list()
 
     def reset_parser(self):
-        """Clean all data from the parser and restore a clean state."""
+        """
+        Clean the parsing data to prepare for another set of output from
+        `clang-tidy`. The deduplication is not cleaned because that data
+        is required between multiple parsing runs. The diagnostics are cleaned
+        as the parser assumes the new unique diagnostics are consumed before
+        the parser is reset.
+        """
         self._current_diag = None
-        self._dedup = Deduplication()
         self._uniq_diags = list()
 
     def get_diags(self):
@@ -203,7 +206,6 @@ class ParseClangTidyDiagnostics(object):
 
     def _parse_line(self, line):
         """Parses on line into internal state, returns nothing."""
-        log.debug("New line: %s", line)
         match = self._diag_re.match(line)
 
         # A new diagnostic is found (either error or warning).
