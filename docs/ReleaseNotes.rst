@@ -182,6 +182,9 @@ Improvements to clang-tidy
   <clang-tidy/checks/readability-redundant-smartptr-get>` check does not warn
   about calls inside macros anymore by default.
 
+- `run-clang-tidy.py` support deduplication of `clang-tidy` diagnostics
+  to reduce the amount of output with the optional `-deduplicate` flag.
+
 Improvements to include-fixer
 -----------------------------
 
