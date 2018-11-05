@@ -321,9 +321,8 @@ def apply_fixes(args, tmpdir):
   subprocess.call(invocation)
 
 
-def run_tidy(args, tmpdir, build_path, queue, lock, failed_files):
+def run_tidy(args, tmpdir, build_path, queue, lock, failed_files, parser):
   """Takes filenames out of queue and runs clang-tidy on them."""
-  parser = ParseClangTidyDiagnostics()
   while True:
     name = queue.get()
     invocation = get_tidy_invocation(name, args.clang_tidy_binary, args.checks,
@@ -445,9 +444,10 @@ def main():
     # List of files with a non-zero return code.
     failed_files = []
     lock = threading.Lock()
+    parser = ParseClangTidyDiagnostics()
     for _ in range(max_task):
       t = threading.Thread(target=run_tidy,
-                           args=(args, tmpdir, build_path, task_queue, lock, failed_files))
+                           args=(args, tmpdir, build_path, task_queue, lock, failed_files, parser))
       t.daemon = True
       t.start()
 
