@@ -57,101 +57,6 @@ if is_py2:
 else:
     import queue as queue
 
-def find_compilation_database(path):
-  """Adjusts the directory until a compilation database is found."""
-  result = './'
-  while not os.path.isfile(os.path.join(result, path)):
-    if os.path.realpath(result) == '/':
-      print('Error: could not find compilation database.')
-      sys.exit(1)
-    result += '../'
-  return os.path.realpath(result)
-
-
-def make_absolute(f, directory):
-  if os.path.isabs(f):
-    return f
-  return os.path.normpath(os.path.join(directory, f))
-
-
-def get_tidy_invocation(f, clang_tidy_binary, checks, tmpdir, build_path,
-                        header_filter, extra_arg, extra_arg_before, quiet,
-                        config):
-  """Gets a command line for clang-tidy."""
-  start = [clang_tidy_binary]
-  if header_filter is not None:
-    start.append('-header-filter=' + header_filter)
-  else:
-    # Show warnings in all in-project headers by default.
-    start.append('-header-filter=^' + build_path + '/.*')
-  if checks:
-    start.append('-checks=' + checks)
-  if tmpdir is not None:
-    start.append('-export-fixes')
-    # Get a temporary file. We immediately close the handle so clang-tidy can
-    # overwrite it.
-    (handle, name) = tempfile.mkstemp(suffix='.yaml', dir=tmpdir)
-    os.close(handle)
-    start.append(name)
-  for arg in extra_arg:
-      start.append('-extra-arg=%s' % arg)
-  for arg in extra_arg_before:
-      start.append('-extra-arg-before=%s' % arg)
-  start.append('-p=' + build_path)
-  if quiet:
-      start.append('-quiet')
-  if config:
-      start.append('-config=' + config)
-  start.append(f)
-  return start
-
-
-def merge_replacement_files(tmpdir, mergefile):
-  """Merge all replacement files in a directory into a single file"""
-  # The fixes suggested by clang-tidy >= 4.0.0 are given under
-  # the top level key 'Diagnostics' in the output yaml files
-  mergekey="Diagnostics"
-  merged=[]
-  for replacefile in glob.iglob(os.path.join(tmpdir, '*.yaml')):
-    content = yaml.safe_load(open(replacefile, 'r'))
-    if not content:
-      continue # Skip empty files.
-    merged.extend(content.get(mergekey, []))
-
-  if merged:
-    # MainSourceFile: The key is required by the definition inside
-    # include/clang/Tooling/ReplacementsYaml.h, but the value
-    # is actually never used inside clang-apply-replacements,
-    # so we set it to '' here.
-    output = { 'MainSourceFile': '', mergekey: merged }
-    with open(mergefile, 'w') as out:
-      yaml.safe_dump(output, out)
-  else:
-    # Empty the file:
-    open(mergefile, 'w').close()
-
-
-def check_clang_apply_replacements_binary(args):
-  """Checks if invoking supplied clang-apply-replacements binary works."""
-  try:
-    subprocess.check_call([args.clang_apply_replacements_binary, '--version'])
-  except:
-    print('Unable to run clang-apply-replacements. Is clang-apply-replacements '
-          'binary correctly specified?', file=sys.stderr)
-    traceback.print_exc()
-    sys.exit(1)
-
-
-def apply_fixes(args, tmpdir):
-  """Calls clang-apply-fixes on a given directory."""
-  invocation = [args.clang_apply_replacements_binary]
-  if args.format:
-    invocation.append('-format')
-  if args.style:
-    invocation.append('-style=' + args.style)
-  invocation.append(tmpdir)
-  subprocess.call(invocation)
-
 # TODO: `DiagEssence` and `Diagnostic` could maybe be merged into one class
 # that provides a 'compress()'-method that calculates the hashes which is
 # called before being stored in a `set`. This could result in less code but the
@@ -390,6 +295,102 @@ class ParseClangTidyDiagnostics(object):
     def _parse_file(self, filename):
         with open(filename, "r") as input_file:
             self._parse_lines(input_file.readlines())
+
+
+def find_compilation_database(path):
+  """Adjusts the directory until a compilation database is found."""
+  result = './'
+  while not os.path.isfile(os.path.join(result, path)):
+    if os.path.realpath(result) == '/':
+      print('Error: could not find compilation database.')
+      sys.exit(1)
+    result += '../'
+  return os.path.realpath(result)
+
+
+def make_absolute(f, directory):
+  if os.path.isabs(f):
+    return f
+  return os.path.normpath(os.path.join(directory, f))
+
+
+def get_tidy_invocation(f, clang_tidy_binary, checks, tmpdir, build_path,
+                        header_filter, extra_arg, extra_arg_before, quiet,
+                        config):
+  """Gets a command line for clang-tidy."""
+  start = [clang_tidy_binary]
+  if header_filter is not None:
+    start.append('-header-filter=' + header_filter)
+  else:
+    # Show warnings in all in-project headers by default.
+    start.append('-header-filter=^' + build_path + '/.*')
+  if checks:
+    start.append('-checks=' + checks)
+  if tmpdir is not None:
+    start.append('-export-fixes')
+    # Get a temporary file. We immediately close the handle so clang-tidy can
+    # overwrite it.
+    (handle, name) = tempfile.mkstemp(suffix='.yaml', dir=tmpdir)
+    os.close(handle)
+    start.append(name)
+  for arg in extra_arg:
+      start.append('-extra-arg=%s' % arg)
+  for arg in extra_arg_before:
+      start.append('-extra-arg-before=%s' % arg)
+  start.append('-p=' + build_path)
+  if quiet:
+      start.append('-quiet')
+  if config:
+      start.append('-config=' + config)
+  start.append(f)
+  return start
+
+
+def merge_replacement_files(tmpdir, mergefile):
+  """Merge all replacement files in a directory into a single file"""
+  # The fixes suggested by clang-tidy >= 4.0.0 are given under
+  # the top level key 'Diagnostics' in the output yaml files
+  mergekey="Diagnostics"
+  merged=[]
+  for replacefile in glob.iglob(os.path.join(tmpdir, '*.yaml')):
+    content = yaml.safe_load(open(replacefile, 'r'))
+    if not content:
+      continue # Skip empty files.
+    merged.extend(content.get(mergekey, []))
+
+  if merged:
+    # MainSourceFile: The key is required by the definition inside
+    # include/clang/Tooling/ReplacementsYaml.h, but the value
+    # is actually never used inside clang-apply-replacements,
+    # so we set it to '' here.
+    output = { 'MainSourceFile': '', mergekey: merged }
+    with open(mergefile, 'w') as out:
+      yaml.safe_dump(output, out)
+  else:
+    # Empty the file:
+    open(mergefile, 'w').close()
+
+
+def check_clang_apply_replacements_binary(args):
+  """Checks if invoking supplied clang-apply-replacements binary works."""
+  try:
+    subprocess.check_call([args.clang_apply_replacements_binary, '--version'])
+  except:
+    print('Unable to run clang-apply-replacements. Is clang-apply-replacements '
+          'binary correctly specified?', file=sys.stderr)
+    traceback.print_exc()
+    sys.exit(1)
+
+
+def apply_fixes(args, tmpdir):
+  """Calls clang-apply-fixes on a given directory."""
+  invocation = [args.clang_apply_replacements_binary]
+  if args.format:
+    invocation.append('-format')
+  if args.style:
+    invocation.append('-style=' + args.style)
+  invocation.append(tmpdir)
+  subprocess.call(invocation)
 
 
 def run_tidy(args, tmpdir, build_path, queue, lock, failed_files):
