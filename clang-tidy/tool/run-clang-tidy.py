@@ -392,8 +392,10 @@ class ParseClangTidyDiagnostics(object):
         with open(filename, "r") as input_file:
             self._parse_lines(input_file.readlines())
 
+
 def run_tidy(args, tmpdir, build_path, queue, lock, failed_files):
   """Takes filenames out of queue and runs clang-tidy on them."""
+  parser = ParseClangTidyDiagnostics()
   while True:
     name = queue.get()
     invocation = get_tidy_invocation(name, args.clang_tidy_binary, args.checks,
@@ -405,10 +407,16 @@ def run_tidy(args, tmpdir, build_path, queue, lock, failed_files):
     output, err = proc.communicate()
     if proc.returncode != 0:
       failed_files.append(name)
+
     with lock:
-      sys.stdout.write(' '.join(invocation) + '\n' + output.decode('utf-8') + '\n')
+      parser.parse_string(output)
+      sys.stdout.write(' '.join(invocation) + '\n' + \
+                       "\n".join(parser.get_diags()).decode('utf-8') + '\n')
+      parser.reset_parser()
+
       if len(err) > 0:
         sys.stderr.write(err.decode('utf-8') + '\n')
+
     queue.task_done()
 
 
