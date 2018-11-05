@@ -177,8 +177,7 @@ class DiagEssence(object):
     but for non-malicious input almost impossible.
     """
 
-    def __init__(self, path: str, line: int, column: int, diag: str,
-                 additional_info: str):
+    def __init__(self, path, line, column, diag, additional_info):
         """
         A fingerprint of the diagnostic information is stored to allow
         deduplication in a `set` data structure.
@@ -244,7 +243,7 @@ class Diagnostic(object):
     message is found the `DiagEssence` is calculated and deduplicated.
     """
 
-    def __init__(self, path: str, line: int, column: int, diag: str):
+    def __init__(self, path, line, column, diag):
         """
         Start initializing this object. The source location is always known
         as it is emitted first and always in a single line.
@@ -260,7 +259,7 @@ class Diagnostic(object):
         self._diag = diag
         self._additional = ""
 
-    def add_additional_line(self, line: str):
+    def add_additional_line(self, line):
         """Store more additional information line per line while parsing."""
         self._additional += "\n" + line
 
@@ -287,7 +286,7 @@ class Deduplication(object):
         """Initializes and empty set."""
         self._set = set()
 
-    def insert_and_query(self, diag: DiagEssence):
+    def insert_and_query(self, diag):
         """
         This method returns True if the `diag` was *NOT* emitted already
         signaling that the parser shall store/emit this diagnostic.
@@ -409,9 +408,10 @@ def run_tidy(args, tmpdir, build_path, queue, lock, failed_files):
       failed_files.append(name)
 
     with lock:
-      parser.parse_string(output)
-      sys.stdout.write(' '.join(invocation) + '\n' + \
-                       "\n".join(parser.get_diags()).decode('utf-8') + '\n')
+      parser.parse_string(output.decode('utf-8'))
+      sys.stdout.write(' '.join(invocation) + '\n' +\
+                       "\n".join([str(diag) for diag in parser.get_diags()])\
+                       + '\n')
       parser.reset_parser()
 
       if len(err) > 0:
