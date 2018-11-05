@@ -183,6 +183,9 @@ class ParseBBOutput(object):
 
         self.parse_lines(lines)
 
+    def parse_string(self, input):
+        self.parse_lines(list(map(lambda l: l.rstrip(), input.splitlines())))
+
     def parse_lines(self, line_list):
         assert self.__expect_enabled_checks, "Not in start state"
         for line in line_list:
