@@ -218,7 +218,7 @@ clang-tidy -header-filter=^/project/git/.* -checks=-*,hicpp-* -export-fixes /tmp
         pp = ParseClangTidyDiagnostics()
         pp._parse_file("test_input/out_csa_cmake.log")
         self.assertEqual(len(pp.get_diags()), 5)
-        
+
         pp.reset_parser()
         pp._parse_file("test_input/out_csa_cmake.log")
         self.assertEqual(len(pp.get_diags()), 0)
