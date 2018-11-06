@@ -101,7 +101,7 @@ class Deduplication(object):
     """
     This class provides an interface to deduplicate diagnostics emitted from
     `clang-tidy`. It maintains a `set` of SHA 256 hashes of the diagnostics
-    and allows to query if an diagnostic is already emitted 
+    and allows to query if an diagnostic is already emitted
     (according to the corresponding hash of the diagnostic string!).
     """
 
@@ -336,10 +336,15 @@ def run_tidy(args, tmpdir, build_path, queue, lock, failed_files, parser):
       failed_files.append(name)
 
     with lock:
-      parser.parse_string(output.decode('utf-8'))
-      sys.stdout.write(' '.join(invocation) + '\n' +\
-                       "\n".join([str(diag) for diag in parser.get_diags()])\
-                       + '\n')
+      invoc = ' '.join(invocation) + '\n'
+      if parser:
+        parser.parse_string(output.decode('utf-8'))
+        sys.stdout.write(invoc\
+                         + "\n".join([str(diag) for diag in parser.get_diags()])\
+                         + '\n')
+      else:
+        sys.stdout.write(invoc + output.decode('utf-8') + '\n')
+
       parser.reset_parser()
 
       if len(err) > 0:
@@ -399,6 +404,8 @@ def main():
                       'command line.')
   parser.add_argument('-quiet', action='store_true',
                       help='Run clang-tidy in quiet mode')
+  parser.add_argument('-deduplicate', action='store_true',
+                      help='Deduplicate diagnostic message from clang-tidy')
   args = parser.parse_args()
 
   db_path = 'compile_commands.json'
@@ -444,7 +451,9 @@ def main():
     # List of files with a non-zero return code.
     failed_files = []
     lock = threading.Lock()
-    parser = ParseClangTidyDiagnostics()
+    parser = None
+    if args.deduplicate:
+        parser = ParseClangTidyDiagnostics()
     for _ in range(max_task):
       t = threading.Thread(target=run_tidy,
                            args=(args, tmpdir, build_path, task_queue, lock, failed_files, parser))
