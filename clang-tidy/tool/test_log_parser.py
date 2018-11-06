@@ -214,6 +214,23 @@ clang-tidy -header-filter=^/project/git/.* -checks=-*,hicpp-* -export-fixes /tmp
         pp.parse_string(excerpt)
         self.assertEqual(len(pp.get_diags()), 0)
 
+    def test_log_files(self):
+        pp = ParseClangTidyDiagnostics()
+        pp._parse_file("test_input/out_csa_cmake.log")
+        self.assertEqual(len(pp.get_diags()), 5)
+        
+        pp.reset_parser()
+        pp._parse_file("test_input/out_csa_cmake.log")
+        self.assertEqual(len(pp.get_diags()), 0)
+
+        pp.reset_parser()
+        pp._parse_file("test_input/out_performance_cmake.log")
+        self.assertEqual(len(pp.get_diags()), 24)
+
+        pp.reset_parser()
+        pp._parse_file("test_input/out_performance_cmake.log")
+        self.assertEqual(len(pp.get_diags()), 0)
+
 
 if __name__ == "__main__":
     unittest.main()

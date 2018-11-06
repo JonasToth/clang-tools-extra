@@ -17,9 +17,6 @@
   if (!m || strcmp(m, "test value") != 0) {
       ^
 /project/git/Source/kwsys/testCommandLineArguments1.cxx:43:7: note: Left side of '||' is false
-1 warning generated.
-
-1 warning generated.
 
 /project/git/Source/kwsys/testCommandLineArguments1.cxx:43:3: note: Taking false branch
   if (!m || strcmp(m, "test value") != 0) {
@@ -306,8 +303,6 @@ disallow_username_in_url,
 consider reordering the fields or adding explicit padding members [clang-analyzer-optin.performance.Padding]
 struct UserDefined {
        ^
-
-clang-tidy -header-filter=^/project/git/.* -checks=-*,clang-analyzer-* -export-fixes /tmp/tmpaBRDdi/tmpNNWfux.yaml -p=/project/git /project/git/Utilities/cmcurl/lib/file.c
 /project/git/Utilities/cmcurl/lib/urldata.h:1209:8: warning: Excessive padding in 'struct UrlState' (61 padding bytes, where 5 is optimal). 
 Optimal fields order: 
 conn_cache, 
