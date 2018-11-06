@@ -342,10 +342,9 @@ def run_tidy(args, tmpdir, build_path, queue, lock, failed_files, parser):
         sys.stdout.write(invoc\
                          + "\n".join([str(diag) for diag in parser.get_diags()])\
                          + '\n')
+        parser.reset_parser()
       else:
         sys.stdout.write(invoc + output.decode('utf-8') + '\n')
-
-      parser.reset_parser()
 
       if len(err) > 0:
         sys.stderr.write(err.decode('utf-8') + '\n')
