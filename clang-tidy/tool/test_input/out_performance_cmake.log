@@ -1,148 +1,3 @@
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 /project/git/Source/kwsys/Glob.cxx:200:28: warning: string concatenation results in allocation of unnecessary temporary strings; consider using 'operator+=' or 'string::append()' instead [performance-inefficient-string-concatenation]
       realname = dir + "/" + fname;
                            ^
@@ -152,175 +7,9 @@
 /project/git/Source/kwsys/Glob.cxx:253:42: warning: string concatenation results in allocation of unnecessary temporary strings; consider using 'operator+=' or 'string::append()' instead [performance-inefficient-string-concatenation]
           message += canonicalPath + "/" + fname;
                                          ^
-
-
-
-
-
-
-
-
 /project/git/Source/kwsys/Glob.cxx:305:28: warning: string concatenation results in allocation of unnecessary temporary strings; consider using 'operator+=' or 'string::append()' instead [performance-inefficient-string-concatenation]
       realname = dir + "/" + fname;
                            ^
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 /project/git/Source/kwsys/SystemTools.cxx:1993:25: warning: 'find_first_of' called with a string literal consisting of a single character; consider using the more effective overload accepting a character [performance-faster-string-find]
   if (ret.find_first_of(" ") != std::string::npos) {
                         ^~~
@@ -348,34 +37,6 @@
   std::string::size_type slash_pos = fn.rfind("/");
                                               ^~~
                                               '/'
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 /project/git/Source/kwsys/SystemInformation.cxx:1340:28: warning: 'rfind' called with a string literal consisting of a single character; consider using the more effective overload accepting a character [performance-faster-string-find]
     size_t at = file.rfind("/");
                            ^~~
@@ -400,568 +61,6 @@
   while ((pos = output.find("\n", pos)) != std::string::npos) {
                             ^~~~
                             '\n'
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 /project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
     CZString(CZString&& other);
     ^
@@ -972,42 +71,8 @@
   Value(Value&& other);
   ^
 /project/git/Utilities/cmjsoncpp/src/lib_json/json_reader.cpp:1998:53: warning: the parameter 'key' is copied for each invocation but only used as a const reference; consider making it a const reference [performance-unnecessary-value-param]
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 Value& CharReaderBuilder::operator[](JSONCPP_STRING key)
                                                     ^
-
-
 /project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
     CZString(CZString&& other);
     ^
@@ -1026,14 +91,6 @@ Value::CZString& Value::CZString::operator=(CZString&& other) {
 /project/git/Utilities/cmjsoncpp/src/lib_json/json_value.cpp:490:8: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
 Value::Value(Value&& other) {
        ^
-
-
-
-
-
-
-
-
 /project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
     CZString(CZString&& other);
     ^
@@ -1050,26 +107,6 @@ Value::Value(Value&& other) {
 /project/git/Utilities/cmjsoncpp/src/lib_json/json_writer.cpp:1226:55: warning: the parameter 'key' is copied for each invocation but only used as a const reference; consider making it a const reference [performance-unnecessary-value-param]
 Value& StreamWriterBuilder::operator[](JSONCPP_STRING key)
                                                       ^
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 /project/git/Source/cmTargetDepend.h:34:40: warning: the parameter 'l' is copied for each invocation but only used as a const reference; consider making it a const reference [performance-unnecessary-value-param]
   friend bool operator<(cmTargetDepend l, cmTargetDepend r)
                                        ^
@@ -1087,8 +124,6 @@ Value& StreamWriterBuilder::operator[](JSONCPP_STRING key)
 /project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
   Value(Value&& other);
   ^
-
-
 /project/git/Source/cmTargetDepend.h:34:40: warning: the parameter 'l' is copied for each invocation but only used as a const reference; consider making it a const reference [performance-unnecessary-value-param]
   friend bool operator<(cmTargetDepend l, cmTargetDepend r)
                                        ^
@@ -1106,47 +141,6 @@ Value& StreamWriterBuilder::operator[](JSONCPP_STRING key)
 /project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
   Value(Value&& other);
   ^
-
-
-/project/git/Source/cmTargetDepend.h:34:40: warning: the parameter 'l' is copied for each invocation but only used as a const reference; consider making it a const reference [performance-unnecessary-value-param]
-  friend bool operator<(cmTargetDepend l, cmTargetDepend r)
-                                       ^
-                        const         &
-/project/git/Source/cmTargetDepend.h:34:58: warning: the parameter 'r' is copied for each invocation but only used as a const reference; consider making it a const reference [performance-unnecessary-value-param]
-  friend bool operator<(cmTargetDepend l, cmTargetDepend r)
-                                                         ^
-                                          const         &
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-/project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
-    CZString(CZString&& other);
-    ^
-/project/git/Utilities/cmjsoncpp/include/json/value.h:241:15: warning: move assignment operators should be marked noexcept [performance-noexcept-move-constructor]
-    CZString& operator=(CZString&& other);
-              ^
-/project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
-  Value(Value&& other);
-  ^
-
-
 /project/git/Source/cmTargetDepend.h:34:40: warning: the parameter 'l' is copied for each invocation but only used as a const reference; consider making it a const reference [performance-unnecessary-value-param]
   friend bool operator<(cmTargetDepend l, cmTargetDepend r)
                                        ^
@@ -1164,8 +158,23 @@ Value& StreamWriterBuilder::operator[](JSONCPP_STRING key)
 /project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
   Value(Value&& other);
   ^
-
-
+/project/git/Source/cmTargetDepend.h:34:40: warning: the parameter 'l' is copied for each invocation but only used as a const reference; consider making it a const reference [performance-unnecessary-value-param]
+  friend bool operator<(cmTargetDepend l, cmTargetDepend r)
+                                       ^
+                        const         &
+/project/git/Source/cmTargetDepend.h:34:58: warning: the parameter 'r' is copied for each invocation but only used as a const reference; consider making it a const reference [performance-unnecessary-value-param]
+  friend bool operator<(cmTargetDepend l, cmTargetDepend r)
+                                                         ^
+                                          const         &
+/project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
+    CZString(CZString&& other);
+    ^
+/project/git/Utilities/cmjsoncpp/include/json/value.h:241:15: warning: move assignment operators should be marked noexcept [performance-noexcept-move-constructor]
+    CZString& operator=(CZString&& other);
+              ^
+/project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
+  Value(Value&& other);
+  ^
 /project/git/Source/CTest/cmCTestBuildHandler.cxx:387:9: warning: string concatenation results in allocation of unnecessary temporary strings; consider using 'operator+=' or 'string::append()' instead [performance-inefficient-string-concatenation]
         srcdirrep = "/..." + srcdirrep;
         ^
@@ -1181,65 +190,13 @@ Value& StreamWriterBuilder::operator[](JSONCPP_STRING key)
 /project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
   Value(Value&& other);
   ^
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 /project/git/Source/CTest/cmParseBlanketJSCoverage.cxx:113:74: warning: the parameter 'files' is copied for each invocation but only used as a const reference; consider making it a const reference [performance-unnecessary-value-param]
 bool cmParseBlanketJSCoverage::LoadCoverageData(std::vector<std::string> files)
                                                                          ^
                                                 const                   &
-
-
-
-
-
-
 /project/git/Source/CTest/cmParseCoberturaCoverage.cxx:85:42: warning: string concatenation results in allocation of unnecessary temporary strings; consider using 'operator+=' or 'string::append()' instead [performance-inefficient-string-concatenation]
               finalpath = filePath + "/" + filename;
                                          ^
-
-
-
-
 /project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
     CZString(CZString&& other);
     ^
@@ -1249,10 +206,6 @@ bool cmParseBlanketJSCoverage::LoadCoverageData(std::vector<std::string> files)
 /project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
   Value(Value&& other);
   ^
-
-
-
-
 /project/git/Source/cmTargetDepend.h:34:40: warning: the parameter 'l' is copied for each invocation but only used as a const reference; consider making it a const reference [performance-unnecessary-value-param]
   friend bool operator<(cmTargetDepend l, cmTargetDepend r)
                                        ^
@@ -1270,38 +223,6 @@ bool cmParseBlanketJSCoverage::LoadCoverageData(std::vector<std::string> files)
 /project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
   Value(Value&& other);
   ^
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 /project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
     CZString(CZString&& other);
     ^
@@ -1311,12 +232,6 @@ bool cmParseBlanketJSCoverage::LoadCoverageData(std::vector<std::string> files)
 /project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
   Value(Value&& other);
   ^
-
-
-
-
-
-
 /project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
     CZString(CZString&& other);
     ^
@@ -1326,8 +241,6 @@ bool cmParseBlanketJSCoverage::LoadCoverageData(std::vector<std::string> files)
 /project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
   Value(Value&& other);
   ^
-
-
 /project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
     CZString(CZString&& other);
     ^
@@ -1337,10 +250,6 @@ bool cmParseBlanketJSCoverage::LoadCoverageData(std::vector<std::string> files)
 /project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
   Value(Value&& other);
   ^
-
-
-
-
 /project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
     CZString(CZString&& other);
     ^
@@ -1350,29 +259,7 @@ bool cmParseBlanketJSCoverage::LoadCoverageData(std::vector<std::string> files)
 /project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
   Value(Value&& other);
   ^
-
-
 /project/git/Source/CTest/cmCTestLaunch.cxx:496:7: warning: string concatenation results in allocation of unnecessary temporary strings; consider using 'operator+=' or 'string::append()' instead [performance-inefficient-string-concatenation]
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
       line = "[CTest: warning suppressed] " + line;
       ^
 /project/git/Source/CTest/cmCTestLaunch.cxx:498:7: warning: string concatenation results in allocation of unnecessary temporary strings; consider using 'operator+=' or 'string::append()' instead [performance-inefficient-string-concatenation]
@@ -1395,8 +282,6 @@ bool cmParseBlanketJSCoverage::LoadCoverageData(std::vector<std::string> files)
 /project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
   Value(Value&& other);
   ^
-
-
 /project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
     CZString(CZString&& other);
     ^
@@ -1406,8 +291,6 @@ bool cmParseBlanketJSCoverage::LoadCoverageData(std::vector<std::string> files)
 /project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
   Value(Value&& other);
   ^
-
-
 /project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
     CZString(CZString&& other);
     ^
@@ -1417,23 +300,9 @@ bool cmParseBlanketJSCoverage::LoadCoverageData(std::vector<std::string> files)
 /project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
   Value(Value&& other);
   ^
-
-
-
-
-
-
 /project/git/Source/CTest/cmCTestSubmitHandler.cxx:202:40: warning: string concatenation results in allocation of unnecessary temporary strings; consider using 'operator+=' or 'string::append()' instead [performance-inefficient-string-concatenation]
         local_file = localprefix + "/" + file;
                                        ^
-
-
-
-
-
-
-
-
 /project/git/Source/CTest/cmCTestSubmitHandler.cxx:205:19: warning: string concatenation results in allocation of unnecessary temporary strings; consider using 'operator+=' or 'string::append()' instead [performance-inefficient-string-concatenation]
         url + "/" + remoteprefix + cmSystemTools::GetFilenameName(file);
                   ^
@@ -1467,37 +336,9 @@ bool cmParseBlanketJSCoverage::LoadCoverageData(std::vector<std::string> files)
 /project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
   Value(Value&& other);
   ^
-
-
-
-
 /project/git/Source/CTest/cmCTestScriptHandler.cxx:951:61: warning: string concatenation results in allocation of unnecessary temporary strings; consider using 'operator+=' or 'string::append()' instead [performance-inefficient-string-concatenation]
     std::string fullPath = directoryPath + std::string("/") + path;
                                                             ^
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 /project/git/Source/cmTargetDepend.h:34:40: warning: the parameter 'l' is copied for each invocation but only used as a const reference; consider making it a const reference [performance-unnecessary-value-param]
   friend bool operator<(cmTargetDepend l, cmTargetDepend r)
                                        ^
@@ -1515,8 +356,6 @@ bool cmParseBlanketJSCoverage::LoadCoverageData(std::vector<std::string> files)
 /project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
   Value(Value&& other);
   ^
-
-
 /project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
     CZString(CZString&& other);
     ^
@@ -1526,10 +365,6 @@ bool cmParseBlanketJSCoverage::LoadCoverageData(std::vector<std::string> files)
 /project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
   Value(Value&& other);
   ^
-
-
-
-
 /project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
     CZString(CZString&& other);
     ^
@@ -1539,108 +374,6 @@ bool cmParseBlanketJSCoverage::LoadCoverageData(std::vector<std::string> files)
 /project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
   Value(Value&& other);
   ^
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 /project/git/Source/cmTargetDepend.h:34:40: warning: the parameter 'l' is copied for each invocation but only used as a const reference; consider making it a const reference [performance-unnecessary-value-param]
   friend bool operator<(cmTargetDepend l, cmTargetDepend r)
                                        ^
@@ -1658,74 +391,6 @@ bool cmParseBlanketJSCoverage::LoadCoverageData(std::vector<std::string> files)
 /project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
   Value(Value&& other);
   ^
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 /project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
     CZString(CZString&& other);
     ^
@@ -1735,8 +400,6 @@ bool cmParseBlanketJSCoverage::LoadCoverageData(std::vector<std::string> files)
 /project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
   Value(Value&& other);
   ^
-
-
 /project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
     CZString(CZString&& other);
     ^
@@ -1746,12 +409,6 @@ bool cmParseBlanketJSCoverage::LoadCoverageData(std::vector<std::string> files)
 /project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
   Value(Value&& other);
   ^
-
-
-
-
-
-
 /project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
     CZString(CZString&& other);
     ^
@@ -1761,30 +418,6 @@ bool cmParseBlanketJSCoverage::LoadCoverageData(std::vector<std::string> files)
 /project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
   Value(Value&& other);
   ^
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 /project/git/Source/cmTargetDepend.h:34:40: warning: the parameter 'l' is copied for each invocation but only used as a const reference; consider making it a const reference [performance-unnecessary-value-param]
   friend bool operator<(cmTargetDepend l, cmTargetDepend r)
                                        ^
@@ -1802,8 +435,6 @@ bool cmParseBlanketJSCoverage::LoadCoverageData(std::vector<std::string> files)
 /project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
   Value(Value&& other);
   ^
-
-
 /project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
     CZString(CZString&& other);
     ^
@@ -1813,10 +444,6 @@ bool cmParseBlanketJSCoverage::LoadCoverageData(std::vector<std::string> files)
 /project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
   Value(Value&& other);
   ^
-
-
-
-
 /project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
     CZString(CZString&& other);
     ^
@@ -1826,47 +453,6 @@ bool cmParseBlanketJSCoverage::LoadCoverageData(std::vector<std::string> files)
 /project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
   Value(Value&& other);
   ^
-
-
-/project/git/Source/cmTargetDepend.h:34:40: warning: the parameter 'l' is copied for each invocation but only used as a const reference; consider making it a const reference [performance-unnecessary-value-param]
-  friend bool operator<(cmTargetDepend l, cmTargetDepend r)
-                                       ^
-                        const         &
-/project/git/Source/cmTargetDepend.h:34:58: warning: the parameter 'r' is copied for each invocation but only used as a const reference; consider making it a const reference [performance-unnecessary-value-param]
-  friend bool operator<(cmTargetDepend l, cmTargetDepend r)
-                                                         ^
-                                          const         &
-/project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    CZString(CZString&& other);
-    ^
-/project/git/Utilities/cmjsoncpp/include/json/value.h:241:15: warning: move assignment operators should be marked noexcept [performance-noexcept-move-constructor]
-    CZString& operator=(CZString&& other);
-              ^
-/project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
-  Value(Value&& other);
-  ^
-
-
 /project/git/Source/cmTargetDepend.h:34:40: warning: the parameter 'l' is copied for each invocation but only used as a const reference; consider making it a const reference [performance-unnecessary-value-param]
   friend bool operator<(cmTargetDepend l, cmTargetDepend r)
                                        ^
@@ -1884,10 +470,6 @@ bool cmParseBlanketJSCoverage::LoadCoverageData(std::vector<std::string> files)
 /project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
   Value(Value&& other);
   ^
-
-
-
-
 /project/git/Source/cmTargetDepend.h:34:40: warning: the parameter 'l' is copied for each invocation but only used as a const reference; consider making it a const reference [performance-unnecessary-value-param]
   friend bool operator<(cmTargetDepend l, cmTargetDepend r)
                                        ^
@@ -1905,141 +487,6 @@ bool cmParseBlanketJSCoverage::LoadCoverageData(std::vector<std::string> files)
 /project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
   Value(Value&& other);
   ^
-
-
-
-
-/project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    CZString(CZString&& other);
-    ^
-/project/git/Utilities/cmjsoncpp/include/json/value.h:241:15: warning: move assignment operators should be marked noexcept [performance-noexcept-move-constructor]
-    CZString& operator=(CZString&& other);
-              ^
-/project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
-  Value(Value&& other);
-  ^
-
-
-/project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
-    CZString(CZString&& other);
-    ^
-/project/git/Utilities/cmjsoncpp/include/json/value.h:241:15: warning: move assignment operators should be marked noexcept [performance-noexcept-move-constructor]
-    CZString& operator=(CZString&& other);
-              ^
-/project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
-  Value(Value&& other);
-  ^
-
-
-
-
-
-
-
-
-
-
-/project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
-    CZString(CZString&& other);
-    ^
-/project/git/Utilities/cmjsoncpp/include/json/value.h:241:15: warning: move assignment operators should be marked noexcept [performance-noexcept-move-constructor]
-    CZString& operator=(CZString&& other);
-              ^
-/project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
-  Value(Value&& other);
-  ^
-
-
-
-
-/project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
-    CZString(CZString&& other);
-    ^
-/project/git/Utilities/cmjsoncpp/include/json/value.h:241:15: warning: move assignment operators should be marked noexcept [performance-noexcept-move-constructor]
-    CZString& operator=(CZString&& other);
-              ^
-/project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
-  Value(Value&& other);
-  ^
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-/project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
-    CZString(CZString&& other);
-    ^
-/project/git/Utilities/cmjsoncpp/include/json/value.h:241:15: warning: move assignment operators should be marked noexcept [performance-noexcept-move-constructor]
-    CZString& operator=(CZString&& other);
-              ^
-/project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
-  Value(Value&& other);
-  ^
-
-
 /project/git/Source/cmTargetDepend.h:34:40: warning: the parameter 'l' is copied for each invocation but only used as a const reference; consider making it a const reference [performance-unnecessary-value-param]
   friend bool operator<(cmTargetDepend l, cmTargetDepend r)
                                        ^
@@ -2057,10 +504,68 @@ bool cmParseBlanketJSCoverage::LoadCoverageData(std::vector<std::string> files)
 /project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
   Value(Value&& other);
   ^
-
-
-
-
+/project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
+    CZString(CZString&& other);
+    ^
+/project/git/Utilities/cmjsoncpp/include/json/value.h:241:15: warning: move assignment operators should be marked noexcept [performance-noexcept-move-constructor]
+    CZString& operator=(CZString&& other);
+              ^
+/project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
+  Value(Value&& other);
+  ^
+/project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
+    CZString(CZString&& other);
+    ^
+/project/git/Utilities/cmjsoncpp/include/json/value.h:241:15: warning: move assignment operators should be marked noexcept [performance-noexcept-move-constructor]
+    CZString& operator=(CZString&& other);
+              ^
+/project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
+  Value(Value&& other);
+  ^
+/project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
+    CZString(CZString&& other);
+    ^
+/project/git/Utilities/cmjsoncpp/include/json/value.h:241:15: warning: move assignment operators should be marked noexcept [performance-noexcept-move-constructor]
+    CZString& operator=(CZString&& other);
+              ^
+/project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
+  Value(Value&& other);
+  ^
+/project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
+    CZString(CZString&& other);
+    ^
+/project/git/Utilities/cmjsoncpp/include/json/value.h:241:15: warning: move assignment operators should be marked noexcept [performance-noexcept-move-constructor]
+    CZString& operator=(CZString&& other);
+              ^
+/project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
+  Value(Value&& other);
+  ^
+/project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
+    CZString(CZString&& other);
+    ^
+/project/git/Utilities/cmjsoncpp/include/json/value.h:241:15: warning: move assignment operators should be marked noexcept [performance-noexcept-move-constructor]
+    CZString& operator=(CZString&& other);
+              ^
+/project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
+  Value(Value&& other);
+  ^
+/project/git/Source/cmTargetDepend.h:34:40: warning: the parameter 'l' is copied for each invocation but only used as a const reference; consider making it a const reference [performance-unnecessary-value-param]
+  friend bool operator<(cmTargetDepend l, cmTargetDepend r)
+                                       ^
+                        const         &
+/project/git/Source/cmTargetDepend.h:34:58: warning: the parameter 'r' is copied for each invocation but only used as a const reference; consider making it a const reference [performance-unnecessary-value-param]
+  friend bool operator<(cmTargetDepend l, cmTargetDepend r)
+                                                         ^
+                                          const         &
+/project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
+    CZString(CZString&& other);
+    ^
+/project/git/Utilities/cmjsoncpp/include/json/value.h:241:15: warning: move assignment operators should be marked noexcept [performance-noexcept-move-constructor]
+    CZString& operator=(CZString&& other);
+              ^
+/project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
+  Value(Value&& other);
+  ^
 /project/git/Source/cmExportInstallFileGenerator.cxx:416:7: warning: string concatenation results in allocation of unnecessary temporary strings; consider using 'operator+=' or 'string::append()' instead [performance-inefficient-string-concatenation]
       obj = value + obj;
       ^
@@ -2076,37 +581,11 @@ bool cmParseBlanketJSCoverage::LoadCoverageData(std::vector<std::string> files)
     CZString(CZString&& other);
     ^
 /project/git/Utilities/cmjsoncpp/include/json/value.h:241:15: warning: move assignment operators should be marked noexcept [performance-noexcept-move-constructor]
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
     CZString& operator=(CZString&& other);
               ^
 /project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
   Value(Value&& other);
   ^
-
-
 /project/git/Source/cmTargetDepend.h:34:40: warning: the parameter 'l' is copied for each invocation but only used as a const reference; consider making it a const reference [performance-unnecessary-value-param]
   friend bool operator<(cmTargetDepend l, cmTargetDepend r)
                                        ^
@@ -2124,14 +603,6 @@ bool cmParseBlanketJSCoverage::LoadCoverageData(std::vector<std::string> files)
 /project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
   Value(Value&& other);
   ^
-
-
-
-
-
-
-
-
 /project/git/Source/cmTargetDepend.h:34:40: warning: the parameter 'l' is copied for each invocation but only used as a const reference; consider making it a const reference [performance-unnecessary-value-param]
   friend bool operator<(cmTargetDepend l, cmTargetDepend r)
                                        ^
@@ -2149,20 +620,6 @@ bool cmParseBlanketJSCoverage::LoadCoverageData(std::vector<std::string> files)
 /project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
   Value(Value&& other);
   ^
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 /project/git/Source/cmExtraCodeLiteGenerator.cxx:127:46: warning: string concatenation results in allocation of unnecessary temporary strings; consider using 'operator+=' or 'string::append()' instead [performance-inefficient-string-concatenation]
       std::string filename = outputDir + "/" + targetName + ".project";
                                              ^
@@ -2189,10 +646,6 @@ bool cmParseBlanketJSCoverage::LoadCoverageData(std::vector<std::string> files)
 /project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
   Value(Value&& other);
   ^
-
-
-
-
 /project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
     CZString(CZString&& other);
     ^
@@ -2202,8 +655,6 @@ bool cmParseBlanketJSCoverage::LoadCoverageData(std::vector<std::string> files)
 /project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
   Value(Value&& other);
   ^
-
-
 /project/git/Source/cmTargetDepend.h:34:40: warning: the parameter 'l' is copied for each invocation but only used as a const reference; consider making it a const reference [performance-unnecessary-value-param]
   friend bool operator<(cmTargetDepend l, cmTargetDepend r)
                                        ^
@@ -2211,14 +662,6 @@ bool cmParseBlanketJSCoverage::LoadCoverageData(std::vector<std::string> files)
 /project/git/Source/cmTargetDepend.h:34:58: warning: the parameter 'r' is copied for each invocation but only used as a const reference; consider making it a const reference [performance-unnecessary-value-param]
   friend bool operator<(cmTargetDepend l, cmTargetDepend r)
                                                          ^
-
-
-
-
-
-
-
-
                                           const         &
 /project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
     CZString(CZString&& other);
@@ -2229,8 +672,6 @@ bool cmParseBlanketJSCoverage::LoadCoverageData(std::vector<std::string> files)
 /project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
   Value(Value&& other);
   ^
-
-
 /project/git/Source/cmExtraCodeBlocksGenerator.cxx:183:51: warning: string concatenation results in allocation of unnecessary temporary strings; consider using 'operator+=' or 'string::append()' instead [performance-inefficient-string-concatenation]
     xml.Attribute("filename", fsPath + path + "/" + f);
                                                   ^
@@ -2251,8 +692,6 @@ bool cmParseBlanketJSCoverage::LoadCoverageData(std::vector<std::string> files)
 /project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
   Value(Value&& other);
   ^
-
-
 /project/git/Source/cmExtraSublimeTextGenerator.cxx:269:27: warning: string concatenation results in allocation of unnecessary temporary strings; consider using 'operator+=' or 'string::append()' instead [performance-inefficient-string-concatenation]
         flagsString + " " + definesString + " " + includesString;
                           ^
@@ -2266,34 +705,6 @@ bool cmParseBlanketJSCoverage::LoadCoverageData(std::vector<std::string> files)
 /project/git/Source/cmTargetDepend.h:34:58: warning: the parameter 'r' is copied for each invocation but only used as a const reference; consider making it a const reference [performance-unnecessary-value-param]
   friend bool operator<(cmTargetDepend l, cmTargetDepend r)
                                                          ^
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
                                           const         &
 /project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
     CZString(CZString&& other);
@@ -2304,10 +715,6 @@ bool cmParseBlanketJSCoverage::LoadCoverageData(std::vector<std::string> files)
 /project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
   Value(Value&& other);
   ^
-
-
-
-
 /project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
     CZString(CZString&& other);
     ^
@@ -2317,12 +724,6 @@ bool cmParseBlanketJSCoverage::LoadCoverageData(std::vector<std::string> files)
 /project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
   Value(Value&& other);
   ^
-
-
-
-
-
-
 /project/git/Source/cmTargetDepend.h:34:40: warning: the parameter 'l' is copied for each invocation but only used as a const reference; consider making it a const reference [performance-unnecessary-value-param]
   friend bool operator<(cmTargetDepend l, cmTargetDepend r)
                                        ^
@@ -2340,40 +741,14 @@ bool cmParseBlanketJSCoverage::LoadCoverageData(std::vector<std::string> files)
 /project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
   Value(Value&& other);
   ^
-
-
-
-
 /project/git/Source/cmTargetDepend.h:34:40: warning: the parameter 'l' is copied for each invocation but only used as a const reference; consider making it a const reference [performance-unnecessary-value-param]
   friend bool operator<(cmTargetDepend l, cmTargetDepend r)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
                                        ^
                         const         &
 /project/git/Source/cmTargetDepend.h:34:58: warning: the parameter 'r' is copied for each invocation but only used as a const reference; consider making it a const reference [performance-unnecessary-value-param]
   friend bool operator<(cmTargetDepend l, cmTargetDepend r)
                                                          ^
                                           const         &
-
-
 /project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
     CZString(CZString&& other);
     ^
@@ -2383,8 +758,6 @@ bool cmParseBlanketJSCoverage::LoadCoverageData(std::vector<std::string> files)
 /project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
   Value(Value&& other);
   ^
-
-
 /project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
     CZString(CZString&& other);
     ^
@@ -2394,8 +767,6 @@ bool cmParseBlanketJSCoverage::LoadCoverageData(std::vector<std::string> files)
 /project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
   Value(Value&& other);
   ^
-
-
 /project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
     CZString(CZString&& other);
     ^
@@ -2405,8 +776,6 @@ bool cmParseBlanketJSCoverage::LoadCoverageData(std::vector<std::string> files)
 /project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
   Value(Value&& other);
   ^
-
-
 /project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
     CZString(CZString&& other);
     ^
@@ -2416,35 +785,15 @@ bool cmParseBlanketJSCoverage::LoadCoverageData(std::vector<std::string> files)
 /project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
   Value(Value&& other);
   ^
-
-
 /project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
     CZString(CZString&& other);
     ^
 /project/git/Utilities/cmjsoncpp/include/json/value.h:241:15: warning: move assignment operators should be marked noexcept [performance-noexcept-move-constructor]
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
     CZString& operator=(CZString&& other);
               ^
 /project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
   Value(Value&& other);
   ^
-
-
 /project/git/Source/cmGeneratorExpressionNode.cxx:1061:77: warning: string concatenation results in allocation of unnecessary temporary strings; consider using 'operator+=' or 'string::append()' instead [performance-inefficient-string-concatenation]
       depString += sep + "$<TARGET_PROPERTY:" + std::move(uniqueName) + "," +
                                                                             ^
@@ -2468,10 +817,6 @@ bool cmParseBlanketJSCoverage::LoadCoverageData(std::vector<std::string> files)
 /project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
   Value(Value&& other);
   ^
-
-
-
-
 /project/git/Source/cmInstallDirectoryGenerator.cxx:76:7: warning: string concatenation results in allocation of unnecessary temporary strings; consider using 'operator+=' or 'string::append()' instead [performance-inefficient-string-concatenation]
       d = mf.GetCurrentSourceDirectory() + "/" + d;
       ^
@@ -2484,47 +829,6 @@ bool cmParseBlanketJSCoverage::LoadCoverageData(std::vector<std::string> files)
 /project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
   Value(Value&& other);
   ^
-
-
-/project/git/Source/cmTargetDepend.h:34:40: warning: the parameter 'l' is copied for each invocation but only used as a const reference; consider making it a const reference [performance-unnecessary-value-param]
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-  friend bool operator<(cmTargetDepend l, cmTargetDepend r)
-                                       ^
-                        const         &
-/project/git/Source/cmTargetDepend.h:34:58: warning: the parameter 'r' is copied for each invocation but only used as a const reference; consider making it a const reference [performance-unnecessary-value-param]
-  friend bool operator<(cmTargetDepend l, cmTargetDepend r)
-                                                         ^
-                                          const         &
-/project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
-    CZString(CZString&& other);
-    ^
-/project/git/Utilities/cmjsoncpp/include/json/value.h:241:15: warning: move assignment operators should be marked noexcept [performance-noexcept-move-constructor]
-    CZString& operator=(CZString&& other);
-              ^
-/project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
-  Value(Value&& other);
-  ^
-
-
 /project/git/Source/cmTargetDepend.h:34:40: warning: the parameter 'l' is copied for each invocation but only used as a const reference; consider making it a const reference [performance-unnecessary-value-param]
   friend bool operator<(cmTargetDepend l, cmTargetDepend r)
                                        ^
@@ -2542,10 +846,14 @@ bool cmParseBlanketJSCoverage::LoadCoverageData(std::vector<std::string> files)
 /project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
   Value(Value&& other);
   ^
-
-
-
-
+/project/git/Source/cmTargetDepend.h:34:40: warning: the parameter 'l' is copied for each invocation but only used as a const reference; consider making it a const reference [performance-unnecessary-value-param]
+  friend bool operator<(cmTargetDepend l, cmTargetDepend r)
+                                       ^
+                        const         &
+/project/git/Source/cmTargetDepend.h:34:58: warning: the parameter 'r' is copied for each invocation but only used as a const reference; consider making it a const reference [performance-unnecessary-value-param]
+  friend bool operator<(cmTargetDepend l, cmTargetDepend r)
+                                                         ^
+                                          const         &
 /project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
     CZString(CZString&& other);
     ^
@@ -2555,26 +863,15 @@ bool cmParseBlanketJSCoverage::LoadCoverageData(std::vector<std::string> files)
 /project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
   Value(Value&& other);
   ^
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+/project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
+    CZString(CZString&& other);
+    ^
+/project/git/Utilities/cmjsoncpp/include/json/value.h:241:15: warning: move assignment operators should be marked noexcept [performance-noexcept-move-constructor]
+    CZString& operator=(CZString&& other);
+              ^
+/project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
+  Value(Value&& other);
+  ^
 /project/git/Source/cmInstallTargetGenerator.cxx:367:5: warning: string concatenation results in allocation of unnecessary temporary strings; consider using 'operator+=' or 'string::append()' instead [performance-inefficient-string-concatenation]
     o = computeInstallObjectDir(this->Target, config) + "/" + o;
     ^
@@ -2595,103 +892,6 @@ bool cmParseBlanketJSCoverage::LoadCoverageData(std::vector<std::string> files)
 /project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
   Value(Value&& other);
   ^
-
-
-/project/git/Source/cmTargetDepend.h:34:40: warning: the parameter 'l' is copied for each invocation but only used as a const reference; consider making it a const reference [performance-unnecessary-value-param]
-  friend bool operator<(cmTargetDepend l, cmTargetDepend r)
-                                       ^
-                        const         &
-/project/git/Source/cmTargetDepend.h:34:58: warning: the parameter 'r' is copied for each invocation but only used as a const reference; consider making it a const reference [performance-unnecessary-value-param]
-  friend bool operator<(cmTargetDepend l, cmTargetDepend r)
-                                                         ^
-                                          const         &
-
-
-/project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
-    CZString(CZString&& other);
-    ^
-/project/git/Utilities/cmjsoncpp/include/json/value.h:241:15: warning: move assignment operators should be marked noexcept [performance-noexcept-move-constructor]
-    CZString& operator=(CZString&& other);
-              ^
-/project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
-  Value(Value&& other);
-  ^
-
-
-
-
-/project/git/Source/cmTargetDepend.h:34:40: warning: the parameter 'l' is copied for each invocation but only used as a const reference; consider making it a const reference [performance-unnecessary-value-param]
-  friend bool operator<(cmTargetDepend l, cmTargetDepend r)
-                                       ^
-                        const         &
-/project/git/Source/cmTargetDepend.h:34:58: warning: the parameter 'r' is copied for each invocation but only used as a const reference; consider making it a const reference [performance-unnecessary-value-param]
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-  friend bool operator<(cmTargetDepend l, cmTargetDepend r)
-                                                         ^
-                                          const         &
-/project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
-    CZString(CZString&& other);
-    ^
-/project/git/Utilities/cmjsoncpp/include/json/value.h:241:15: warning: move assignment operators should be marked noexcept [performance-noexcept-move-constructor]
-    CZString& operator=(CZString&& other);
-              ^
-/project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
-  Value(Value&& other);
-  ^
-
-
-
-
-
-
-/project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
-    CZString(CZString&& other);
-    ^
-/project/git/Utilities/cmjsoncpp/include/json/value.h:241:15: warning: move assignment operators should be marked noexcept [performance-noexcept-move-constructor]
-    CZString& operator=(CZString&& other);
-              ^
-/project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
-  Value(Value&& other);
-  ^
-
-
-
-
 /project/git/Source/cmTargetDepend.h:34:40: warning: the parameter 'l' is copied for each invocation but only used as a const reference; consider making it a const reference [performance-unnecessary-value-param]
   friend bool operator<(cmTargetDepend l, cmTargetDepend r)
                                        ^
@@ -2709,28 +909,49 @@ bool cmParseBlanketJSCoverage::LoadCoverageData(std::vector<std::string> files)
 /project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
   Value(Value&& other);
   ^
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+/project/git/Source/cmTargetDepend.h:34:40: warning: the parameter 'l' is copied for each invocation but only used as a const reference; consider making it a const reference [performance-unnecessary-value-param]
+  friend bool operator<(cmTargetDepend l, cmTargetDepend r)
+                                       ^
+                        const         &
+/project/git/Source/cmTargetDepend.h:34:58: warning: the parameter 'r' is copied for each invocation but only used as a const reference; consider making it a const reference [performance-unnecessary-value-param]
+  friend bool operator<(cmTargetDepend l, cmTargetDepend r)
+                                                         ^
+                                          const         &
+/project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
+    CZString(CZString&& other);
+    ^
+/project/git/Utilities/cmjsoncpp/include/json/value.h:241:15: warning: move assignment operators should be marked noexcept [performance-noexcept-move-constructor]
+    CZString& operator=(CZString&& other);
+              ^
+/project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
+  Value(Value&& other);
+  ^
+/project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
+    CZString(CZString&& other);
+    ^
+/project/git/Utilities/cmjsoncpp/include/json/value.h:241:15: warning: move assignment operators should be marked noexcept [performance-noexcept-move-constructor]
+    CZString& operator=(CZString&& other);
+              ^
+/project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
+  Value(Value&& other);
+  ^
+/project/git/Source/cmTargetDepend.h:34:40: warning: the parameter 'l' is copied for each invocation but only used as a const reference; consider making it a const reference [performance-unnecessary-value-param]
+  friend bool operator<(cmTargetDepend l, cmTargetDepend r)
+                                       ^
+                        const         &
+/project/git/Source/cmTargetDepend.h:34:58: warning: the parameter 'r' is copied for each invocation but only used as a const reference; consider making it a const reference [performance-unnecessary-value-param]
+  friend bool operator<(cmTargetDepend l, cmTargetDepend r)
+                                                         ^
+                                          const         &
+/project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
+    CZString(CZString&& other);
+    ^
+/project/git/Utilities/cmjsoncpp/include/json/value.h:241:15: warning: move assignment operators should be marked noexcept [performance-noexcept-move-constructor]
+    CZString& operator=(CZString&& other);
+              ^
+/project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
+  Value(Value&& other);
+  ^
 /project/git/Source/cmLocalGenerator.cxx:1746:38: warning: string concatenation results in allocation of unnecessary temporary strings; consider using 'operator+=' or 'string::append()' instead [performance-inefficient-string-concatenation]
       "CMAKE_" + lang + *stdIt + "_" + type + "_COMPILE_OPTION";
                                      ^
@@ -2751,8 +972,6 @@ bool cmParseBlanketJSCoverage::LoadCoverageData(std::vector<std::string> files)
 /project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
   Value(Value&& other);
   ^
-
-
 /project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
     CZString(CZString&& other);
     ^
@@ -2762,8 +981,6 @@ bool cmParseBlanketJSCoverage::LoadCoverageData(std::vector<std::string> files)
 /project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
   Value(Value&& other);
   ^
-
-
 /project/git/Source/cmMakefileExecutableTargetGenerator.cxx:252:7: warning: string concatenation results in allocation of unnecessary temporary strings; consider using 'operator+=' or 'string::append()' instead [performance-inefficient-string-concatenation]
       real_link_command = launcher + real_link_command;
       ^
@@ -2774,14 +991,6 @@ bool cmParseBlanketJSCoverage::LoadCoverageData(std::vector<std::string> files)
   friend bool operator<(cmTargetDepend l, cmTargetDepend r)
                                        ^
                         const         &
-
-
-
-
-
-
-
-
 /project/git/Source/cmTargetDepend.h:34:58: warning: the parameter 'r' is copied for each invocation but only used as a const reference; consider making it a const reference [performance-unnecessary-value-param]
   friend bool operator<(cmTargetDepend l, cmTargetDepend r)
                                                          ^
@@ -2795,8 +1004,6 @@ bool cmParseBlanketJSCoverage::LoadCoverageData(std::vector<std::string> files)
 /project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
   Value(Value&& other);
   ^
-
-
 /project/git/Source/cmTargetDepend.h:34:40: warning: the parameter 'l' is copied for each invocation but only used as a const reference; consider making it a const reference [performance-unnecessary-value-param]
   friend bool operator<(cmTargetDepend l, cmTargetDepend r)
                                        ^
@@ -2814,8 +1021,6 @@ bool cmParseBlanketJSCoverage::LoadCoverageData(std::vector<std::string> files)
 /project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
   Value(Value&& other);
   ^
-
-
 /project/git/Source/cmMakefileLibraryTargetGenerator.cxx:396:7: warning: string concatenation results in allocation of unnecessary temporary strings; consider using 'operator+=' or 'string::append()' instead [performance-inefficient-string-concatenation]
       real_link_command = launcher + real_link_command;
       ^
@@ -2831,18 +1036,6 @@ bool cmParseBlanketJSCoverage::LoadCoverageData(std::vector<std::string> files)
                                                          ^
                                           const         &
 /project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
-
-
-
-
-
-
-
-
-
-
-
-
     CZString(CZString&& other);
     ^
 /project/git/Utilities/cmjsoncpp/include/json/value.h:241:15: warning: move assignment operators should be marked noexcept [performance-noexcept-move-constructor]
@@ -2851,8 +1044,6 @@ bool cmParseBlanketJSCoverage::LoadCoverageData(std::vector<std::string> files)
 /project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
   Value(Value&& other);
   ^
-
-
 /project/git/Source/cmLocalUnixMakefileGenerator3.cxx:964:9: warning: string concatenation results in allocation of unnecessary temporary strings; consider using 'operator+=' or 'string::append()' instead [performance-inefficient-string-concatenation]
         cmd = "./" + cmd;
         ^
@@ -2879,10 +1070,6 @@ bool cmParseBlanketJSCoverage::LoadCoverageData(std::vector<std::string> files)
 /project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
   Value(Value&& other);
   ^
-
-
-
-
 /project/git/Source/cmMakefileTargetGenerator.cxx:773:7: warning: string concatenation results in allocation of unnecessary temporary strings; consider using 'operator+=' or 'string::append()' instead [performance-inefficient-string-concatenation]
       compileCommand = launcher + compileCommand;
       ^
@@ -2891,22 +1078,6 @@ bool cmParseBlanketJSCoverage::LoadCoverageData(std::vector<std::string> files)
                                        ^
                         const         &
 /project/git/Source/cmTargetDepend.h:34:58: warning: the parameter 'r' is copied for each invocation but only used as a const reference; consider making it a const reference [performance-unnecessary-value-param]
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
   friend bool operator<(cmTargetDepend l, cmTargetDepend r)
                                                          ^
                                           const         &
@@ -2919,8 +1090,6 @@ bool cmParseBlanketJSCoverage::LoadCoverageData(std::vector<std::string> files)
 /project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
   Value(Value&& other);
   ^
-
-
 /project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
     CZString(CZString&& other);
     ^
@@ -2930,10 +1099,6 @@ bool cmParseBlanketJSCoverage::LoadCoverageData(std::vector<std::string> files)
 /project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
   Value(Value&& other);
   ^
-
-
-
-
 /project/git/Source/cmMakefile.cxx:2345:13: warning: loop variable is copied but only used as const reference; consider making it a const reference [performance-for-range-copy]
   for (auto entry : sdkDatabase) {
             ^
@@ -2955,44 +1120,10 @@ bool cmParseBlanketJSCoverage::LoadCoverageData(std::vector<std::string> files)
 /project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
   Value(Value&& other);
   ^
-
-
 /project/git/Source/cmTargetDepend.h:34:40: warning: the parameter 'l' is copied for each invocation but only used as a const reference; consider making it a const reference [performance-unnecessary-value-param]
   friend bool operator<(cmTargetDepend l, cmTargetDepend r)
                                        ^
                         const         &
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 /project/git/Source/cmTargetDepend.h:34:58: warning: the parameter 'r' is copied for each invocation but only used as a const reference; consider making it a const reference [performance-unnecessary-value-param]
   friend bool operator<(cmTargetDepend l, cmTargetDepend r)
                                                          ^
@@ -3006,26 +1137,12 @@ bool cmParseBlanketJSCoverage::LoadCoverageData(std::vector<std::string> files)
 /project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
   Value(Value&& other);
   ^
-
-
-
-
-
-
 /project/git/Source/cmRST.cxx:344:7: warning: string concatenation results in allocation of unnecessary temporary strings; consider using 'operator+=' or 'string::append()' instead [performance-inefficient-string-concatenation]
       line = " " + line;
       ^
-
-
 /project/git/Source/cmUuid.cxx:130:5: warning: string concatenation results in allocation of unnecessary temporary strings; consider using 'operator+=' or 'string::append()' instead [performance-inefficient-string-concatenation]
     result = c + result;
     ^
-
-
-
-
-
-
 /project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
     CZString(CZString&& other);
     ^
@@ -3035,8 +1152,6 @@ bool cmParseBlanketJSCoverage::LoadCoverageData(std::vector<std::string> files)
 /project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
   Value(Value&& other);
   ^
-
-
 /project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
     CZString(CZString&& other);
     ^
@@ -3046,24 +1161,6 @@ bool cmParseBlanketJSCoverage::LoadCoverageData(std::vector<std::string> files)
 /project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
   Value(Value&& other);
   ^
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 /project/git/Source/cmTargetDepend.h:34:40: warning: the parameter 'l' is copied for each invocation but only used as a const reference; consider making it a const reference [performance-unnecessary-value-param]
   friend bool operator<(cmTargetDepend l, cmTargetDepend r)
                                        ^
@@ -3081,8 +1178,6 @@ bool cmParseBlanketJSCoverage::LoadCoverageData(std::vector<std::string> files)
 /project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
   Value(Value&& other);
   ^
-
-
 /project/git/Source/cmTargetDepend.h:34:40: warning: the parameter 'l' is copied for each invocation but only used as a const reference; consider making it a const reference [performance-unnecessary-value-param]
   friend bool operator<(cmTargetDepend l, cmTargetDepend r)
                                        ^
@@ -3100,13 +1195,9 @@ bool cmParseBlanketJSCoverage::LoadCoverageData(std::vector<std::string> files)
 /project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
   Value(Value&& other);
   ^
-
-
 /project/git/Source/cmSystemTools.cxx:931:34: warning: string concatenation results in allocation of unnecessary temporary strings; consider using 'operator+=' or 'string::append()' instead [performance-inefficient-string-concatenation]
     std::string path = dir + "/" + file;
                                  ^
-
-
 /project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
     CZString(CZString&& other);
     ^
@@ -3116,20 +1207,6 @@ bool cmParseBlanketJSCoverage::LoadCoverageData(std::vector<std::string> files)
 /project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
   Value(Value&& other);
   ^
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 /project/git/Source/cmTargetDepend.h:34:40: warning: the parameter 'l' is copied for each invocation but only used as a const reference; consider making it a const reference [performance-unnecessary-value-param]
   friend bool operator<(cmTargetDepend l, cmTargetDepend r)
                                        ^
@@ -3147,8 +1224,6 @@ bool cmParseBlanketJSCoverage::LoadCoverageData(std::vector<std::string> files)
 /project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
   Value(Value&& other);
   ^
-
-
 /project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
     CZString(CZString&& other);
     ^
@@ -3158,8 +1233,6 @@ bool cmParseBlanketJSCoverage::LoadCoverageData(std::vector<std::string> files)
 /project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
   Value(Value&& other);
   ^
-
-
 /project/git/Source/cmTargetDepend.h:34:40: warning: the parameter 'l' is copied for each invocation but only used as a const reference; consider making it a const reference [performance-unnecessary-value-param]
   friend bool operator<(cmTargetDepend l, cmTargetDepend r)
                                        ^
@@ -3177,57 +1250,6 @@ bool cmParseBlanketJSCoverage::LoadCoverageData(std::vector<std::string> files)
 /project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
   Value(Value&& other);
   ^
-
-
-/project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
-    CZString(CZString&& other);
-    ^
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-/project/git/Utilities/cmjsoncpp/include/json/value.h:241:15: warning: move assignment operators should be marked noexcept [performance-noexcept-move-constructor]
-    CZString& operator=(CZString&& other);
-              ^
-/project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
-  Value(Value&& other);
-  ^
-
-
-
-
 /project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
     CZString(CZString&& other);
     ^
@@ -3237,16 +1259,6 @@ bool cmParseBlanketJSCoverage::LoadCoverageData(std::vector<std::string> files)
 /project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
   Value(Value&& other);
   ^
-
-
-
-
-
-
-
-
-
-
 /project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
     CZString(CZString&& other);
     ^
@@ -3256,55 +1268,6 @@ bool cmParseBlanketJSCoverage::LoadCoverageData(std::vector<std::string> files)
 /project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
   Value(Value&& other);
   ^
-
-
-
-
-/project/git/Source/cmTargetDepend.h:34:40: warning: the parameter 'l' is copied for each invocation but only used as a const reference; consider making it a const reference [performance-unnecessary-value-param]
-  friend bool operator<(cmTargetDepend l, cmTargetDepend r)
-                                       ^
-                        const         &
-/project/git/Source/cmTargetDepend.h:34:58: warning: the parameter 'r' is copied for each invocation but only used as a const reference; consider making it a const reference [performance-unnecessary-value-param]
-  friend bool operator<(cmTargetDepend l, cmTargetDepend r)
-                                                         ^
-                                          const         &
-/project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
-    CZString(CZString&& other);
-    ^
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-/project/git/Utilities/cmjsoncpp/include/json/value.h:241:15: warning: move assignment operators should be marked noexcept [performance-noexcept-move-constructor]
-    CZString& operator=(CZString&& other);
-              ^
-/project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
-  Value(Value&& other);
-  ^
-
-
-
-
 /project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
     CZString(CZString&& other);
     ^
@@ -3314,90 +1277,6 @@ bool cmParseBlanketJSCoverage::LoadCoverageData(std::vector<std::string> files)
 /project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
   Value(Value&& other);
   ^
-
-
-/project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
-    CZString(CZString&& other);
-    ^
-/project/git/Utilities/cmjsoncpp/include/json/value.h:241:15: warning: move assignment operators should be marked noexcept [performance-noexcept-move-constructor]
-    CZString& operator=(CZString&& other);
-              ^
-/project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
-  Value(Value&& other);
-  ^
-
-
-/project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
-    CZString(CZString&& other);
-    ^
-/project/git/Utilities/cmjsoncpp/include/json/value.h:241:15: warning: move assignment operators should be marked noexcept [performance-noexcept-move-constructor]
-    CZString& operator=(CZString&& other);
-              ^
-/project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
-  Value(Value&& other);
-  ^
-
-
-/project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
-    CZString(CZString&& other);
-    ^
-/project/git/Utilities/cmjsoncpp/include/json/value.h:241:15: warning: move assignment operators should be marked noexcept [performance-noexcept-move-constructor]
-    CZString& operator=(CZString&& other);
-              ^
-/project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
-  Value(Value&& other);
-  ^
-
-
-/project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
-    CZString(CZString&& other);
-    ^
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-/project/git/Utilities/cmjsoncpp/include/json/value.h:241:15: warning: move assignment operators should be marked noexcept [performance-noexcept-move-constructor]
-    CZString& operator=(CZString&& other);
-              ^
-/project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
-  Value(Value&& other);
-  ^
-
-
-/project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
-    CZString(CZString&& other);
-    ^
-/project/git/Utilities/cmjsoncpp/include/json/value.h:241:15: warning: move assignment operators should be marked noexcept [performance-noexcept-move-constructor]
-    CZString& operator=(CZString&& other);
-              ^
-/project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
-  Value(Value&& other);
-  ^
-
-
-/project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
-    CZString(CZString&& other);
-    ^
-/project/git/Utilities/cmjsoncpp/include/json/value.h:241:15: warning: move assignment operators should be marked noexcept [performance-noexcept-move-constructor]
-    CZString& operator=(CZString&& other);
-              ^
-/project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
-  Value(Value&& other);
-  ^
-
-
 /project/git/Source/cmTargetDepend.h:34:40: warning: the parameter 'l' is copied for each invocation but only used as a const reference; consider making it a const reference [performance-unnecessary-value-param]
   friend bool operator<(cmTargetDepend l, cmTargetDepend r)
                                        ^
@@ -3415,28 +1294,6 @@ bool cmParseBlanketJSCoverage::LoadCoverageData(std::vector<std::string> files)
 /project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
   Value(Value&& other);
   ^
-
-
-/project/git/Source/cmTargetDepend.h:34:40: warning: the parameter 'l' is copied for each invocation but only used as a const reference; consider making it a const reference [performance-unnecessary-value-param]
-  friend bool operator<(cmTargetDepend l, cmTargetDepend r)
-                                       ^
-                        const         &
-/project/git/Source/cmTargetDepend.h:34:58: warning: the parameter 'r' is copied for each invocation but only used as a const reference; consider making it a const reference [performance-unnecessary-value-param]
-
-
-
-
-
-
-
-
-
-
-
-
-  friend bool operator<(cmTargetDepend l, cmTargetDepend r)
-                                                         ^
-                                          const         &
 /project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
     CZString(CZString&& other);
     ^
@@ -3446,16 +1303,6 @@ bool cmParseBlanketJSCoverage::LoadCoverageData(std::vector<std::string> files)
 /project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
   Value(Value&& other);
   ^
-
-
-/project/git/Source/cmTargetDepend.h:34:40: warning: the parameter 'l' is copied for each invocation but only used as a const reference; consider making it a const reference [performance-unnecessary-value-param]
-  friend bool operator<(cmTargetDepend l, cmTargetDepend r)
-                                       ^
-                        const         &
-/project/git/Source/cmTargetDepend.h:34:58: warning: the parameter 'r' is copied for each invocation but only used as a const reference; consider making it a const reference [performance-unnecessary-value-param]
-  friend bool operator<(cmTargetDepend l, cmTargetDepend r)
-                                                         ^
-                                          const         &
 /project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
     CZString(CZString&& other);
     ^
@@ -3465,8 +1312,6 @@ bool cmParseBlanketJSCoverage::LoadCoverageData(std::vector<std::string> files)
 /project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
   Value(Value&& other);
   ^
-
-
 /project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
     CZString(CZString&& other);
     ^
@@ -3476,49 +1321,6 @@ bool cmParseBlanketJSCoverage::LoadCoverageData(std::vector<std::string> files)
 /project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
   Value(Value&& other);
   ^
-
-
-/project/git/Source/cmTargetDepend.h:34:40: warning: the parameter 'l' is copied for each invocation but only used as a const reference; consider making it a const reference [performance-unnecessary-value-param]
-  friend bool operator<(cmTargetDepend l, cmTargetDepend r)
-                                       ^
-                        const         &
-/project/git/Source/cmTargetDepend.h:34:58: warning: the parameter 'r' is copied for each invocation but only used as a const reference; consider making it a const reference [performance-unnecessary-value-param]
-  friend bool operator<(cmTargetDepend l, cmTargetDepend r)
-                                                         ^
-                                          const         &
-/project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    CZString(CZString&& other);
-    ^
-/project/git/Utilities/cmjsoncpp/include/json/value.h:241:15: warning: move assignment operators should be marked noexcept [performance-noexcept-move-constructor]
-    CZString& operator=(CZString&& other);
-              ^
-/project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
-  Value(Value&& other);
-  ^
-
-
-
-
 /project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
     CZString(CZString&& other);
     ^
@@ -3528,8 +1330,6 @@ bool cmParseBlanketJSCoverage::LoadCoverageData(std::vector<std::string> files)
 /project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
   Value(Value&& other);
   ^
-
-
 /project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
     CZString(CZString&& other);
     ^
@@ -3539,8 +1339,6 @@ bool cmParseBlanketJSCoverage::LoadCoverageData(std::vector<std::string> files)
 /project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
   Value(Value&& other);
   ^
-
-
 /project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
     CZString(CZString&& other);
     ^
@@ -3550,47 +1348,6 @@ bool cmParseBlanketJSCoverage::LoadCoverageData(std::vector<std::string> files)
 /project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
   Value(Value&& other);
   ^
-
-
-/project/git/Source/cmTargetDepend.h:34:40: warning: the parameter 'l' is copied for each invocation but only used as a const reference; consider making it a const reference [performance-unnecessary-value-param]
-  friend bool operator<(cmTargetDepend l, cmTargetDepend r)
-                                       ^
-                        const         &
-/project/git/Source/cmTargetDepend.h:34:58: warning: the parameter 'r' is copied for each invocation but only used as a const reference; consider making it a const reference [performance-unnecessary-value-param]
-  friend bool operator<(cmTargetDepend l, cmTargetDepend r)
-                                                         ^
-                                          const         &
-/project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
-    CZString(CZString&& other);
-    ^
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-/project/git/Utilities/cmjsoncpp/include/json/value.h:241:15: warning: move assignment operators should be marked noexcept [performance-noexcept-move-constructor]
-    CZString& operator=(CZString&& other);
-              ^
-/project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
-  Value(Value&& other);
-  ^
-
-
 /project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
     CZString(CZString&& other);
     ^
@@ -3600,19 +1357,6 @@ bool cmParseBlanketJSCoverage::LoadCoverageData(std::vector<std::string> files)
 /project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
   Value(Value&& other);
   ^
-
-
-/project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
-    CZString(CZString&& other);
-    ^
-/project/git/Utilities/cmjsoncpp/include/json/value.h:241:15: warning: move assignment operators should be marked noexcept [performance-noexcept-move-constructor]
-    CZString& operator=(CZString&& other);
-              ^
-/project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
-  Value(Value&& other);
-  ^
-
-
 /project/git/Source/cmTargetDepend.h:34:40: warning: the parameter 'l' is copied for each invocation but only used as a const reference; consider making it a const reference [performance-unnecessary-value-param]
   friend bool operator<(cmTargetDepend l, cmTargetDepend r)
                                        ^
@@ -3630,45 +1374,14 @@ bool cmParseBlanketJSCoverage::LoadCoverageData(std::vector<std::string> files)
 /project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
   Value(Value&& other);
   ^
-
-
-
-
-/project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
-    CZString(CZString&& other);
-    ^
-/project/git/Utilities/cmjsoncpp/include/json/value.h:241:15: warning: move assignment operators should be marked noexcept [performance-noexcept-move-constructor]
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    CZString& operator=(CZString&& other);
-              ^
-/project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
-  Value(Value&& other);
-  ^
-
-
+/project/git/Source/cmTargetDepend.h:34:40: warning: the parameter 'l' is copied for each invocation but only used as a const reference; consider making it a const reference [performance-unnecessary-value-param]
+  friend bool operator<(cmTargetDepend l, cmTargetDepend r)
+                                       ^
+                        const         &
+/project/git/Source/cmTargetDepend.h:34:58: warning: the parameter 'r' is copied for each invocation but only used as a const reference; consider making it a const reference [performance-unnecessary-value-param]
+  friend bool operator<(cmTargetDepend l, cmTargetDepend r)
+                                                         ^
+                                          const         &
 /project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
     CZString(CZString&& other);
     ^
@@ -3678,8 +1391,14 @@ bool cmParseBlanketJSCoverage::LoadCoverageData(std::vector<std::string> files)
 /project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
   Value(Value&& other);
   ^
-
-
+/project/git/Source/cmTargetDepend.h:34:40: warning: the parameter 'l' is copied for each invocation but only used as a const reference; consider making it a const reference [performance-unnecessary-value-param]
+  friend bool operator<(cmTargetDepend l, cmTargetDepend r)
+                                       ^
+                        const         &
+/project/git/Source/cmTargetDepend.h:34:58: warning: the parameter 'r' is copied for each invocation but only used as a const reference; consider making it a const reference [performance-unnecessary-value-param]
+  friend bool operator<(cmTargetDepend l, cmTargetDepend r)
+                                                         ^
+                                          const         &
 /project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
     CZString(CZString&& other);
     ^
@@ -3689,8 +1408,6 @@ bool cmParseBlanketJSCoverage::LoadCoverageData(std::vector<std::string> files)
 /project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
   Value(Value&& other);
   ^
-
-
 /project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
     CZString(CZString&& other);
     ^
@@ -3700,8 +1417,14 @@ bool cmParseBlanketJSCoverage::LoadCoverageData(std::vector<std::string> files)
 /project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
   Value(Value&& other);
   ^
-
-
+/project/git/Source/cmTargetDepend.h:34:40: warning: the parameter 'l' is copied for each invocation but only used as a const reference; consider making it a const reference [performance-unnecessary-value-param]
+  friend bool operator<(cmTargetDepend l, cmTargetDepend r)
+                                       ^
+                        const         &
+/project/git/Source/cmTargetDepend.h:34:58: warning: the parameter 'r' is copied for each invocation but only used as a const reference; consider making it a const reference [performance-unnecessary-value-param]
+  friend bool operator<(cmTargetDepend l, cmTargetDepend r)
+                                                         ^
+                                          const         &
 /project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
     CZString(CZString&& other);
     ^
@@ -3711,8 +1434,6 @@ bool cmParseBlanketJSCoverage::LoadCoverageData(std::vector<std::string> files)
 /project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
   Value(Value&& other);
   ^
-
-
 /project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
     CZString(CZString&& other);
     ^
@@ -3722,20 +1443,6 @@ bool cmParseBlanketJSCoverage::LoadCoverageData(std::vector<std::string> files)
 /project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
   Value(Value&& other);
   ^
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 /project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
     CZString(CZString&& other);
     ^
@@ -3745,8 +1452,6 @@ bool cmParseBlanketJSCoverage::LoadCoverageData(std::vector<std::string> files)
 /project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
   Value(Value&& other);
   ^
-
-
 /project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
     CZString(CZString&& other);
     ^
@@ -3756,8 +1461,14 @@ bool cmParseBlanketJSCoverage::LoadCoverageData(std::vector<std::string> files)
 /project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
   Value(Value&& other);
   ^
-
-
+/project/git/Source/cmTargetDepend.h:34:40: warning: the parameter 'l' is copied for each invocation but only used as a const reference; consider making it a const reference [performance-unnecessary-value-param]
+  friend bool operator<(cmTargetDepend l, cmTargetDepend r)
+                                       ^
+                        const         &
+/project/git/Source/cmTargetDepend.h:34:58: warning: the parameter 'r' is copied for each invocation but only used as a const reference; consider making it a const reference [performance-unnecessary-value-param]
+  friend bool operator<(cmTargetDepend l, cmTargetDepend r)
+                                                         ^
+                                          const         &
 /project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
     CZString(CZString&& other);
     ^
@@ -3767,8 +1478,122 @@ bool cmParseBlanketJSCoverage::LoadCoverageData(std::vector<std::string> files)
 /project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
   Value(Value&& other);
   ^
-
-
+/project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
+    CZString(CZString&& other);
+    ^
+/project/git/Utilities/cmjsoncpp/include/json/value.h:241:15: warning: move assignment operators should be marked noexcept [performance-noexcept-move-constructor]
+    CZString& operator=(CZString&& other);
+              ^
+/project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
+  Value(Value&& other);
+  ^
+/project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
+    CZString(CZString&& other);
+    ^
+/project/git/Utilities/cmjsoncpp/include/json/value.h:241:15: warning: move assignment operators should be marked noexcept [performance-noexcept-move-constructor]
+    CZString& operator=(CZString&& other);
+              ^
+/project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
+  Value(Value&& other);
+  ^
+/project/git/Source/cmTargetDepend.h:34:40: warning: the parameter 'l' is copied for each invocation but only used as a const reference; consider making it a const reference [performance-unnecessary-value-param]
+  friend bool operator<(cmTargetDepend l, cmTargetDepend r)
+                                       ^
+                        const         &
+/project/git/Source/cmTargetDepend.h:34:58: warning: the parameter 'r' is copied for each invocation but only used as a const reference; consider making it a const reference [performance-unnecessary-value-param]
+  friend bool operator<(cmTargetDepend l, cmTargetDepend r)
+                                                         ^
+                                          const         &
+/project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
+    CZString(CZString&& other);
+    ^
+/project/git/Utilities/cmjsoncpp/include/json/value.h:241:15: warning: move assignment operators should be marked noexcept [performance-noexcept-move-constructor]
+    CZString& operator=(CZString&& other);
+              ^
+/project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
+  Value(Value&& other);
+  ^
+/project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
+    CZString(CZString&& other);
+    ^
+/project/git/Utilities/cmjsoncpp/include/json/value.h:241:15: warning: move assignment operators should be marked noexcept [performance-noexcept-move-constructor]
+    CZString& operator=(CZString&& other);
+              ^
+/project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
+  Value(Value&& other);
+  ^
+/project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
+    CZString(CZString&& other);
+    ^
+/project/git/Utilities/cmjsoncpp/include/json/value.h:241:15: warning: move assignment operators should be marked noexcept [performance-noexcept-move-constructor]
+    CZString& operator=(CZString&& other);
+              ^
+/project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
+  Value(Value&& other);
+  ^
+/project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
+    CZString(CZString&& other);
+    ^
+/project/git/Utilities/cmjsoncpp/include/json/value.h:241:15: warning: move assignment operators should be marked noexcept [performance-noexcept-move-constructor]
+    CZString& operator=(CZString&& other);
+              ^
+/project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
+  Value(Value&& other);
+  ^
+/project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
+    CZString(CZString&& other);
+    ^
+/project/git/Utilities/cmjsoncpp/include/json/value.h:241:15: warning: move assignment operators should be marked noexcept [performance-noexcept-move-constructor]
+    CZString& operator=(CZString&& other);
+              ^
+/project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
+  Value(Value&& other);
+  ^
+/project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
+    CZString(CZString&& other);
+    ^
+/project/git/Utilities/cmjsoncpp/include/json/value.h:241:15: warning: move assignment operators should be marked noexcept [performance-noexcept-move-constructor]
+    CZString& operator=(CZString&& other);
+              ^
+/project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
+  Value(Value&& other);
+  ^
+/project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
+    CZString(CZString&& other);
+    ^
+/project/git/Utilities/cmjsoncpp/include/json/value.h:241:15: warning: move assignment operators should be marked noexcept [performance-noexcept-move-constructor]
+    CZString& operator=(CZString&& other);
+              ^
+/project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
+  Value(Value&& other);
+  ^
+/project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
+    CZString(CZString&& other);
+    ^
+/project/git/Utilities/cmjsoncpp/include/json/value.h:241:15: warning: move assignment operators should be marked noexcept [performance-noexcept-move-constructor]
+    CZString& operator=(CZString&& other);
+              ^
+/project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
+  Value(Value&& other);
+  ^
+/project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
+    CZString(CZString&& other);
+    ^
+/project/git/Utilities/cmjsoncpp/include/json/value.h:241:15: warning: move assignment operators should be marked noexcept [performance-noexcept-move-constructor]
+    CZString& operator=(CZString&& other);
+              ^
+/project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
+  Value(Value&& other);
+  ^
+/project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
+    CZString(CZString&& other);
+    ^
+/project/git/Utilities/cmjsoncpp/include/json/value.h:241:15: warning: move assignment operators should be marked noexcept [performance-noexcept-move-constructor]
+    CZString& operator=(CZString&& other);
+              ^
+/project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
+  Value(Value&& other);
+  ^
 /project/git/Source/cmCoreTryCompile.cxx:476:63: warning: string concatenation results in allocation of unnecessary temporary strings; consider using 'operator+=' or 'string::append()' instead [performance-inefficient-string-concatenation]
       std::string rulesOverrideLang = rulesOverrideBase + "_" + li;
                                                               ^
@@ -3783,26 +1608,6 @@ bool cmParseBlanketJSCoverage::LoadCoverageData(std::vector<std::string> files)
   friend bool operator<(cmTargetDepend l, cmTargetDepend r)
                                                          ^
                                           const         &
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 /project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
     CZString(CZString&& other);
     ^
@@ -3812,10 +1617,6 @@ bool cmParseBlanketJSCoverage::LoadCoverageData(std::vector<std::string> files)
 /project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
   Value(Value&& other);
   ^
-
-
-
-
 /project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
     CZString(CZString&& other);
     ^
@@ -3825,8 +1626,6 @@ bool cmParseBlanketJSCoverage::LoadCoverageData(std::vector<std::string> files)
 /project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
   Value(Value&& other);
   ^
-
-
 /project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
     CZString(CZString&& other);
     ^
@@ -3836,8 +1635,6 @@ bool cmParseBlanketJSCoverage::LoadCoverageData(std::vector<std::string> files)
 /project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
   Value(Value&& other);
   ^
-
-
 /project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
     CZString(CZString&& other);
     ^
@@ -3847,54 +1644,6 @@ bool cmParseBlanketJSCoverage::LoadCoverageData(std::vector<std::string> files)
 /project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
   Value(Value&& other);
   ^
-
-
-/project/git/Source/cmTargetDepend.h:34:40: warning: the parameter 'l' is copied for each invocation but only used as a const reference; consider making it a const reference [performance-unnecessary-value-param]
-  friend bool operator<(cmTargetDepend l, cmTargetDepend r)
-                                       ^
-                        const         &
-/project/git/Source/cmTargetDepend.h:34:58: warning: the parameter 'r' is copied for each invocation but only used as a const reference; consider making it a const reference [performance-unnecessary-value-param]
-  friend bool operator<(cmTargetDepend l, cmTargetDepend r)
-                                                         ^
-                                          const         &
-/project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
-    CZString(CZString&& other);
-    ^
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-/project/git/Utilities/cmjsoncpp/include/json/value.h:241:15: warning: move assignment operators should be marked noexcept [performance-noexcept-move-constructor]
-    CZString& operator=(CZString&& other);
-              ^
-/project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
-  Value(Value&& other);
-  ^
-
-
-/project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
-    CZString(CZString&& other);
-    ^
-/project/git/Utilities/cmjsoncpp/include/json/value.h:241:15: warning: move assignment operators should be marked noexcept [performance-noexcept-move-constructor]
-    CZString& operator=(CZString&& other);
-              ^
-/project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
-  Value(Value&& other);
-  ^
-
-
 /project/git/Source/cmTargetDepend.h:34:40: warning: the parameter 'l' is copied for each invocation but only used as a const reference; consider making it a const reference [performance-unnecessary-value-param]
   friend bool operator<(cmTargetDepend l, cmTargetDepend r)
                                        ^
@@ -3912,8 +1661,6 @@ bool cmParseBlanketJSCoverage::LoadCoverageData(std::vector<std::string> files)
 /project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
   Value(Value&& other);
   ^
-
-
 /project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
     CZString(CZString&& other);
     ^
@@ -3923,57 +1670,6 @@ bool cmParseBlanketJSCoverage::LoadCoverageData(std::vector<std::string> files)
 /project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
   Value(Value&& other);
   ^
-
-
-/project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
-    CZString(CZString&& other);
-    ^
-/project/git/Utilities/cmjsoncpp/include/json/value.h:241:15: warning: move assignment operators should be marked noexcept [performance-noexcept-move-constructor]
-    CZString& operator=(CZString&& other);
-              ^
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-/project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
-  Value(Value&& other);
-  ^
-
-
-/project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
-    CZString(CZString&& other);
-    ^
-/project/git/Utilities/cmjsoncpp/include/json/value.h:241:15: warning: move assignment operators should be marked noexcept [performance-noexcept-move-constructor]
-    CZString& operator=(CZString&& other);
-              ^
-/project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
-  Value(Value&& other);
-  ^
-
-
-/project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
-    CZString(CZString&& other);
-    ^
-/project/git/Utilities/cmjsoncpp/include/json/value.h:241:15: warning: move assignment operators should be marked noexcept [performance-noexcept-move-constructor]
-    CZString& operator=(CZString&& other);
-              ^
-/project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
-  Value(Value&& other);
-  ^
-
-
 /project/git/Source/cmTargetDepend.h:34:40: warning: the parameter 'l' is copied for each invocation but only used as a const reference; consider making it a const reference [performance-unnecessary-value-param]
   friend bool operator<(cmTargetDepend l, cmTargetDepend r)
                                        ^
@@ -3991,40 +1687,6 @@ bool cmParseBlanketJSCoverage::LoadCoverageData(std::vector<std::string> files)
 /project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
   Value(Value&& other);
   ^
-
-
-/project/git/Source/cmTargetDepend.h:34:40: warning: the parameter 'l' is copied for each invocation but only used as a const reference; consider making it a const reference [performance-unnecessary-value-param]
-  friend bool operator<(cmTargetDepend l, cmTargetDepend r)
-                                       ^
-                        const         &
-/project/git/Source/cmTargetDepend.h:34:58: warning: the parameter 'r' is copied for each invocation but only used as a const reference; consider making it a const reference [performance-unnecessary-value-param]
-  friend bool operator<(cmTargetDepend l, cmTargetDepend r)
-                                                         ^
-                                          const         &
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 /project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
     CZString(CZString&& other);
     ^
@@ -4034,8 +1696,6 @@ bool cmParseBlanketJSCoverage::LoadCoverageData(std::vector<std::string> files)
 /project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
   Value(Value&& other);
   ^
-
-
 /project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
     CZString(CZString&& other);
     ^
@@ -4045,12 +1705,6 @@ bool cmParseBlanketJSCoverage::LoadCoverageData(std::vector<std::string> files)
 /project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
   Value(Value&& other);
   ^
-
-
-
-
-
-
 /project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
     CZString(CZString&& other);
     ^
@@ -4060,8 +1714,15 @@ bool cmParseBlanketJSCoverage::LoadCoverageData(std::vector<std::string> files)
 /project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
   Value(Value&& other);
   ^
-
-
+/project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
+    CZString(CZString&& other);
+    ^
+/project/git/Utilities/cmjsoncpp/include/json/value.h:241:15: warning: move assignment operators should be marked noexcept [performance-noexcept-move-constructor]
+    CZString& operator=(CZString&& other);
+              ^
+/project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
+  Value(Value&& other);
+  ^
 /project/git/Source/cmTargetDepend.h:34:40: warning: the parameter 'l' is copied for each invocation but only used as a const reference; consider making it a const reference [performance-unnecessary-value-param]
   friend bool operator<(cmTargetDepend l, cmTargetDepend r)
                                        ^
@@ -4079,24 +1740,6 @@ bool cmParseBlanketJSCoverage::LoadCoverageData(std::vector<std::string> files)
 /project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
   Value(Value&& other);
   ^
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 /project/git/Source/cmTargetDepend.h:34:40: warning: the parameter 'l' is copied for each invocation but only used as a const reference; consider making it a const reference [performance-unnecessary-value-param]
   friend bool operator<(cmTargetDepend l, cmTargetDepend r)
                                        ^
@@ -4114,8 +1757,6 @@ bool cmParseBlanketJSCoverage::LoadCoverageData(std::vector<std::string> files)
 /project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
   Value(Value&& other);
   ^
-
-
 /project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
     CZString(CZString&& other);
     ^
@@ -4125,8 +1766,6 @@ bool cmParseBlanketJSCoverage::LoadCoverageData(std::vector<std::string> files)
 /project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
   Value(Value&& other);
   ^
-
-
 /project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
     CZString(CZString&& other);
     ^
@@ -4136,184 +1775,6 @@ bool cmParseBlanketJSCoverage::LoadCoverageData(std::vector<std::string> files)
 /project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
   Value(Value&& other);
   ^
-
-
-/project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
-    CZString(CZString&& other);
-    ^
-/project/git/Utilities/cmjsoncpp/include/json/value.h:241:15: warning: move assignment operators should be marked noexcept [performance-noexcept-move-constructor]
-    CZString& operator=(CZString&& other);
-              ^
-/project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
-  Value(Value&& other);
-  ^
-
-
-/project/git/Source/cmTargetDepend.h:34:40: warning: the parameter 'l' is copied for each invocation but only used as a const reference; consider making it a const reference [performance-unnecessary-value-param]
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-  friend bool operator<(cmTargetDepend l, cmTargetDepend r)
-                                       ^
-                        const         &
-/project/git/Source/cmTargetDepend.h:34:58: warning: the parameter 'r' is copied for each invocation but only used as a const reference; consider making it a const reference [performance-unnecessary-value-param]
-  friend bool operator<(cmTargetDepend l, cmTargetDepend r)
-                                                         ^
-                                          const         &
-/project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
-    CZString(CZString&& other);
-    ^
-/project/git/Utilities/cmjsoncpp/include/json/value.h:241:15: warning: move assignment operators should be marked noexcept [performance-noexcept-move-constructor]
-    CZString& operator=(CZString&& other);
-              ^
-/project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
-  Value(Value&& other);
-  ^
-
-
-
-
-/project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
-    CZString(CZString&& other);
-    ^
-/project/git/Utilities/cmjsoncpp/include/json/value.h:241:15: warning: move assignment operators should be marked noexcept [performance-noexcept-move-constructor]
-    CZString& operator=(CZString&& other);
-              ^
-/project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
-  Value(Value&& other);
-  ^
-
-
-/project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
-    CZString(CZString&& other);
-    ^
-/project/git/Utilities/cmjsoncpp/include/json/value.h:241:15: warning: move assignment operators should be marked noexcept [performance-noexcept-move-constructor]
-    CZString& operator=(CZString&& other);
-              ^
-/project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
-  Value(Value&& other);
-  ^
-
-
-/project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
-    CZString(CZString&& other);
-    ^
-/project/git/Utilities/cmjsoncpp/include/json/value.h:241:15: warning: move assignment operators should be marked noexcept [performance-noexcept-move-constructor]
-    CZString& operator=(CZString&& other);
-              ^
-/project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
-  Value(Value&& other);
-  ^
-
-
-/project/git/Source/cmTargetDepend.h:34:40: warning: the parameter 'l' is copied for each invocation but only used as a const reference; consider making it a const reference [performance-unnecessary-value-param]
-  friend bool operator<(cmTargetDepend l, cmTargetDepend r)
-                                       ^
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-                        const         &
-/project/git/Source/cmTargetDepend.h:34:58: warning: the parameter 'r' is copied for each invocation but only used as a const reference; consider making it a const reference [performance-unnecessary-value-param]
-  friend bool operator<(cmTargetDepend l, cmTargetDepend r)
-                                                         ^
-                                          const         &
-/project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
-    CZString(CZString&& other);
-    ^
-/project/git/Utilities/cmjsoncpp/include/json/value.h:241:15: warning: move assignment operators should be marked noexcept [performance-noexcept-move-constructor]
-    CZString& operator=(CZString&& other);
-              ^
-/project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
-  Value(Value&& other);
-  ^
-
-
-/project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
-    CZString(CZString&& other);
-    ^
-/project/git/Utilities/cmjsoncpp/include/json/value.h:241:15: warning: move assignment operators should be marked noexcept [performance-noexcept-move-constructor]
-    CZString& operator=(CZString&& other);
-              ^
-/project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
-  Value(Value&& other);
-  ^
-
-
-/project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
-    CZString(CZString&& other);
-    ^
-/project/git/Utilities/cmjsoncpp/include/json/value.h:241:15: warning: move assignment operators should be marked noexcept [performance-noexcept-move-constructor]
-    CZString& operator=(CZString&& other);
-              ^
-/project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
-  Value(Value&& other);
-  ^
-
-
-/project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
-    CZString(CZString&& other);
-    ^
-/project/git/Utilities/cmjsoncpp/include/json/value.h:241:15: warning: move assignment operators should be marked noexcept [performance-noexcept-move-constructor]
-    CZString& operator=(CZString&& other);
-              ^
-/project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
-  Value(Value&& other);
-  ^
-
-
-/project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
-    CZString(CZString&& other);
-    ^
-/project/git/Utilities/cmjsoncpp/include/json/value.h:241:15: warning: move assignment operators should be marked noexcept [performance-noexcept-move-constructor]
-    CZString& operator=(CZString&& other);
-              ^
-/project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
-
-
-
-
-
-
-
-
-
-
-
-
-  Value(Value&& other);
-  ^
-
-
 /project/git/Source/cmTargetDepend.h:34:40: warning: the parameter 'l' is copied for each invocation but only used as a const reference; consider making it a const reference [performance-unnecessary-value-param]
   friend bool operator<(cmTargetDepend l, cmTargetDepend r)
                                        ^
@@ -4331,8 +1792,6 @@ bool cmParseBlanketJSCoverage::LoadCoverageData(std::vector<std::string> files)
 /project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
   Value(Value&& other);
   ^
-
-
 /project/git/Source/cmTargetDepend.h:34:40: warning: the parameter 'l' is copied for each invocation but only used as a const reference; consider making it a const reference [performance-unnecessary-value-param]
   friend bool operator<(cmTargetDepend l, cmTargetDepend r)
                                        ^
@@ -4350,36 +1809,6 @@ bool cmParseBlanketJSCoverage::LoadCoverageData(std::vector<std::string> files)
 /project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
   Value(Value&& other);
   ^
-
-
-/project/git/Source/cmTargetDepend.h:34:40: warning: the parameter 'l' is copied for each invocation but only used as a const reference; consider making it a const reference [performance-unnecessary-value-param]
-  friend bool operator<(cmTargetDepend l, cmTargetDepend r)
-                                       ^
-                        const         &
-/project/git/Source/cmTargetDepend.h:34:58: warning: the parameter 'r' is copied for each invocation but only used as a const reference; consider making it a const reference [performance-unnecessary-value-param]
-  friend bool operator<(cmTargetDepend l, cmTargetDepend r)
-                                                         ^
-                                          const         &
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 /project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
     CZString(CZString&& other);
     ^
@@ -4389,8 +1818,24 @@ bool cmParseBlanketJSCoverage::LoadCoverageData(std::vector<std::string> files)
 /project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
   Value(Value&& other);
   ^
-
-
+/project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
+    CZString(CZString&& other);
+    ^
+/project/git/Utilities/cmjsoncpp/include/json/value.h:241:15: warning: move assignment operators should be marked noexcept [performance-noexcept-move-constructor]
+    CZString& operator=(CZString&& other);
+              ^
+/project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
+  Value(Value&& other);
+  ^
+/project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
+    CZString(CZString&& other);
+    ^
+/project/git/Utilities/cmjsoncpp/include/json/value.h:241:15: warning: move assignment operators should be marked noexcept [performance-noexcept-move-constructor]
+    CZString& operator=(CZString&& other);
+              ^
+/project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
+  Value(Value&& other);
+  ^
 /project/git/Source/cmTargetDepend.h:34:40: warning: the parameter 'l' is copied for each invocation but only used as a const reference; consider making it a const reference [performance-unnecessary-value-param]
   friend bool operator<(cmTargetDepend l, cmTargetDepend r)
                                        ^
@@ -4408,10 +1853,6 @@ bool cmParseBlanketJSCoverage::LoadCoverageData(std::vector<std::string> files)
 /project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
   Value(Value&& other);
   ^
-
-
-
-
 /project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
     CZString(CZString&& other);
     ^
@@ -4421,8 +1862,6 @@ bool cmParseBlanketJSCoverage::LoadCoverageData(std::vector<std::string> files)
 /project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
   Value(Value&& other);
   ^
-
-
 /project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
     CZString(CZString&& other);
     ^
@@ -4432,23 +1871,163 @@ bool cmParseBlanketJSCoverage::LoadCoverageData(std::vector<std::string> files)
 /project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
   Value(Value&& other);
   ^
-
-
 /project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
     CZString(CZString&& other);
     ^
-
-
-
-
 /project/git/Utilities/cmjsoncpp/include/json/value.h:241:15: warning: move assignment operators should be marked noexcept [performance-noexcept-move-constructor]
     CZString& operator=(CZString&& other);
               ^
 /project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
   Value(Value&& other);
   ^
-
-
+/project/git/Source/cmTargetDepend.h:34:40: warning: the parameter 'l' is copied for each invocation but only used as a const reference; consider making it a const reference [performance-unnecessary-value-param]
+  friend bool operator<(cmTargetDepend l, cmTargetDepend r)
+                                       ^
+                        const         &
+/project/git/Source/cmTargetDepend.h:34:58: warning: the parameter 'r' is copied for each invocation but only used as a const reference; consider making it a const reference [performance-unnecessary-value-param]
+  friend bool operator<(cmTargetDepend l, cmTargetDepend r)
+                                                         ^
+                                          const         &
+/project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
+    CZString(CZString&& other);
+    ^
+/project/git/Utilities/cmjsoncpp/include/json/value.h:241:15: warning: move assignment operators should be marked noexcept [performance-noexcept-move-constructor]
+    CZString& operator=(CZString&& other);
+              ^
+/project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
+  Value(Value&& other);
+  ^
+/project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
+    CZString(CZString&& other);
+    ^
+/project/git/Utilities/cmjsoncpp/include/json/value.h:241:15: warning: move assignment operators should be marked noexcept [performance-noexcept-move-constructor]
+    CZString& operator=(CZString&& other);
+              ^
+/project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
+  Value(Value&& other);
+  ^
+/project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
+    CZString(CZString&& other);
+    ^
+/project/git/Utilities/cmjsoncpp/include/json/value.h:241:15: warning: move assignment operators should be marked noexcept [performance-noexcept-move-constructor]
+    CZString& operator=(CZString&& other);
+              ^
+/project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
+  Value(Value&& other);
+  ^
+/project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
+    CZString(CZString&& other);
+    ^
+/project/git/Utilities/cmjsoncpp/include/json/value.h:241:15: warning: move assignment operators should be marked noexcept [performance-noexcept-move-constructor]
+    CZString& operator=(CZString&& other);
+              ^
+/project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
+  Value(Value&& other);
+  ^
+/project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
+    CZString(CZString&& other);
+    ^
+/project/git/Utilities/cmjsoncpp/include/json/value.h:241:15: warning: move assignment operators should be marked noexcept [performance-noexcept-move-constructor]
+    CZString& operator=(CZString&& other);
+              ^
+/project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
+  Value(Value&& other);
+  ^
+/project/git/Source/cmTargetDepend.h:34:40: warning: the parameter 'l' is copied for each invocation but only used as a const reference; consider making it a const reference [performance-unnecessary-value-param]
+  friend bool operator<(cmTargetDepend l, cmTargetDepend r)
+                                       ^
+                        const         &
+/project/git/Source/cmTargetDepend.h:34:58: warning: the parameter 'r' is copied for each invocation but only used as a const reference; consider making it a const reference [performance-unnecessary-value-param]
+  friend bool operator<(cmTargetDepend l, cmTargetDepend r)
+                                                         ^
+                                          const         &
+/project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
+    CZString(CZString&& other);
+    ^
+/project/git/Utilities/cmjsoncpp/include/json/value.h:241:15: warning: move assignment operators should be marked noexcept [performance-noexcept-move-constructor]
+    CZString& operator=(CZString&& other);
+              ^
+/project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
+  Value(Value&& other);
+  ^
+/project/git/Source/cmTargetDepend.h:34:40: warning: the parameter 'l' is copied for each invocation but only used as a const reference; consider making it a const reference [performance-unnecessary-value-param]
+  friend bool operator<(cmTargetDepend l, cmTargetDepend r)
+                                       ^
+                        const         &
+/project/git/Source/cmTargetDepend.h:34:58: warning: the parameter 'r' is copied for each invocation but only used as a const reference; consider making it a const reference [performance-unnecessary-value-param]
+  friend bool operator<(cmTargetDepend l, cmTargetDepend r)
+                                                         ^
+                                          const         &
+/project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
+    CZString(CZString&& other);
+    ^
+/project/git/Utilities/cmjsoncpp/include/json/value.h:241:15: warning: move assignment operators should be marked noexcept [performance-noexcept-move-constructor]
+    CZString& operator=(CZString&& other);
+              ^
+/project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
+  Value(Value&& other);
+  ^
+/project/git/Source/cmTargetDepend.h:34:40: warning: the parameter 'l' is copied for each invocation but only used as a const reference; consider making it a const reference [performance-unnecessary-value-param]
+  friend bool operator<(cmTargetDepend l, cmTargetDepend r)
+                                       ^
+                        const         &
+/project/git/Source/cmTargetDepend.h:34:58: warning: the parameter 'r' is copied for each invocation but only used as a const reference; consider making it a const reference [performance-unnecessary-value-param]
+  friend bool operator<(cmTargetDepend l, cmTargetDepend r)
+                                                         ^
+                                          const         &
+/project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
+    CZString(CZString&& other);
+    ^
+/project/git/Utilities/cmjsoncpp/include/json/value.h:241:15: warning: move assignment operators should be marked noexcept [performance-noexcept-move-constructor]
+    CZString& operator=(CZString&& other);
+              ^
+/project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
+  Value(Value&& other);
+  ^
+/project/git/Source/cmTargetDepend.h:34:40: warning: the parameter 'l' is copied for each invocation but only used as a const reference; consider making it a const reference [performance-unnecessary-value-param]
+  friend bool operator<(cmTargetDepend l, cmTargetDepend r)
+                                       ^
+                        const         &
+/project/git/Source/cmTargetDepend.h:34:58: warning: the parameter 'r' is copied for each invocation but only used as a const reference; consider making it a const reference [performance-unnecessary-value-param]
+  friend bool operator<(cmTargetDepend l, cmTargetDepend r)
+                                                         ^
+                                          const         &
+/project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
+    CZString(CZString&& other);
+    ^
+/project/git/Utilities/cmjsoncpp/include/json/value.h:241:15: warning: move assignment operators should be marked noexcept [performance-noexcept-move-constructor]
+    CZString& operator=(CZString&& other);
+              ^
+/project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
+  Value(Value&& other);
+  ^
+/project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
+    CZString(CZString&& other);
+    ^
+/project/git/Utilities/cmjsoncpp/include/json/value.h:241:15: warning: move assignment operators should be marked noexcept [performance-noexcept-move-constructor]
+    CZString& operator=(CZString&& other);
+              ^
+/project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
+  Value(Value&& other);
+  ^
+/project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
+    CZString(CZString&& other);
+    ^
+/project/git/Utilities/cmjsoncpp/include/json/value.h:241:15: warning: move assignment operators should be marked noexcept [performance-noexcept-move-constructor]
+    CZString& operator=(CZString&& other);
+              ^
+/project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
+  Value(Value&& other);
+  ^
+/project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
+    CZString(CZString&& other);
+    ^
+/project/git/Utilities/cmjsoncpp/include/json/value.h:241:15: warning: move assignment operators should be marked noexcept [performance-noexcept-move-constructor]
+    CZString& operator=(CZString&& other);
+              ^
+/project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
+  Value(Value&& other);
+  ^
 /project/git/Source/cmListCommand.cxx:1054:55: warning: string concatenation results in allocation of unnecessary temporary strings; consider using 'operator+=' or 'string::append()' instead [performance-inefficient-string-concatenation]
         std::string error = messageHint + "option \"" + option +
                                                       ^
@@ -4479,22 +2058,6 @@ bool cmParseBlanketJSCoverage::LoadCoverageData(std::vector<std::string> files)
 /project/git/Source/cmListCommand.cxx:1118:56: warning: string concatenation results in allocation of unnecessary temporary strings; consider using 'operator+=' or 'string::append()' instead [performance-inefficient-string-concatenation]
           std::string error = messageHint + "value \"" + argument +
                                                        ^
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 /project/git/Source/cmListCommand.cxx:1119:32: warning: string concatenation results in allocation of unnecessary temporary strings; consider using 'operator+=' or 'string::append()' instead [performance-inefficient-string-concatenation]
             "\" for option \"" + option + "\" is invalid.";
                                ^
@@ -4513,8 +2076,6 @@ bool cmParseBlanketJSCoverage::LoadCoverageData(std::vector<std::string> files)
 /project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
   Value(Value&& other);
   ^
-
-
 /project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
     CZString(CZString&& other);
     ^
@@ -4524,8 +2085,6 @@ bool cmParseBlanketJSCoverage::LoadCoverageData(std::vector<std::string> files)
 /project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
   Value(Value&& other);
   ^
-
-
 /project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
     CZString(CZString&& other);
     ^
@@ -4535,27 +2094,11 @@ bool cmParseBlanketJSCoverage::LoadCoverageData(std::vector<std::string> files)
 /project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
   Value(Value&& other);
   ^
-
-
-
-
 /project/git/Source/cmTargetDepend.h:34:40: warning: the parameter 'l' is copied for each invocation but only used as a const reference; consider making it a const reference [performance-unnecessary-value-param]
   friend bool operator<(cmTargetDepend l, cmTargetDepend r)
                                        ^
                         const         &
 /project/git/Source/cmTargetDepend.h:34:58: warning: the parameter 'r' is copied for each invocation but only used as a const reference; consider making it a const reference [performance-unnecessary-value-param]
-
-
-
-
-
-
-
-
-
-
-
-
   friend bool operator<(cmTargetDepend l, cmTargetDepend r)
                                                          ^
                                           const         &
@@ -4568,8 +2111,6 @@ bool cmParseBlanketJSCoverage::LoadCoverageData(std::vector<std::string> files)
 /project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
   Value(Value&& other);
   ^
-
-
 /project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
     CZString(CZString&& other);
     ^
@@ -4579,8 +2120,6 @@ bool cmParseBlanketJSCoverage::LoadCoverageData(std::vector<std::string> files)
 /project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
   Value(Value&& other);
   ^
-
-
 /project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
     CZString(CZString&& other);
     ^
@@ -4590,8 +2129,6 @@ bool cmParseBlanketJSCoverage::LoadCoverageData(std::vector<std::string> files)
 /project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
   Value(Value&& other);
   ^
-
-
 /project/git/Source/cmOutputRequiredFilesCommand.cxx:220:13: warning: string concatenation results in allocation of unnecessary temporary strings; consider using 'operator+=' or 'string::append()' instead [performance-inefficient-string-concatenation]
             path = path + "/";
             ^
@@ -4607,14 +2144,6 @@ bool cmParseBlanketJSCoverage::LoadCoverageData(std::vector<std::string> files)
 /project/git/Source/cmOutputRequiredFilesCommand.cxx:245:15: warning: string concatenation results in allocation of unnecessary temporary strings; consider using 'operator+=' or 'string::append()' instead [performance-inefficient-string-concatenation]
               path = path + "/";
               ^
-
-
-
-
-
-
-
-
 /project/git/Source/cmOutputRequiredFilesCommand.cxx:246:15: warning: string concatenation results in allocation of unnecessary temporary strings; consider using 'operator+=' or 'string::append()' instead [performance-inefficient-string-concatenation]
               path = path + cxxFile;
               ^
@@ -4645,8 +2174,6 @@ bool cmParseBlanketJSCoverage::LoadCoverageData(std::vector<std::string> files)
 /project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
   Value(Value&& other);
   ^
-
-
 /project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
     CZString(CZString&& other);
     ^
@@ -4656,47 +2183,6 @@ bool cmParseBlanketJSCoverage::LoadCoverageData(std::vector<std::string> files)
 /project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
   Value(Value&& other);
   ^
-
-
-/project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
-    CZString(CZString&& other);
-    ^
-/project/git/Utilities/cmjsoncpp/include/json/value.h:241:15: warning: move assignment operators should be marked noexcept [performance-noexcept-move-constructor]
-    CZString& operator=(CZString&& other);
-              ^
-/project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-  Value(Value&& other);
-  ^
-
-
 /project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
     CZString(CZString&& other);
     ^
@@ -4706,8 +2192,6 @@ bool cmParseBlanketJSCoverage::LoadCoverageData(std::vector<std::string> files)
 /project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
   Value(Value&& other);
   ^
-
-
 /project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
     CZString(CZString&& other);
     ^
@@ -4717,8 +2201,6 @@ bool cmParseBlanketJSCoverage::LoadCoverageData(std::vector<std::string> files)
 /project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
   Value(Value&& other);
   ^
-
-
 /project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
     CZString(CZString&& other);
     ^
@@ -4728,8 +2210,6 @@ bool cmParseBlanketJSCoverage::LoadCoverageData(std::vector<std::string> files)
 /project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
   Value(Value&& other);
   ^
-
-
 /project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
     CZString(CZString&& other);
     ^
@@ -4739,8 +2219,6 @@ bool cmParseBlanketJSCoverage::LoadCoverageData(std::vector<std::string> files)
 /project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
   Value(Value&& other);
   ^
-
-
 /project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
     CZString(CZString&& other);
     ^
@@ -4750,30 +2228,6 @@ bool cmParseBlanketJSCoverage::LoadCoverageData(std::vector<std::string> files)
 /project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
   Value(Value&& other);
   ^
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 /project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
     CZString(CZString&& other);
     ^
@@ -4783,8 +2237,6 @@ bool cmParseBlanketJSCoverage::LoadCoverageData(std::vector<std::string> files)
 /project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
   Value(Value&& other);
   ^
-
-
 /project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
     CZString(CZString&& other);
     ^
@@ -4794,8 +2246,6 @@ bool cmParseBlanketJSCoverage::LoadCoverageData(std::vector<std::string> files)
 /project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
   Value(Value&& other);
   ^
-
-
 /project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
     CZString(CZString&& other);
     ^
@@ -4805,8 +2255,6 @@ bool cmParseBlanketJSCoverage::LoadCoverageData(std::vector<std::string> files)
 /project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
   Value(Value&& other);
   ^
-
-
 /project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
     CZString(CZString&& other);
     ^
@@ -4816,8 +2264,6 @@ bool cmParseBlanketJSCoverage::LoadCoverageData(std::vector<std::string> files)
 /project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
   Value(Value&& other);
   ^
-
-
 /project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
     CZString(CZString&& other);
     ^
@@ -4827,24 +2273,6 @@ bool cmParseBlanketJSCoverage::LoadCoverageData(std::vector<std::string> files)
 /project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
   Value(Value&& other);
   ^
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 /project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
     CZString(CZString&& other);
     ^
@@ -4854,8 +2282,6 @@ bool cmParseBlanketJSCoverage::LoadCoverageData(std::vector<std::string> files)
 /project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
   Value(Value&& other);
   ^
-
-
 /project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
     CZString(CZString&& other);
     ^
@@ -4865,8 +2291,15 @@ bool cmParseBlanketJSCoverage::LoadCoverageData(std::vector<std::string> files)
 /project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
   Value(Value&& other);
   ^
-
-
+/project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
+    CZString(CZString&& other);
+    ^
+/project/git/Utilities/cmjsoncpp/include/json/value.h:241:15: warning: move assignment operators should be marked noexcept [performance-noexcept-move-constructor]
+    CZString& operator=(CZString&& other);
+              ^
+/project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
+  Value(Value&& other);
+  ^
 /project/git/Source/cmTargetDepend.h:34:40: warning: the parameter 'l' is copied for each invocation but only used as a const reference; consider making it a const reference [performance-unnecessary-value-param]
   friend bool operator<(cmTargetDepend l, cmTargetDepend r)
                                        ^
@@ -4884,8 +2317,6 @@ bool cmParseBlanketJSCoverage::LoadCoverageData(std::vector<std::string> files)
 /project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
   Value(Value&& other);
   ^
-
-
 /project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
     CZString(CZString&& other);
     ^
@@ -4895,27 +2326,9 @@ bool cmParseBlanketJSCoverage::LoadCoverageData(std::vector<std::string> files)
 /project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
   Value(Value&& other);
   ^
-
-
 /project/git/Source/cmSourceGroupCommand.cxx:58:62: warning: string concatenation results in allocation of unnecessary temporary strings; consider using 'operator+=' or 'string::append()' instead [performance-inefficient-string-concatenation]
       error = "ROOT: " + root + " is not a prefix of file: " + file;
                                                              ^
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 /project/git/Source/cmSourceGroupCommand.cxx:82:5: warning: 'push_back' is called inside a loop; consider pre-allocating the vector capacity before the loop [performance-inefficient-vector-operation]
     prepared.push_back(prepareFilePathForTree(filePath, currentSourceDir));
     ^
@@ -4931,8 +2344,6 @@ bool cmParseBlanketJSCoverage::LoadCoverageData(std::vector<std::string> files)
 /project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
   Value(Value&& other);
   ^
-
-
 /project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
     CZString(CZString&& other);
     ^
@@ -4942,8 +2353,6 @@ bool cmParseBlanketJSCoverage::LoadCoverageData(std::vector<std::string> files)
 /project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
   Value(Value&& other);
   ^
-
-
 /project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
     CZString(CZString&& other);
     ^
@@ -4953,8 +2362,6 @@ bool cmParseBlanketJSCoverage::LoadCoverageData(std::vector<std::string> files)
 /project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
   Value(Value&& other);
   ^
-
-
 /project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
     CZString(CZString&& other);
     ^
@@ -4964,45 +2371,6 @@ bool cmParseBlanketJSCoverage::LoadCoverageData(std::vector<std::string> files)
 /project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
   Value(Value&& other);
   ^
-
-
-/project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
-    CZString(CZString&& other);
-    ^
-/project/git/Utilities/cmjsoncpp/include/json/value.h:241:15: warning: move assignment operators should be marked noexcept [performance-noexcept-move-constructor]
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    CZString& operator=(CZString&& other);
-              ^
-/project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
-  Value(Value&& other);
-  ^
-
-
-
-
 /project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
     CZString(CZString&& other);
     ^
@@ -5012,8 +2380,6 @@ bool cmParseBlanketJSCoverage::LoadCoverageData(std::vector<std::string> files)
 /project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
   Value(Value&& other);
   ^
-
-
 /project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
     CZString(CZString&& other);
     ^
@@ -5023,10 +2389,6 @@ bool cmParseBlanketJSCoverage::LoadCoverageData(std::vector<std::string> files)
 /project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
   Value(Value&& other);
   ^
-
-
-
-
 /project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
     CZString(CZString&& other);
     ^
@@ -5036,8 +2398,15 @@ bool cmParseBlanketJSCoverage::LoadCoverageData(std::vector<std::string> files)
 /project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
   Value(Value&& other);
   ^
-
-
+/project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
+    CZString(CZString&& other);
+    ^
+/project/git/Utilities/cmjsoncpp/include/json/value.h:241:15: warning: move assignment operators should be marked noexcept [performance-noexcept-move-constructor]
+    CZString& operator=(CZString&& other);
+              ^
+/project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
+  Value(Value&& other);
+  ^
 /project/git/Source/cmTargetIncludeDirectoriesCommand.cxx:44:28: warning: string concatenation results in allocation of unnecessary temporary strings; consider using 'operator+=' or 'string::append()' instead [performance-inefficient-string-concatenation]
       dirs += sep + prefix + it;
                            ^
@@ -5050,28 +2419,6 @@ bool cmParseBlanketJSCoverage::LoadCoverageData(std::vector<std::string> files)
 /project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
   Value(Value&& other);
   ^
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 /project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
     CZString(CZString&& other);
     ^
@@ -5081,8 +2428,6 @@ bool cmParseBlanketJSCoverage::LoadCoverageData(std::vector<std::string> files)
 /project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
   Value(Value&& other);
   ^
-
-
 /project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
     CZString(CZString&& other);
     ^
@@ -5092,8 +2437,6 @@ bool cmParseBlanketJSCoverage::LoadCoverageData(std::vector<std::string> files)
 /project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
   Value(Value&& other);
   ^
-
-
 /project/git/Source/cmTargetDepend.h:34:40: warning: the parameter 'l' is copied for each invocation but only used as a const reference; consider making it a const reference [performance-unnecessary-value-param]
   friend bool operator<(cmTargetDepend l, cmTargetDepend r)
                                        ^
@@ -5111,230 +2454,6 @@ bool cmParseBlanketJSCoverage::LoadCoverageData(std::vector<std::string> files)
 /project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
   Value(Value&& other);
   ^
-
-
-
-
-/project/git/Source/cmTargetDepend.h:34:40: warning: the parameter 'l' is copied for each invocation but only used as a const reference; consider making it a const reference [performance-unnecessary-value-param]
-  friend bool operator<(cmTargetDepend l, cmTargetDepend r)
-                                       ^
-                        const         &
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-/project/git/Source/cmTargetDepend.h:34:58: warning: the parameter 'r' is copied for each invocation but only used as a const reference; consider making it a const reference [performance-unnecessary-value-param]
-  friend bool operator<(cmTargetDepend l, cmTargetDepend r)
-                                                         ^
-                                          const         &
-/project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
-    CZString(CZString&& other);
-    ^
-/project/git/Utilities/cmjsoncpp/include/json/value.h:241:15: warning: move assignment operators should be marked noexcept [performance-noexcept-move-constructor]
-    CZString& operator=(CZString&& other);
-              ^
-/project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
-  Value(Value&& other);
-  ^
-
-
-/project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
-    CZString(CZString&& other);
-    ^
-/project/git/Utilities/cmjsoncpp/include/json/value.h:241:15: warning: move assignment operators should be marked noexcept [performance-noexcept-move-constructor]
-    CZString& operator=(CZString&& other);
-              ^
-/project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
-  Value(Value&& other);
-  ^
-
-
-
-
-/project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
-    CZString(CZString&& other);
-    ^
-/project/git/Utilities/cmjsoncpp/include/json/value.h:241:15: warning: move assignment operators should be marked noexcept [performance-noexcept-move-constructor]
-    CZString& operator=(CZString&& other);
-              ^
-/project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
-  Value(Value&& other);
-  ^
-
-
-/project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
-    CZString(CZString&& other);
-    ^
-/project/git/Utilities/cmjsoncpp/include/json/value.h:241:15: warning: move assignment operators should be marked noexcept [performance-noexcept-move-constructor]
-    CZString& operator=(CZString&& other);
-              ^
-/project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
-  Value(Value&& other);
-  ^
-
-
-/project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
-    CZString(CZString&& other);
-    ^
-/project/git/Utilities/cmjsoncpp/include/json/value.h:241:15: warning: move assignment operators should be marked noexcept [performance-noexcept-move-constructor]
-    CZString& operator=(CZString&& other);
-              ^
-/project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-  Value(Value&& other);
-  ^
-
-
-/project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
-    CZString(CZString&& other);
-    ^
-/project/git/Utilities/cmjsoncpp/include/json/value.h:241:15: warning: move assignment operators should be marked noexcept [performance-noexcept-move-constructor]
-    CZString& operator=(CZString&& other);
-              ^
-/project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
-  Value(Value&& other);
-  ^
-
-
-/project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
-    CZString(CZString&& other);
-    ^
-/project/git/Utilities/cmjsoncpp/include/json/value.h:241:15: warning: move assignment operators should be marked noexcept [performance-noexcept-move-constructor]
-    CZString& operator=(CZString&& other);
-              ^
-/project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
-  Value(Value&& other);
-  ^
-
-
-/project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
-    CZString(CZString&& other);
-    ^
-/project/git/Utilities/cmjsoncpp/include/json/value.h:241:15: warning: move assignment operators should be marked noexcept [performance-noexcept-move-constructor]
-    CZString& operator=(CZString&& other);
-              ^
-/project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
-  Value(Value&& other);
-  ^
-
-
-/project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
-    CZString(CZString&& other);
-    ^
-/project/git/Utilities/cmjsoncpp/include/json/value.h:241:15: warning: move assignment operators should be marked noexcept [performance-noexcept-move-constructor]
-    CZString& operator=(CZString&& other);
-              ^
-/project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
-  Value(Value&& other);
-  ^
-
-
-
-
-
-
-/project/git/Source/cmTargetDepend.h:34:40: warning: the parameter 'l' is copied for each invocation but only used as a const reference; consider making it a const reference [performance-unnecessary-value-param]
-  friend bool operator<(cmTargetDepend l, cmTargetDepend r)
-                                       ^
-                        const         &
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-/project/git/Source/cmTargetDepend.h:34:58: warning: the parameter 'r' is copied for each invocation but only used as a const reference; consider making it a const reference [performance-unnecessary-value-param]
-  friend bool operator<(cmTargetDepend l, cmTargetDepend r)
-                                                         ^
-                                          const         &
-/project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
-    CZString(CZString&& other);
-    ^
-/project/git/Utilities/cmjsoncpp/include/json/value.h:241:15: warning: move assignment operators should be marked noexcept [performance-noexcept-move-constructor]
-    CZString& operator=(CZString&& other);
-              ^
-/project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
-  Value(Value&& other);
-  ^
-
-
-/project/git/Source/cmTargetDepend.h:34:40: warning: the parameter 'l' is copied for each invocation but only used as a const reference; consider making it a const reference [performance-unnecessary-value-param]
-  friend bool operator<(cmTargetDepend l, cmTargetDepend r)
-                                       ^
-                        const         &
-/project/git/Source/cmTargetDepend.h:34:58: warning: the parameter 'r' is copied for each invocation but only used as a const reference; consider making it a const reference [performance-unnecessary-value-param]
-  friend bool operator<(cmTargetDepend l, cmTargetDepend r)
-                                                         ^
-                                          const         &
-
-
-
-
-
-
-
-
 /project/git/Source/cmTargetDepend.h:34:40: warning: the parameter 'l' is copied for each invocation but only used as a const reference; consider making it a const reference [performance-unnecessary-value-param]
   friend bool operator<(cmTargetDepend l, cmTargetDepend r)
                                        ^
@@ -5352,20 +2471,78 @@ bool cmParseBlanketJSCoverage::LoadCoverageData(std::vector<std::string> files)
 /project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
   Value(Value&& other);
   ^
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+/project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
+    CZString(CZString&& other);
+    ^
+/project/git/Utilities/cmjsoncpp/include/json/value.h:241:15: warning: move assignment operators should be marked noexcept [performance-noexcept-move-constructor]
+    CZString& operator=(CZString&& other);
+              ^
+/project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
+  Value(Value&& other);
+  ^
+/project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
+    CZString(CZString&& other);
+    ^
+/project/git/Utilities/cmjsoncpp/include/json/value.h:241:15: warning: move assignment operators should be marked noexcept [performance-noexcept-move-constructor]
+    CZString& operator=(CZString&& other);
+              ^
+/project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
+  Value(Value&& other);
+  ^
+/project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
+    CZString(CZString&& other);
+    ^
+/project/git/Utilities/cmjsoncpp/include/json/value.h:241:15: warning: move assignment operators should be marked noexcept [performance-noexcept-move-constructor]
+    CZString& operator=(CZString&& other);
+              ^
+/project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
+  Value(Value&& other);
+  ^
+/project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
+    CZString(CZString&& other);
+    ^
+/project/git/Utilities/cmjsoncpp/include/json/value.h:241:15: warning: move assignment operators should be marked noexcept [performance-noexcept-move-constructor]
+    CZString& operator=(CZString&& other);
+              ^
+/project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
+  Value(Value&& other);
+  ^
+/project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
+    CZString(CZString&& other);
+    ^
+/project/git/Utilities/cmjsoncpp/include/json/value.h:241:15: warning: move assignment operators should be marked noexcept [performance-noexcept-move-constructor]
+    CZString& operator=(CZString&& other);
+              ^
+/project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
+  Value(Value&& other);
+  ^
+/project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
+    CZString(CZString&& other);
+    ^
+/project/git/Utilities/cmjsoncpp/include/json/value.h:241:15: warning: move assignment operators should be marked noexcept [performance-noexcept-move-constructor]
+    CZString& operator=(CZString&& other);
+              ^
+/project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
+  Value(Value&& other);
+  ^
+/project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
+    CZString(CZString&& other);
+    ^
+/project/git/Utilities/cmjsoncpp/include/json/value.h:241:15: warning: move assignment operators should be marked noexcept [performance-noexcept-move-constructor]
+    CZString& operator=(CZString&& other);
+              ^
+/project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
+  Value(Value&& other);
+  ^
+/project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
+    CZString(CZString&& other);
+    ^
+/project/git/Utilities/cmjsoncpp/include/json/value.h:241:15: warning: move assignment operators should be marked noexcept [performance-noexcept-move-constructor]
+    CZString& operator=(CZString&& other);
+              ^
+/project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
+  Value(Value&& other);
+  ^
 /project/git/Source/cmTargetDepend.h:34:40: warning: the parameter 'l' is copied for each invocation but only used as a const reference; consider making it a const reference [performance-unnecessary-value-param]
   friend bool operator<(cmTargetDepend l, cmTargetDepend r)
                                        ^
@@ -5383,19 +2560,14 @@ bool cmParseBlanketJSCoverage::LoadCoverageData(std::vector<std::string> files)
 /project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
   Value(Value&& other);
   ^
-
-
-/project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
-    CZString(CZString&& other);
-    ^
-/project/git/Utilities/cmjsoncpp/include/json/value.h:241:15: warning: move assignment operators should be marked noexcept [performance-noexcept-move-constructor]
-    CZString& operator=(CZString&& other);
-              ^
-/project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
-  Value(Value&& other);
-  ^
-
-
+/project/git/Source/cmTargetDepend.h:34:40: warning: the parameter 'l' is copied for each invocation but only used as a const reference; consider making it a const reference [performance-unnecessary-value-param]
+  friend bool operator<(cmTargetDepend l, cmTargetDepend r)
+                                       ^
+                        const         &
+/project/git/Source/cmTargetDepend.h:34:58: warning: the parameter 'r' is copied for each invocation but only used as a const reference; consider making it a const reference [performance-unnecessary-value-param]
+  friend bool operator<(cmTargetDepend l, cmTargetDepend r)
+                                                         ^
+                                          const         &
 /project/git/Source/cmTargetDepend.h:34:40: warning: the parameter 'l' is copied for each invocation but only used as a const reference; consider making it a const reference [performance-unnecessary-value-param]
   friend bool operator<(cmTargetDepend l, cmTargetDepend r)
                                        ^
@@ -5413,23 +2585,52 @@ bool cmParseBlanketJSCoverage::LoadCoverageData(std::vector<std::string> files)
 /project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
   Value(Value&& other);
   ^
-
-
+/project/git/Source/cmTargetDepend.h:34:40: warning: the parameter 'l' is copied for each invocation but only used as a const reference; consider making it a const reference [performance-unnecessary-value-param]
+  friend bool operator<(cmTargetDepend l, cmTargetDepend r)
+                                       ^
+                        const         &
+/project/git/Source/cmTargetDepend.h:34:58: warning: the parameter 'r' is copied for each invocation but only used as a const reference; consider making it a const reference [performance-unnecessary-value-param]
+  friend bool operator<(cmTargetDepend l, cmTargetDepend r)
+                                                         ^
+                                          const         &
+/project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
+    CZString(CZString&& other);
+    ^
+/project/git/Utilities/cmjsoncpp/include/json/value.h:241:15: warning: move assignment operators should be marked noexcept [performance-noexcept-move-constructor]
+    CZString& operator=(CZString&& other);
+              ^
+/project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
+  Value(Value&& other);
+  ^
+/project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
+    CZString(CZString&& other);
+    ^
+/project/git/Utilities/cmjsoncpp/include/json/value.h:241:15: warning: move assignment operators should be marked noexcept [performance-noexcept-move-constructor]
+    CZString& operator=(CZString&& other);
+              ^
+/project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
+  Value(Value&& other);
+  ^
+/project/git/Source/cmTargetDepend.h:34:40: warning: the parameter 'l' is copied for each invocation but only used as a const reference; consider making it a const reference [performance-unnecessary-value-param]
+  friend bool operator<(cmTargetDepend l, cmTargetDepend r)
+                                       ^
+                        const         &
+/project/git/Source/cmTargetDepend.h:34:58: warning: the parameter 'r' is copied for each invocation but only used as a const reference; consider making it a const reference [performance-unnecessary-value-param]
+  friend bool operator<(cmTargetDepend l, cmTargetDepend r)
+                                                         ^
+                                          const         &
+/project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
+    CZString(CZString&& other);
+    ^
+/project/git/Utilities/cmjsoncpp/include/json/value.h:241:15: warning: move assignment operators should be marked noexcept [performance-noexcept-move-constructor]
+    CZString& operator=(CZString&& other);
+              ^
+/project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
+  Value(Value&& other);
+  ^
 /project/git/Source/cmNinjaTargetGenerator.cxx:522:7: warning: string concatenation results in allocation of unnecessary temporary strings; consider using 'operator+=' or 'string::append()' instead [performance-inefficient-string-concatenation]
       i = launcher + i;
       ^
-
-
-
-
-
-
-
-
-
-
-
-
 /project/git/Source/cmNinjaTargetGenerator.cxx:744:5: warning: string concatenation results in allocation of unnecessary temporary strings; consider using 'operator+=' or 'string::append()' instead [performance-inefficient-string-concatenation]
     i = launcher + i;
     ^
@@ -5450,8 +2651,6 @@ bool cmParseBlanketJSCoverage::LoadCoverageData(std::vector<std::string> files)
 /project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
   Value(Value&& other);
   ^
-
-
 /project/git/Source/cmNinjaNormalTargetGenerator.cxx:252:7: warning: string concatenation results in allocation of unnecessary temporary strings; consider using 'operator+=' or 'string::append()' instead [performance-inefficient-string-concatenation]
       linkCmd = launcher + linkCmd;
       ^
@@ -5475,42 +2674,6 @@ bool cmParseBlanketJSCoverage::LoadCoverageData(std::vector<std::string> files)
 /project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
   Value(Value&& other);
   ^
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 /project/git/Source/cmTargetDepend.h:34:40: warning: the parameter 'l' is copied for each invocation but only used as a const reference; consider making it a const reference [performance-unnecessary-value-param]
   friend bool operator<(cmTargetDepend l, cmTargetDepend r)
                                        ^
@@ -5528,16 +2691,6 @@ bool cmParseBlanketJSCoverage::LoadCoverageData(std::vector<std::string> files)
 /project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
   Value(Value&& other);
   ^
-
-
-
-
-
-
-
-
-
-
 /project/git/Source/cmGlobalNinjaGenerator.cxx:257:15: warning: local copy 'cmd' of the variable 'command' is never modified; consider avoiding the copy [performance-unnecessary-copy-initialization]
   std::string cmd = command; // NOLINT(clang-tidy)
               ^
@@ -5559,48 +2712,6 @@ bool cmParseBlanketJSCoverage::LoadCoverageData(std::vector<std::string> files)
 /project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
   Value(Value&& other);
   ^
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 /project/git/Source/cmTargetDepend.h:34:40: warning: the parameter 'l' is copied for each invocation but only used as a const reference; consider making it a const reference [performance-unnecessary-value-param]
   friend bool operator<(cmTargetDepend l, cmTargetDepend r)
                                        ^
@@ -5618,8 +2729,6 @@ bool cmParseBlanketJSCoverage::LoadCoverageData(std::vector<std::string> files)
 /project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
   Value(Value&& other);
   ^
-
-
 /project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
     CZString(CZString&& other);
     ^
@@ -5629,10 +2738,6 @@ bool cmParseBlanketJSCoverage::LoadCoverageData(std::vector<std::string> files)
 /project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
   Value(Value&& other);
   ^
-
-
-
-
 /project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
     CZString(CZString&& other);
     ^
@@ -5642,58 +2747,6 @@ bool cmParseBlanketJSCoverage::LoadCoverageData(std::vector<std::string> files)
 /project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
   Value(Value&& other);
   ^
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 /project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
     CZString(CZString&& other);
     ^
@@ -5703,97 +2756,15 @@ bool cmParseBlanketJSCoverage::LoadCoverageData(std::vector<std::string> files)
 /project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
   Value(Value&& other);
   ^
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 /project/git/Utilities/cmjsoncpp/include/json/value.h:235:5: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
     CZString(CZString&& other);
     ^
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 /project/git/Utilities/cmjsoncpp/include/json/value.h:241:15: warning: move assignment operators should be marked noexcept [performance-noexcept-move-constructor]
     CZString& operator=(CZString&& other);
               ^
 /project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
   Value(Value&& other);
   ^
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 /project/git/Source/cmTargetDepend.h:34:40: warning: the parameter 'l' is copied for each invocation but only used as a const reference; consider making it a const reference [performance-unnecessary-value-param]
   friend bool operator<(cmTargetDepend l, cmTargetDepend r)
                                        ^
@@ -5811,8 +2782,6 @@ bool cmParseBlanketJSCoverage::LoadCoverageData(std::vector<std::string> files)
 /project/git/Utilities/cmjsoncpp/include/json/value.h:326:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
   Value(Value&& other);
   ^
-
-
 /project/git/Source/cmJsonObjects.cxx:503:45: warning: string concatenation results in allocation of unnecessary temporary strings; consider using 'operator+=' or 'string::append()' instead [performance-inefficient-string-concatenation]
           installPath = installPrefix + '/' + dest;
                                             ^
@@ -5821,10 +2790,6 @@ bool cmParseBlanketJSCoverage::LoadCoverageData(std::vector<std::string> files)
                                        ^
                         const         &
 /project/git/Source/cmTargetDepend.h:34:58: warning: the parameter 'r' is copied for each invocation but only used as a const reference; consider making it a const reference [performance-unnecessary-value-param]
-
-
-
-
   friend bool operator<(cmTargetDepend l, cmTargetDepend r)
                                                          ^
                                           const         &
