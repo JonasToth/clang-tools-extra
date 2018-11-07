@@ -20,8 +20,14 @@ namespace fixit {
 /// \brief Creates fix to make ``VarDecl`` a reference by adding ``&``.
 FixItHint changeVarDeclToReference(const VarDecl &Var, ASTContext &Context);
 
+enum class ConstPolicy {
+  AlwaysLeft,  // Add the `const` always to the left side, if that is possible.
+  AlwaysRight, // Add the `const` always to the right side.
+};
+
 /// \brief Creates fix to make ``VarDecl`` const qualified.
-FixItHint changeVarDeclToConst(const VarDecl &Var);
+FixItHint changeVarDeclToConst(const VarDecl &Var,
+                               ConstPolicy CP = ConstPolicy::AlwaysLeft);
 
 } // namespace fixit
 } // namespace utils

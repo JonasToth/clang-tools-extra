@@ -26,8 +26,14 @@ FixItHint changeVarDeclToReference(const VarDecl &Var, ASTContext &Context) {
   return FixItHint::CreateInsertion(AmpLocation, "&");
 }
 
-FixItHint changeVarDeclToConst(const VarDecl &Var) {
-  return FixItHint::CreateInsertion(Var.getTypeSpecStartLoc(), "const ");
+FixItHint changeVarDeclToConst(const VarDecl &Var, ConstPolicy CP) {
+  switch (CP) {
+  case ConstPolicy::AlwaysLeft:
+    return FixItHint::CreateInsertion(Var.getTypeSpecStartLoc(), "const ");
+  case ConstPolicy::AlwaysRight: {
+    return FixItHint::CreateInsertion(Var.getEndLoc(), " const ");
+  }
+  }
 }
 
 } // namespace fixit
