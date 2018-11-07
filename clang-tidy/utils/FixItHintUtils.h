@@ -25,8 +25,19 @@ enum class ConstPolicy {
   Right, // Add the `const` always to the right side.
 };
 
-/// \brief Creates fix to make ``VarDecl`` const qualified.
+enum class ConstTarget {
+  Pointee, /// Transforming a pointer goes for the pointee and not the pointer
+           /// itself. For references and normal values this option has no
+           /// effect.
+           /// `int * p = &i;` -> `const int * p = &i` or `int const * p = &i`.
+  Value,   /// Transforming pointers will consider the pointer itself.
+           /// `int * p = &i;` -> `int * const = &i`
+};
+
+/// \brief Creates fix to make ``VarDecl`` const qualified. Only valid if
+/// `Var` is isolated in written code. `int foo = 42;`
 FixItHint changeVarDeclToConst(const VarDecl &Var,
+                               ConstTarget CT = ConstTarget::Pointee,
                                ConstPolicy CP = ConstPolicy::Left);
 
 } // namespace fixit
