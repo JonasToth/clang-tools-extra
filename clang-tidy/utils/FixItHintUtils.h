@@ -38,7 +38,8 @@ enum class ConstTarget {
 /// `Var` is isolated in written code. `int foo = 42;`
 FixItHint changeVarDeclToConst(const VarDecl &Var,
                                ConstTarget CT = ConstTarget::Pointee,
-                               ConstPolicy CP = ConstPolicy::Left);
+                               ConstPolicy CP = ConstPolicy::Left,
+                               ASTContext *Context = nullptr);
 
 } // namespace fixit
 } // namespace utils

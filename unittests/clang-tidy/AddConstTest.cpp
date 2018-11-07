@@ -26,7 +26,7 @@ public:
   void check(const MatchFinder::MatchResult &Result) override {
     const auto *D = Result.Nodes.getNodeAs<VarDecl>("var");
     diag(D->getBeginLoc(), "doing const transformation")
-        << utils::fixit::changeVarDeclToConst(*D, CT, CP);
+        << utils::fixit::changeVarDeclToConst(*D, CT, CP, Result.Context);
   }
 };
 } // namespace
@@ -40,42 +40,139 @@ using PointeeRTransform =
 using ValueLTransform = ConstTransform<ConstTarget::Value, ConstPolicy::Left>;
 using ValueRTransform = ConstTransform<ConstTarget::Value, ConstPolicy::Right>;
 
-TEST(ConstBuiltins, BuiltinValueLeft) {
+// ----------------------------------------------------------------------------
+// Test Value-like types. Everything with indirection is done later.
+// ----------------------------------------------------------------------------
+
+TEST(Values, Builtin) {
+  StringRef Snippet = "int target = 0;";
+
+  EXPECT_EQ("const int target = 0;", runCheckOnCode<ValueLTransform>(Snippet));
   EXPECT_EQ("const int target = 0;",
-            runCheckOnCode<PointeeLTransform>("int target = 0;"));
-}
-TEST(ConstBuiltins, BuiltinValueRight) {
+            runCheckOnCode<PointeeLTransform>(Snippet));
+
+  EXPECT_EQ("int const target = 0;", runCheckOnCode<ValueRTransform>(Snippet));
   EXPECT_EQ("int const target = 0;",
-            runCheckOnCode<PointeeRTransform>("int target = 0;"));
+            runCheckOnCode<PointeeRTransform>(Snippet));
 }
 
-TEST(ConstBuiltins, PointerLeft) {
-  EXPECT_EQ("int* const target = nullptr;",
-            runCheckOnCode<ValueLTransform>("int* target = nullptr;"));
-}
+TEST(Arrays, Builtin) {
+  StringRef Snippet = "int target[][1] = {{1}, {2}, {3}};";
 
-TEST(ConstBuiltins, PointerRight) {
-  EXPECT_EQ("int* const target = nullptr;",
-            runCheckOnCode<ValueRTransform>("int* target = nullptr;"));
-}
+  EXPECT_EQ("const int target[][1] = {{1}, {2}, {3}};",
+            runCheckOnCode<PointeeLTransform>(Snippet));
+  EXPECT_EQ("const int target[][1] = {{1}, {2}, {3}};",
+            runCheckOnCode<ValueLTransform>(Snippet));
 
-TEST(ConstBuiltins, LValueReferenceLeft) {
+  EXPECT_EQ("int const target[][1] = {{1}, {2}, {3}};",
+            runCheckOnCode<PointeeRTransform>(Snippet));
+  EXPECT_EQ("int const target[][1] = {{1}, {2}, {3}};",
+            runCheckOnCode<ValueRTransform>(Snippet));
+}
+TEST(Arrays, Pointers) {
+  StringRef Snippet = "int x; int* target[] = {&x, &x, &x};";
+
+  EXPECT_EQ("int x; const int* target[] = {&x, &x, &x};",
+            runCheckOnCode<PointeeLTransform>(Snippet));
+  EXPECT_EQ("int x; int const* target[] = {&x, &x, &x};",
+            runCheckOnCode<PointeeRTransform>(Snippet));
+
+  EXPECT_EQ("int x; int* const target[] = {&x, &x, &x};",
+            runCheckOnCode<ValueLTransform>(Snippet));
+  EXPECT_EQ("int x; int* const target[] = {&x, &x, &x};",
+            runCheckOnCode<ValueRTransform>(Snippet));
+}
+#if 0
+TEST(Arrays, PointerPointers) {
+  StringRef Snippet = "int* x = nullptr; int** target[] = {&x, &x, &x};";
+
+  EXPECT_EQ("int* x = nullptr; int* const * target[] = {&x, &x, &x};",
+            runCheckOnCode<PointeeLTransform>(Snippet));
+  EXPECT_EQ("int* x = nullptr; int** const target[] = {&x, &x, &x};",
+            runCheckOnCode<ValueLTransform>(Snippet));
+
+  EXPECT_EQ("int* x = nullptr; int* const * target[] = {&x, &x, &x};",
+            runCheckOnCode<PointeeRTransform>(Snippet));
+  EXPECT_EQ("int* x = nullptr; int** const target[] = {&x, &x, &x};",
+            runCheckOnCode<ValueRTransform>(Snippet));
+}
+#endif
+
+// ----------------------------------------------------------------------------
+// Test reference types. This does not include pointers and arrays.
+// ----------------------------------------------------------------------------
+
+TEST(Reference, LValueBuiltin) {
+  StringRef Snippet = "int x = 42; int& target = x;";
+
   EXPECT_EQ("int x = 42; const int& target = x;",
-            runCheckOnCode<PointeeLTransform>("int x = 42; int& target = x;"));
+            runCheckOnCode<ValueLTransform>(Snippet));
+  EXPECT_EQ("int x = 42; const int& target = x;",
+            runCheckOnCode<PointeeLTransform>(Snippet));
+
+  EXPECT_EQ("int x = 42; int const& target = x;",
+            runCheckOnCode<ValueRTransform>(Snippet));
+  EXPECT_EQ("int x = 42; int const& target = x;",
+            runCheckOnCode<PointeeRTransform>(Snippet));
 }
-TEST(ConstBuiltins, LValueReferenceRight) {
-  EXPECT_EQ("int x = 42; int& const target = x;",
-            runCheckOnCode<PointeeRTransform>("int x = 42; int& target = x;"));
+TEST(Reference, RValueBuiltin) {
+  StringRef Snippet = "int&& target = 42;";
+  EXPECT_EQ("const int&& target = 42;",
+            runCheckOnCode<ValueLTransform>(Snippet));
+  EXPECT_EQ("const int&& target = 42;",
+            runCheckOnCode<PointeeLTransform>(Snippet));
+
+  EXPECT_EQ("int const&& target = 42;",
+            runCheckOnCode<ValueRTransform>(Snippet));
+  EXPECT_EQ("int const&& target = 42;",
+            runCheckOnCode<PointeeRTransform>(Snippet));
 }
 
-TEST(ConstBuiltins, RValueReferenceLeft) {
-  EXPECT_EQ("const int&& target = 42;",
-            runCheckOnCode<PointeeLTransform>("int&& target = 42;"));
+// TODO: Reference to pointer.
+
+// ----------------------------------------------------------------------------
+// Test pointers types.
+// ----------------------------------------------------------------------------
+
+TEST(Pointers, SingleBuiltin) {
+  StringRef Snippet = "int* target = nullptr;";
+
+  EXPECT_EQ("int* const target = nullptr;",
+            runCheckOnCode<ValueLTransform>(Snippet));
+  EXPECT_EQ("int* const target = nullptr;",
+            runCheckOnCode<ValueRTransform>(Snippet));
+
+  EXPECT_EQ("const int* target = nullptr;",
+            runCheckOnCode<PointeeLTransform>(Snippet));
+  EXPECT_EQ("int const* target = nullptr;",
+            runCheckOnCode<PointeeRTransform>(Snippet));
 }
-TEST(ConstBuiltins, RValueReferenceRight) {
-  EXPECT_EQ("int&& const target = 42;",
-            runCheckOnCode<PointeeRTransform>("int&& target = 42;"));
+
+// TODO: Pointer to pointer
+// TODO: Pointer to array `int array[4]; int (*ap)[4] = &array;`
+
+#if 0
+TEST(ConstBuiltins, PointerPointerLeft) {
+  EXPECT_EQ("int** const target = nullptr;",
+            runCheckOnCode<ValueLTransform>("int** target = nullptr;"));
 }
+
+TEST(ConstBuiltins, PointerPointerRight) {
+  EXPECT_EQ("int** const target = nullptr;",
+            runCheckOnCode<ValueRTransform>("int** target = nullptr;"));
+}
+
+TEST(ConstBuiltins, PointeePointerLeft) {
+  EXPECT_EQ("int*const * target = nullptr;",
+            runCheckOnCode<PointeeLTransform>("int** target = nullptr;"));
+}
+
+TEST(ConstBuiltins, PointeePointerRight) {
+  EXPECT_EQ("int*const * target = nullptr;",
+            runCheckOnCode<PointeeRTransform>("int** target = nullptr;"));
+}
+
+#endif
 } // namespace test
 } // namespace tidy
 } // namespace clang
