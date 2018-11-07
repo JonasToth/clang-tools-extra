@@ -31,7 +31,8 @@ FixItHint changeVarDeclToConst(const VarDecl &Var, ConstPolicy CP) {
   case ConstPolicy::AlwaysLeft:
     return FixItHint::CreateInsertion(Var.getTypeSpecStartLoc(), "const ");
   case ConstPolicy::AlwaysRight: {
-    return FixItHint::CreateInsertion(Var.getEndLoc(), " const ");
+    return FixItHint::CreateInsertion(
+        Var.getIdentifier()->getLocStart(), " const ");
   }
   }
 }

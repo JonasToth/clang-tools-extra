@@ -38,7 +38,7 @@ TEST(ConstBuiltins, BuiltinValueLeft) {
             runCheckOnCode<LTransform>("int target = 0;"));
 }
 TEST(ConstBuiltins, BuiltinValueRight) {
-  EXPECT_NE("int const target = 0;",
+  EXPECT_EQ("int const target = 0;",
             runCheckOnCode<RTransform>("int target = 0;"));
 }
 
