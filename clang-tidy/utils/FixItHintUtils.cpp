@@ -27,12 +27,14 @@ FixItHint changeVarDeclToReference(const VarDecl &Var, ASTContext &Context) {
 }
 
 FixItHint changeVarDeclToConst(const VarDecl &Var, ConstPolicy CP) {
+  if (Var.getType()->isPointerType())
+    CP = ConstPolicy::Right;
+
   switch (CP) {
-  case ConstPolicy::AlwaysLeft:
+  case ConstPolicy::Left:
     return FixItHint::CreateInsertion(Var.getTypeSpecStartLoc(), "const ");
-  case ConstPolicy::AlwaysRight: {
-    return FixItHint::CreateInsertion(
-        Var.getIdentifier()->getLocStart(), " const ");
+  case ConstPolicy::Right: {
+    return FixItHint::CreateInsertion(Var.getLocation(), " const ");
   }
   }
 }
