@@ -95,23 +95,22 @@ static FixItHint changePointer(const VarDecl &Var, const Type *Pointee,
   llvm_unreachable("All paths should have been handled");
 } // namespace fixit
 
-static FixItHint changeReferencee(const VarDecl &Var, ConstTarget CT,
-                                  ConstPolicy CP, ASTContext *Context) {
+static FixItHint changeReferencee(const VarDecl &Var, QualType Pointee,
+                                  ConstTarget CT, ConstPolicy CP,
+                                  ASTContext *Context) {
   llvm::dbgs() << "Change Referencee for " << Var.getName() << "\n";
-  if (CP == ConstPolicy::Left) {
+  if (CP == ConstPolicy::Left && isValueType(Pointee)) {
     llvm::dbgs() << "Policy: Left\n";
     return FixItHint::CreateInsertion(Var.getTypeSpecStartLoc(), "const ");
   }
 
-  if (CP == ConstPolicy::Right) {
-    llvm::dbgs() << "Policy: Right\n";
+  llvm::dbgs() << "Policy: Right || Pointee not Value\n";
 
-    assert(Context && "Require ASTContext!");
-    SourceLocation BeforeRef = lexer::findPreviousAnyTokenKind(
-        Var.getLocation(), Context->getSourceManager(), Context->getLangOpts(),
-        tok::amp, tok::ampamp);
-    return FixItHint::CreateInsertion(BeforeRef, " const");
-  }
+  assert(Context && "Require ASTContext!");
+  SourceLocation BeforeRef = lexer::findPreviousAnyTokenKind(
+      Var.getLocation(), Context->getSourceManager(), Context->getLangOpts(),
+      tok::amp, tok::ampamp);
+  return FixItHint::CreateInsertion(BeforeRef, " const");
 
   llvm_unreachable("All paths should have been covered!");
 }
@@ -127,7 +126,8 @@ FixItHint changeVarDeclToConst(const VarDecl &Var, ConstTarget CT,
     return changeValue(Var, CT, CP);
 
   if (isReferenceType(Var.getType()))
-    return changeReferencee(Var, CT, CP, Context);
+    return changeReferencee(Var, Var.getType()->getPointeeType(), CT, CP,
+                            Context);
 
   if (isPointerType(Var.getType()))
     return changePointer(Var, Var.getType()->getPointeeType().getTypePtr(), CT,

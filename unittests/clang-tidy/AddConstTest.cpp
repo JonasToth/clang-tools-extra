@@ -82,21 +82,19 @@ TEST(Arrays, Pointers) {
   EXPECT_EQ("int x; int* const target[] = {&x, &x, &x};",
             runCheckOnCode<ValueRTransform>(Snippet));
 }
-#if 0
 TEST(Arrays, PointerPointers) {
   StringRef Snippet = "int* x = nullptr; int** target[] = {&x, &x, &x};";
 
-  EXPECT_EQ("int* x = nullptr; int* const * target[] = {&x, &x, &x};",
+  EXPECT_EQ("int* x = nullptr; int* const* target[] = {&x, &x, &x};",
             runCheckOnCode<PointeeLTransform>(Snippet));
   EXPECT_EQ("int* x = nullptr; int** const target[] = {&x, &x, &x};",
             runCheckOnCode<ValueLTransform>(Snippet));
 
-  EXPECT_EQ("int* x = nullptr; int* const * target[] = {&x, &x, &x};",
+  EXPECT_EQ("int* x = nullptr; int* const* target[] = {&x, &x, &x};",
             runCheckOnCode<PointeeRTransform>(Snippet));
   EXPECT_EQ("int* x = nullptr; int** const target[] = {&x, &x, &x};",
             runCheckOnCode<ValueRTransform>(Snippet));
 }
-#endif
 
 // ----------------------------------------------------------------------------
 // Test reference types. This does not include pointers and arrays.
@@ -129,6 +127,7 @@ TEST(Reference, RValueBuiltin) {
 }
 
 // TODO: Reference to pointer.
+// TODO: Reference to array.
 
 // ----------------------------------------------------------------------------
 // Test pointers types.
@@ -147,32 +146,22 @@ TEST(Pointers, SingleBuiltin) {
   EXPECT_EQ("int const* target = nullptr;",
             runCheckOnCode<PointeeRTransform>(Snippet));
 }
+TEST(Pointers, MultiBuiltin) {
+  StringRef Snippet = "int** target = nullptr;";
 
-// TODO: Pointer to pointer
+  EXPECT_EQ("int** const target = nullptr;",
+            runCheckOnCode<ValueLTransform>(Snippet));
+  EXPECT_EQ("int** const target = nullptr;",
+            runCheckOnCode<ValueRTransform>(Snippet));
+
+  EXPECT_EQ("int* const* target = nullptr;",
+            runCheckOnCode<PointeeLTransform>(Snippet));
+  EXPECT_EQ("int* const* target = nullptr;",
+            runCheckOnCode<PointeeRTransform>(Snippet));
+}
 // TODO: Pointer to array `int array[4]; int (*ap)[4] = &array;`
 
-#if 0
-TEST(ConstBuiltins, PointerPointerLeft) {
-  EXPECT_EQ("int** const target = nullptr;",
-            runCheckOnCode<ValueLTransform>("int** target = nullptr;"));
-}
 
-TEST(ConstBuiltins, PointerPointerRight) {
-  EXPECT_EQ("int** const target = nullptr;",
-            runCheckOnCode<ValueRTransform>("int** target = nullptr;"));
-}
-
-TEST(ConstBuiltins, PointeePointerLeft) {
-  EXPECT_EQ("int*const * target = nullptr;",
-            runCheckOnCode<PointeeLTransform>("int** target = nullptr;"));
-}
-
-TEST(ConstBuiltins, PointeePointerRight) {
-  EXPECT_EQ("int*const * target = nullptr;",
-            runCheckOnCode<PointeeRTransform>("int** target = nullptr;"));
-}
-
-#endif
 } // namespace test
 } // namespace tidy
 } // namespace clang
