@@ -63,7 +63,7 @@ static Optional<SourceLocation> skipLParensBackwards(SourceLocation Start,
 }
 
 static Optional<FixItHint> changeValue(const VarDecl &Var, ConstTarget CT,
-                                       ConstPolicy CP) {
+                                       ConstPolicy CP, ASTContext *Context) {
   llvm::dbgs() << "Change Value for " << Var.getName() << "\n";
   switch (CP) {
   case ConstPolicy::Left:
@@ -71,9 +71,12 @@ static Optional<FixItHint> changeValue(const VarDecl &Var, ConstTarget CT,
       return None;
     return FixItHint::CreateInsertion(Var.getTypeSpecStartLoc(), "const ");
   case ConstPolicy::Right:
-    if (locDangerous(Var.getLocation()))
-      return None;
-    return FixItHint::CreateInsertion(Var.getLocation(), "const ");
+    assert(Context && "Require ASTContext for Lexing");
+    Optional<SourceLocation> IgnoredParens =
+        skipLParensBackwards(Var.getLocation(), *Context);
+    if (IgnoredParens)
+      return FixItHint::CreateInsertion(*IgnoredParens, "const ");
+    return None;
   }
 }
 
@@ -177,7 +180,7 @@ Optional<FixItHint> changeVarDeclToConst(const VarDecl &Var, ConstTarget CT,
          "Unexpected Target");
 
   if (isValueType(Var.getType()))
-    return changeValue(Var, CT, CP);
+    return changeValue(Var, CT, CP, Context);
 
   if (isReferenceType(Var.getType()))
     return changeReferencee(Var, Var.getType()->getPointeeType(), CT, CP,
@@ -193,7 +196,7 @@ Optional<FixItHint> changeVarDeclToConst(const VarDecl &Var, ConstTarget CT,
     assert(AT && "Did not retrieve array element type for an array.");
 
     if (isValueType(AT))
-      return changeValue(Var, CT, CP);
+      return changeValue(Var, CT, CP, Context);
 
     if (isPointerType(AT))
       return changePointer(Var, AT->getPointeeType().getTypePtr(), CT, CP,

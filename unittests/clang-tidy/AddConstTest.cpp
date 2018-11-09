@@ -48,7 +48,9 @@ using ValueRTransform = ConstTransform<ConstTarget::Value, ConstPolicy::Right>;
 // ----------------------------------------------------------------------------
 
 // TODO: Template-code
+// TODO: Normal clases, Tag Types (same as Value/Builtins)
 // TODO: Macros
+// TODO: decltype()
 
 TEST(Values, Builtin) {
   StringRef Snippet = "int target = 0;";
@@ -135,6 +137,19 @@ TEST(Values, AutoReference) {
             runCheckOnCode<ValueRTransform>(Cat(S)));
   EXPECT_EQ(Cat("auto const target = f();"),
             runCheckOnCode<PointeeRTransform>(Cat(S)));
+}
+TEST(Values, Parens) {
+  StringRef Snippet = "int ((target)) = 0;";
+
+  EXPECT_EQ("const int ((target)) = 0;",
+            runCheckOnCode<ValueLTransform>(Snippet));
+  EXPECT_EQ("const int ((target)) = 0;",
+            runCheckOnCode<PointeeLTransform>(Snippet));
+
+  EXPECT_EQ("int const ((target)) = 0;",
+            runCheckOnCode<ValueRTransform>(Snippet));
+  EXPECT_EQ("int const ((target)) = 0;",
+            runCheckOnCode<PointeeRTransform>(Snippet));
 }
 
 // ----------------------------------------------------------------------------
@@ -339,6 +354,37 @@ TEST(Pointers, Auto) {
   EXPECT_EQ(Cat("auto const* target = f();"),
             runCheckOnCode<PointeeRTransform>(Cat(S)));
 }
+#if 0
+TEST(Pointers, FunctionPointer) {
+  StringRef S = "int (*target)(float, int, double) = nullptr;";
+
+  EXPECT_EQ("int (*const target)(float, int, double) = nullptr;",
+            runCheckOnCode<ValueLTransform>(S));
+  EXPECT_EQ("int (*const target)(float, int, double) = nullptr;",
+            runCheckOnCode<ValueRTransform>(S));
+
+  EXPECT_EQ("int (*const target)(float, int, double) = nullptr;",
+            runCheckOnCode<PointeeLTransform>(S));
+  EXPECT_EQ("int (*const target)(float, int, double) = nullptr;",
+            runCheckOnCode<PointeeRTransform>(S));
+}
+TEST(Pointers, MemberFunctionPointer) {
+  StringRef S = "int (*target)(float, int, double) = nullptr;";
+
+  EXPECT_EQ("int (*const target)(float, int, double) = nullptr;",
+            runCheckOnCode<ValueLTransform>(S));
+  EXPECT_EQ("int (*const target)(float, int, double) = nullptr;",
+            runCheckOnCode<ValueRTransform>(S));
+
+  EXPECT_EQ("int (*const target)(float, int, double) = nullptr;",
+            runCheckOnCode<PointeeLTransform>(S));
+  EXPECT_EQ("int (*const target)(float, int, double) = nullptr;",
+            runCheckOnCode<PointeeRTransform>(S));
+}
+TEST(Pointers, MemberDataPointer) {
+
+}
+#endif
 
 // TODO: Function pointers
 // TODO: Member-data pointers
