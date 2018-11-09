@@ -235,6 +235,21 @@ TEST(Reference, LValueParens) {
   EXPECT_EQ("int x = 42; int  const((& target)) = x;",
             runCheckOnCode<PointeeRTransform>(Snippet));
 }
+TEST(Reference, ToArray) {
+  StringRef ArraySnippet = "int a[4] = {1, 2, 3, 4};";
+  StringRef Snippet = "int (&target)[4] = a;";
+  auto Cat = [&ArraySnippet](StringRef S) { return (ArraySnippet + S).str(); };
+
+  EXPECT_EQ(Cat("const int (&target)[4] = a;"),
+            runCheckOnCode<ValueLTransform>(Cat(Snippet)));
+  EXPECT_EQ(Cat("const int (&target)[4] = a;"),
+            runCheckOnCode<PointeeLTransform>(Cat(Snippet)));
+
+  EXPECT_EQ(Cat("int const (&target)[4] = a;"),
+            runCheckOnCode<ValueRTransform>(Cat(Snippet)));
+  EXPECT_EQ(Cat("int const (&target)[4] = a;"),
+            runCheckOnCode<PointeeRTransform>(Cat(Snippet)));
+}
 TEST(Reference, Auto) {
   StringRef T = "static int global = 42; int& f() { return global; }\n";
   StringRef S = "auto& target = f();";
@@ -250,8 +265,6 @@ TEST(Reference, Auto) {
   EXPECT_EQ(Cat("auto const& target = f();"),
             runCheckOnCode<PointeeRTransform>(Cat(S)));
 }
-
-// TODO: Reference to array.
 
 // ----------------------------------------------------------------------------
 // Test pointers types.
