@@ -36,10 +36,10 @@ enum class ConstTarget {
 
 /// \brief Creates fix to make ``VarDecl`` const qualified. Only valid if
 /// `Var` is isolated in written code. `int foo = 42;`
-FixItHint changeVarDeclToConst(const VarDecl &Var,
-                               ConstTarget CT = ConstTarget::Pointee,
-                               ConstPolicy CP = ConstPolicy::Left,
-                               ASTContext *Context = nullptr);
+Optional<FixItHint> changeVarDeclToConst(const VarDecl &Var,
+                                         ConstTarget CT = ConstTarget::Pointee,
+                                         ConstPolicy CP = ConstPolicy::Left,
+                                         ASTContext *Context = nullptr);
 
 } // namespace fixit
 } // namespace utils

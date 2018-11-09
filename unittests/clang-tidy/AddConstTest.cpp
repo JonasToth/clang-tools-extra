@@ -25,8 +25,11 @@ public:
 
   void check(const MatchFinder::MatchResult &Result) override {
     const auto *D = Result.Nodes.getNodeAs<VarDecl>("var");
-    diag(D->getBeginLoc(), "doing const transformation")
-        << utils::fixit::changeVarDeclToConst(*D, CT, CP, Result.Context);
+    using utils::fixit::changeVarDeclToConst;
+    Optional<FixItHint> Fix = changeVarDeclToConst(*D, CT, CP, Result.Context);
+    auto Diag = diag(D->getBeginLoc(), "doing const transformation");
+    if (Fix)
+      Diag << *Fix;
   }
 };
 } // namespace
@@ -44,6 +47,9 @@ using ValueRTransform = ConstTransform<ConstTarget::Value, ConstPolicy::Right>;
 // Test Value-like types. Everything with indirection is done later.
 // ----------------------------------------------------------------------------
 
+// TODO: Template-code
+// TODO: Macros
+
 TEST(Values, Builtin) {
   StringRef Snippet = "int target = 0;";
 
@@ -54,6 +60,36 @@ TEST(Values, Builtin) {
   EXPECT_EQ("int const target = 0;", runCheckOnCode<ValueRTransform>(Snippet));
   EXPECT_EQ("int const target = 0;",
             runCheckOnCode<PointeeRTransform>(Snippet));
+}
+TEST(Values, TypedefBuiltin) {
+  StringRef T = "typedef int MyInt;";
+  StringRef S = "MyInt target = 0;";
+  auto Cat = [&T](StringRef S) { return (T + S).str(); };
+
+  EXPECT_EQ(Cat("const MyInt target = 0;"),
+            runCheckOnCode<ValueLTransform>(Cat(S)));
+  EXPECT_EQ(Cat("const MyInt target = 0;"),
+            runCheckOnCode<PointeeLTransform>(Cat(S)));
+
+  EXPECT_EQ(Cat("MyInt const target = 0;"),
+            runCheckOnCode<ValueRTransform>(Cat(S)));
+  EXPECT_EQ(Cat("MyInt const target = 0;"),
+            runCheckOnCode<PointeeRTransform>(Cat(S)));
+}
+TEST(Values, TypedefBuiltinPointer) {
+  StringRef T = "typedef int* MyInt;";
+  StringRef S = "MyInt target = nullptr;";
+  auto Cat = [&T](StringRef S) { return (T + S).str(); };
+
+  EXPECT_EQ(Cat("const MyInt target = nullptr;"),
+            runCheckOnCode<ValueLTransform>(Cat(S)));
+  EXPECT_EQ(Cat("const MyInt target = nullptr;"),
+            runCheckOnCode<PointeeLTransform>(Cat(S)));
+
+  EXPECT_EQ(Cat("MyInt const target = nullptr;"),
+            runCheckOnCode<ValueRTransform>(Cat(S)));
+  EXPECT_EQ(Cat("MyInt const target = nullptr;"),
+            runCheckOnCode<PointeeRTransform>(Cat(S)));
 }
 
 TEST(Arrays, Builtin) {
@@ -125,8 +161,19 @@ TEST(Reference, RValueBuiltin) {
   EXPECT_EQ("int const&& target = 42;",
             runCheckOnCode<PointeeRTransform>(Snippet));
 }
+TEST(Reference, LValueToPointer) {
+  StringRef Snippet = "int* p; int *& target = p;";
+  EXPECT_EQ("int* p; int * const& target = p;",
+            runCheckOnCode<ValueLTransform>(Snippet));
+  EXPECT_EQ("int* p; int * const& target = p;",
+            runCheckOnCode<PointeeLTransform>(Snippet));
 
-// TODO: Reference to pointer.
+  EXPECT_EQ("int* p; int * const& target = p;",
+            runCheckOnCode<ValueRTransform>(Snippet));
+  EXPECT_EQ("int* p; int * const& target = p;",
+            runCheckOnCode<PointeeRTransform>(Snippet));
+}
+
 // TODO: Reference to array.
 
 // ----------------------------------------------------------------------------
@@ -159,8 +206,21 @@ TEST(Pointers, MultiBuiltin) {
   EXPECT_EQ("int* const* target = nullptr;",
             runCheckOnCode<PointeeRTransform>(Snippet));
 }
-// TODO: Pointer to array `int array[4]; int (*ap)[4] = &array;`
+TEST(Pointers, ToArray) {
+  StringRef ArraySnippet = "int a[4] = {1, 2, 3, 4};";
+  StringRef Snippet = "int (*target)[4] = &a;";
+  auto Cat = [&ArraySnippet](StringRef S) { return (ArraySnippet + S).str(); };
 
+  EXPECT_EQ(Cat("int (*const target)[4] = &a;"),
+            runCheckOnCode<ValueLTransform>(Cat(Snippet)));
+  EXPECT_EQ(Cat("const int (*target)[4] = &a;"),
+            runCheckOnCode<PointeeLTransform>(Cat(Snippet)));
+
+  EXPECT_EQ(Cat("int (*const target)[4] = &a;"),
+            runCheckOnCode<ValueRTransform>(Cat(Snippet)));
+  EXPECT_EQ(Cat("int  const(*target)[4] = &a;"),
+            runCheckOnCode<PointeeRTransform>(Cat(Snippet)));
+}
 
 } // namespace test
 } // namespace tidy

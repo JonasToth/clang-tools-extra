@@ -27,15 +27,36 @@ FixItHint changeVarDeclToReference(const VarDecl &Var, ASTContext &Context) {
 }
 
 static bool isValueType(const Type *T) {
-  return !(T->isPointerType() || T->isReferenceType() || T->isArrayType());
+  return !(isa<PointerType>(T) || isa<ReferenceType>(T) || isa<ArrayType>(T));
 }
 static bool isValueType(QualType QT) { return isValueType(QT.getTypePtr()); }
-static bool isArrayType(QualType QT) { return QT->isArrayType(); }
+static bool isArrayType(QualType QT) { return isa<ArrayType>(QT.getTypePtr()); }
 
-static bool isReferenceType(QualType QT) { return QT->isReferenceType(); }
+static bool isReferenceType(QualType QT) {
+  return isa<ReferenceType>(QT.getTypePtr());
+}
 
-static bool isPointerType(const Type *T) { return T->isPointerType(); }
-static bool isPointerType(QualType QT) { return QT->isPointerType(); }
+static bool isPointerType(const Type *T) { return isa<PointerType>(T); }
+static bool isPointerType(QualType QT) {
+  return isPointerType(QT.getTypePtr());
+}
+static Optional<SourceLocation> skipLParensBackwards(SourceLocation Start,
+                                                     ASTContext &Context) {
+  Token T;
+  auto PreviousTokenLParen = [&]() {
+    T = lexer::getPreviousToken(Start, Context.getSourceManager(),
+                                Context.getLangOpts());
+    return T.is(tok::l_paren);
+  };
+  while (PreviousTokenLParen()) {
+    if (Start.isInvalid() || Start.isMacroID())
+      return None;
+
+    Start = lexer::findPreviousTokenStart(Start, Context.getSourceManager(),
+                                          Context.getLangOpts());
+  }
+  return Start;
+}
 
 static FixItHint changeValue(const VarDecl &Var, ConstTarget CT,
                              ConstPolicy CP) {
@@ -75,7 +96,9 @@ static FixItHint changePointer(const VarDecl &Var, const Type *Pointee,
       SourceLocation BeforeStar = lexer::findPreviousTokenKind(
           Var.getLocation(), Context->getSourceManager(),
           Context->getLangOpts(), tok::star);
-      return FixItHint::CreateInsertion(BeforeStar, " const");
+      SourceLocation IgnoredParens =
+          *skipLParensBackwards(BeforeStar, *Context);
+      return FixItHint::CreateInsertion(IgnoredParens, " const");
     }
   }
 
@@ -115,8 +138,8 @@ static FixItHint changeReferencee(const VarDecl &Var, QualType Pointee,
   llvm_unreachable("All paths should have been covered!");
 }
 
-FixItHint changeVarDeclToConst(const VarDecl &Var, ConstTarget CT,
-                               ConstPolicy CP, ASTContext *Context) {
+Optional<FixItHint> changeVarDeclToConst(const VarDecl &Var, ConstTarget CT,
+                                         ConstPolicy CP, ASTContext *Context) {
   assert((CP == ConstPolicy::Left || CP == ConstPolicy::Right) &&
          "Unexpected Insertion Policy");
   assert((CT == ConstTarget::Pointee || CT == ConstTarget::Value) &&
