@@ -245,9 +245,9 @@ TEST(Reference, ToArray) {
   EXPECT_EQ(Cat("const int (&target)[4] = a;"),
             runCheckOnCode<PointeeLTransform>(Cat(Snippet)));
 
-  EXPECT_EQ(Cat("int const (&target)[4] = a;"),
+  EXPECT_EQ(Cat("int  const(&target)[4] = a;"),
             runCheckOnCode<ValueRTransform>(Cat(Snippet)));
-  EXPECT_EQ(Cat("int const (&target)[4] = a;"),
+  EXPECT_EQ(Cat("int  const(&target)[4] = a;"),
             runCheckOnCode<PointeeRTransform>(Cat(Snippet)));
 }
 TEST(Reference, Auto) {
