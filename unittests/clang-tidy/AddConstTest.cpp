@@ -91,6 +91,7 @@ TEST(Values, TypedefBuiltinPointer) {
   EXPECT_EQ(Cat("MyInt const target = nullptr;"),
             runCheckOnCode<PointeeRTransform>(Cat(S)));
 }
+// TODO: auto usage
 
 TEST(Arrays, Builtin) {
   StringRef Snippet = "int target[][1] = {{1}, {2}, {3}};";
@@ -173,6 +174,19 @@ TEST(Reference, LValueToPointer) {
   EXPECT_EQ("int* p; int * const& target = p;",
             runCheckOnCode<PointeeRTransform>(Snippet));
 }
+TEST(Reference, LValueParens) {
+  StringRef Snippet = "int x = 42; int ((& target)) = x;";
+
+  EXPECT_EQ("int x = 42; const int ((& target)) = x;",
+            runCheckOnCode<ValueLTransform>(Snippet));
+  EXPECT_EQ("int x = 42; const int ((& target)) = x;",
+            runCheckOnCode<PointeeLTransform>(Snippet));
+
+  EXPECT_EQ("int x = 42; int  const((& target)) = x;",
+            runCheckOnCode<ValueRTransform>(Snippet));
+  EXPECT_EQ("int x = 42; int  const((& target)) = x;",
+            runCheckOnCode<PointeeRTransform>(Snippet));
+}
 
 // TODO: Reference to array.
 
@@ -221,6 +235,22 @@ TEST(Pointers, ToArray) {
   EXPECT_EQ(Cat("int  const(*target)[4] = &a;"),
             runCheckOnCode<PointeeRTransform>(Cat(Snippet)));
 }
+TEST(Pointers, Parens) {
+  StringRef Snippet = "int ((**target)) = nullptr;";
+
+  EXPECT_EQ("int ((**const target)) = nullptr;",
+            runCheckOnCode<ValueLTransform>(Snippet));
+  EXPECT_EQ("int ((**const target)) = nullptr;",
+            runCheckOnCode<ValueRTransform>(Snippet));
+
+  EXPECT_EQ("int ((* const*target)) = nullptr;",
+            runCheckOnCode<PointeeLTransform>(Snippet));
+  EXPECT_EQ("int ((* const*target)) = nullptr;",
+            runCheckOnCode<PointeeRTransform>(Snippet));
+}
+// TODO: Function pointers
+// TODO: Member-data pointers
+// TODO: Member-function pointers
 
 } // namespace test
 } // namespace tidy

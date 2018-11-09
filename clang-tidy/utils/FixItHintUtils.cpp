@@ -40,6 +40,10 @@ static bool isPointerType(const Type *T) { return isa<PointerType>(T); }
 static bool isPointerType(QualType QT) {
   return isPointerType(QT.getTypePtr());
 }
+
+static bool locDangerous(SourceLocation S) {
+  return S.isInvalid() || S.isMacroID();
+}
 static Optional<SourceLocation> skipLParensBackwards(SourceLocation Start,
                                                      ASTContext &Context) {
   Token T;
@@ -49,7 +53,7 @@ static Optional<SourceLocation> skipLParensBackwards(SourceLocation Start,
     return T.is(tok::l_paren);
   };
   while (PreviousTokenLParen()) {
-    if (Start.isInvalid() || Start.isMacroID())
+    if (locDangerous(Start))
       return None;
 
     Start = lexer::findPreviousTokenStart(Start, Context.getSourceManager(),
@@ -58,22 +62,31 @@ static Optional<SourceLocation> skipLParensBackwards(SourceLocation Start,
   return Start;
 }
 
-static FixItHint changeValue(const VarDecl &Var, ConstTarget CT,
-                             ConstPolicy CP) {
+static Optional<FixItHint> changeValue(const VarDecl &Var, ConstTarget CT,
+                                       ConstPolicy CP) {
   llvm::dbgs() << "Change Value for " << Var.getName() << "\n";
-  return FixItHint::CreateInsertion(
-      CP == ConstPolicy::Left ? Var.getTypeSpecStartLoc() : Var.getLocation(),
-      "const ");
+  switch (CP) {
+  case ConstPolicy::Left:
+    if (locDangerous(Var.getTypeSpecStartLoc()))
+      return None;
+    return FixItHint::CreateInsertion(Var.getTypeSpecStartLoc(), "const ");
+  case ConstPolicy::Right:
+    if (locDangerous(Var.getLocation()))
+      return None;
+    return FixItHint::CreateInsertion(Var.getLocation(), "const ");
+  }
 }
 
-static FixItHint changePointer(const VarDecl &Var, const Type *Pointee,
-                               ConstTarget CT, ConstPolicy CP,
-                               ASTContext *Context) {
+static Optional<FixItHint> changePointer(const VarDecl &Var,
+                                         const Type *Pointee, ConstTarget CT,
+                                         ConstPolicy CP, ASTContext *Context) {
   llvm::dbgs() << "Change Pointer for " << Var.getName() << "\n";
   // The pointer itself shall be marked as `const`. This is always right
   // of the '*' or in front of the identifier.
   if (CT == ConstTarget::Value) {
     llvm::dbgs() << "Pointer itself const - policy irrelevant\n";
+    if (locDangerous(Var.getLocation()))
+      return None;
     return FixItHint::CreateInsertion(Var.getLocation(), "const ");
   }
 
@@ -84,6 +97,8 @@ static FixItHint changePointer(const VarDecl &Var, const Type *Pointee,
     // specification. (`const int* p = nullptr;`)
     if (CP == ConstPolicy::Left) {
       llvm::dbgs() << "Policy: Left\n";
+      if (locDangerous(Var.getTypeSpecStartLoc()))
+        return None;
       return FixItHint::CreateInsertion(Var.getTypeSpecStartLoc(), "const ");
     }
 
@@ -93,12 +108,18 @@ static FixItHint changePointer(const VarDecl &Var, const Type *Pointee,
     if (CP == ConstPolicy::Right) {
       llvm::dbgs() << "Policy: Right\n";
       assert(Context && "Require ASTContext!");
+
       SourceLocation BeforeStar = lexer::findPreviousTokenKind(
           Var.getLocation(), Context->getSourceManager(),
           Context->getLangOpts(), tok::star);
-      SourceLocation IgnoredParens =
-          *skipLParensBackwards(BeforeStar, *Context);
-      return FixItHint::CreateInsertion(IgnoredParens, " const");
+      if (locDangerous(BeforeStar))
+        return None;
+
+      Optional<SourceLocation> IgnoredParens =
+          skipLParensBackwards(BeforeStar, *Context);
+      if (IgnoredParens)
+        return FixItHint::CreateInsertion(*IgnoredParens, " const");
+      return None;
     }
   }
 
@@ -109,6 +130,7 @@ static FixItHint changePointer(const VarDecl &Var, const Type *Pointee,
     // The `const` must be left of the last `*` token.
     // (`int * const* p = nullptr;`)
     assert(Context && "Require ASTContext!");
+
     SourceLocation BeforeStar = lexer::findPreviousTokenKind(
         Var.getLocation(), Context->getSourceManager(), Context->getLangOpts(),
         tok::star);
@@ -118,11 +140,14 @@ static FixItHint changePointer(const VarDecl &Var, const Type *Pointee,
   llvm_unreachable("All paths should have been handled");
 } // namespace fixit
 
-static FixItHint changeReferencee(const VarDecl &Var, QualType Pointee,
-                                  ConstTarget CT, ConstPolicy CP,
-                                  ASTContext *Context) {
+static Optional<FixItHint> changeReferencee(const VarDecl &Var,
+                                            QualType Pointee, ConstTarget CT,
+                                            ConstPolicy CP,
+                                            ASTContext *Context) {
   llvm::dbgs() << "Change Referencee for " << Var.getName() << "\n";
   if (CP == ConstPolicy::Left && isValueType(Pointee)) {
+    if (locDangerous(Var.getTypeSpecStartLoc()))
+      return None;
     llvm::dbgs() << "Policy: Left\n";
     return FixItHint::CreateInsertion(Var.getTypeSpecStartLoc(), "const ");
   }
@@ -133,9 +158,15 @@ static FixItHint changeReferencee(const VarDecl &Var, QualType Pointee,
   SourceLocation BeforeRef = lexer::findPreviousAnyTokenKind(
       Var.getLocation(), Context->getSourceManager(), Context->getLangOpts(),
       tok::amp, tok::ampamp);
-  return FixItHint::CreateInsertion(BeforeRef, " const");
+  if (locDangerous(BeforeRef))
+    return None;
 
-  llvm_unreachable("All paths should have been covered!");
+  Optional<SourceLocation> IgnoredParens =
+      skipLParensBackwards(BeforeRef, *Context);
+  if (IgnoredParens)
+    return FixItHint::CreateInsertion(*IgnoredParens, " const");
+
+  return None;
 }
 
 Optional<FixItHint> changeVarDeclToConst(const VarDecl &Var, ConstTarget CT,
