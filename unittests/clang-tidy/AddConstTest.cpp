@@ -137,6 +137,10 @@ TEST(Values, AutoReference) {
             runCheckOnCode<PointeeRTransform>(Cat(S)));
 }
 
+// ----------------------------------------------------------------------------
+// Test builtin-arrays
+// ----------------------------------------------------------------------------
+
 TEST(Arrays, Builtin) {
   StringRef Snippet = "int target[][1] = {{1}, {2}, {3}};";
 
@@ -231,6 +235,21 @@ TEST(Reference, LValueParens) {
   EXPECT_EQ("int x = 42; int  const((& target)) = x;",
             runCheckOnCode<PointeeRTransform>(Snippet));
 }
+TEST(Reference, Auto) {
+  StringRef T = "static int global = 42; int& f() { return global; }\n";
+  StringRef S = "auto& target = f();";
+  auto Cat = [&T](StringRef S) { return (T + S).str(); };
+
+  EXPECT_EQ(Cat("const auto& target = f();"),
+            runCheckOnCode<ValueLTransform>(Cat(S)));
+  EXPECT_EQ(Cat("auto const& target = f();"),
+            runCheckOnCode<ValueRTransform>(Cat(S)));
+
+  EXPECT_EQ(Cat("const auto& target = f();"),
+            runCheckOnCode<PointeeLTransform>(Cat(S)));
+  EXPECT_EQ(Cat("auto const& target = f();"),
+            runCheckOnCode<PointeeRTransform>(Cat(S)));
+}
 
 // TODO: Reference to array.
 
@@ -292,6 +311,22 @@ TEST(Pointers, Parens) {
   EXPECT_EQ("int ((* const*target)) = nullptr;",
             runCheckOnCode<PointeeRTransform>(Snippet));
 }
+TEST(Pointers, Auto) {
+  StringRef T = "int* f() { return nullptr; }\n";
+  StringRef S = "auto* target = f();";
+  auto Cat = [&T](StringRef S) { return (T + S).str(); };
+
+  EXPECT_EQ(Cat("auto* const target = f();"),
+            runCheckOnCode<ValueLTransform>(Cat(S)));
+  EXPECT_EQ(Cat("auto* const target = f();"),
+            runCheckOnCode<ValueRTransform>(Cat(S)));
+
+  EXPECT_EQ(Cat("const auto* target = f();"),
+            runCheckOnCode<PointeeLTransform>(Cat(S)));
+  EXPECT_EQ(Cat("auto const* target = f();"),
+            runCheckOnCode<PointeeRTransform>(Cat(S)));
+}
+
 // TODO: Function pointers
 // TODO: Member-data pointers
 // TODO: Member-function pointers
