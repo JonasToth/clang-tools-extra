@@ -336,7 +336,7 @@ def run_tidy(args, tmpdir, build_path, queue, lock, failed_files, parser):
       failed_files.append(name)
 
     with lock:
-      invoc = ' '.join(invocation) + '\n'
+      invoc = ' '.join(invocation)
       if parser:
         parser.parse_string(output.decode('utf-8'))
         sys.stdout.write(invoc\
@@ -347,7 +347,10 @@ def run_tidy(args, tmpdir, build_path, queue, lock, failed_files, parser):
         sys.stdout.write(invoc + output.decode('utf-8') + '\n')
 
       if len(err) > 0:
-        sys.stderr.write(err.decode('utf-8') + '\n')
+        err_lines = err.splitlines()
+        errors = [l for l in err_lines if not l.endswith("warnings generated.")]
+        for l in errors:
+            sys.stderr.write(l.decode('utf-8'))
 
     queue.task_done()
 
