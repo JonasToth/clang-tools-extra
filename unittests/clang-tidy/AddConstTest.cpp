@@ -48,9 +48,7 @@ using ValueRTransform = ConstTransform<ConstTarget::Value, ConstPolicy::Right>;
 // ----------------------------------------------------------------------------
 
 // TODO: Template-code
-// TODO: Normal clases, Tag Types (same as Value/Builtins)
 // TODO: Macros
-// TODO: decltype()
 
 TEST(Values, Builtin) {
   StringRef Snippet = "int target = 0;";
@@ -136,6 +134,56 @@ TEST(Values, AutoReference) {
   EXPECT_EQ(Cat("auto const target = f();"),
             runCheckOnCode<ValueRTransform>(Cat(S)));
   EXPECT_EQ(Cat("auto const target = f();"),
+            runCheckOnCode<PointeeRTransform>(Cat(S)));
+}
+TEST(Values, DeclTypeValue) {
+  StringRef T = "int f() { return 42; }\n";
+  StringRef S = "decltype(f()) target = f();";
+  auto Cat = [&T](StringRef S) { return (T + S).str(); };
+
+  EXPECT_EQ(Cat("const decltype(f()) target = f();"),
+            runCheckOnCode<ValueLTransform>(Cat(S)));
+  EXPECT_EQ(Cat("const decltype(f()) target = f();"),
+            runCheckOnCode<PointeeLTransform>(Cat(S)));
+
+  EXPECT_EQ(Cat("decltype(f()) const target = f();"),
+            runCheckOnCode<ValueRTransform>(Cat(S)));
+  EXPECT_EQ(Cat("decltype(f()) const target = f();"),
+            runCheckOnCode<PointeeRTransform>(Cat(S)));
+}
+TEST(Values, DeclTypePointer) {
+  // The pointer itself will be changed to 'const'. There is no
+  // way to make the pointee 'const' with this syntax.
+  StringRef T = "int* f() { return nullptr; }\n";
+  StringRef S = "decltype(f()) target = f();";
+  auto Cat = [&T](StringRef S) { return (T + S).str(); };
+
+  EXPECT_EQ(Cat("const decltype(f()) target = f();"),
+            runCheckOnCode<ValueLTransform>(Cat(S)));
+  EXPECT_EQ(Cat("const decltype(f()) target = f();"),
+            runCheckOnCode<PointeeLTransform>(Cat(S)));
+
+  EXPECT_EQ(Cat("decltype(f()) const target = f();"),
+            runCheckOnCode<ValueRTransform>(Cat(S)));
+  EXPECT_EQ(Cat("decltype(f()) const target = f();"),
+            runCheckOnCode<PointeeRTransform>(Cat(S)));
+}
+TEST(Values, DeclTypeReference) {
+  // Same as pointer, but the reference itself will be marked 'const'.
+  // This has no effect and will result in a warning afterwards. The
+  // transformation itself is still correct.
+  StringRef T = "static int global = 42; int& f() { return global; }\n";
+  StringRef S = "decltype(f()) target = f();";
+  auto Cat = [&T](StringRef S) { return (T + S).str(); };
+
+  EXPECT_EQ(Cat("const decltype(f()) target = f();"),
+            runCheckOnCode<ValueLTransform>(Cat(S)));
+  EXPECT_EQ(Cat("const decltype(f()) target = f();"),
+            runCheckOnCode<PointeeLTransform>(Cat(S)));
+
+  EXPECT_EQ(Cat("decltype(f()) const target = f();"),
+            runCheckOnCode<ValueRTransform>(Cat(S)));
+  EXPECT_EQ(Cat("decltype(f()) const target = f();"),
             runCheckOnCode<PointeeRTransform>(Cat(S)));
 }
 TEST(Values, Parens) {
@@ -451,6 +499,152 @@ TEST(Pointers, MemberDataPointer) {
             runCheckOnCode<PointeeRTransform>(Cat(S)));
 }
 
+// ----------------------------------------------------------------------------
+// Test TagTypes (struct, class, unions, enums)
+// ----------------------------------------------------------------------------
+
+TEST(TagTypes, Struct) {
+  StringRef T = "struct Foo { int data; int method(); };\n";
+  StringRef S = "struct Foo target{0};";
+  auto Cat = [&T](StringRef S) { return (T + S).str(); };
+
+  EXPECT_EQ(Cat("const struct Foo target{0};"),
+            runCheckOnCode<ValueLTransform>(Cat(S)));
+  EXPECT_EQ(Cat("const struct Foo target{0};"),
+            runCheckOnCode<PointeeLTransform>(Cat(S)));
+
+  EXPECT_EQ(Cat("struct Foo const target{0};"),
+            runCheckOnCode<ValueRTransform>(Cat(S)));
+  EXPECT_EQ(Cat("struct Foo const target{0};"),
+            runCheckOnCode<PointeeRTransform>(Cat(S)));
+
+  S = "Foo target{0};";
+  EXPECT_EQ(Cat("const Foo target{0};"),
+            runCheckOnCode<ValueLTransform>(Cat(S)));
+  EXPECT_EQ(Cat("const Foo target{0};"),
+            runCheckOnCode<PointeeLTransform>(Cat(S)));
+
+  EXPECT_EQ(Cat("Foo const target{0};"),
+            runCheckOnCode<ValueRTransform>(Cat(S)));
+  EXPECT_EQ(Cat("Foo const target{0};"),
+            runCheckOnCode<PointeeRTransform>(Cat(S)));
+
+  S = "Foo (target){0};";
+  EXPECT_EQ(Cat("const Foo (target){0};"),
+            runCheckOnCode<ValueLTransform>(Cat(S)));
+  EXPECT_EQ(Cat("const Foo (target){0};"),
+            runCheckOnCode<PointeeLTransform>(Cat(S)));
+
+  EXPECT_EQ(Cat("Foo const (target){0};"),
+            runCheckOnCode<ValueRTransform>(Cat(S)));
+  EXPECT_EQ(Cat("Foo const (target){0};"),
+            runCheckOnCode<PointeeRTransform>(Cat(S)));
+}
+TEST(TagTypes, Class) {
+  StringRef T = "class Foo { int data; int method(); };\n";
+  StringRef S = "class Foo target;";
+  auto Cat = [&T](StringRef S) { return (T + S).str(); };
+
+  EXPECT_EQ(Cat("const class Foo target;"),
+            runCheckOnCode<ValueLTransform>(Cat(S)));
+  EXPECT_EQ(Cat("const class Foo target;"),
+            runCheckOnCode<PointeeLTransform>(Cat(S)));
+
+  EXPECT_EQ(Cat("class Foo const target;"),
+            runCheckOnCode<ValueRTransform>(Cat(S)));
+  EXPECT_EQ(Cat("class Foo const target;"),
+            runCheckOnCode<PointeeRTransform>(Cat(S)));
+
+  S = "Foo target;";
+  EXPECT_EQ(Cat("const Foo target;"), runCheckOnCode<ValueLTransform>(Cat(S)));
+  EXPECT_EQ(Cat("const Foo target;"),
+            runCheckOnCode<PointeeLTransform>(Cat(S)));
+
+  EXPECT_EQ(Cat("Foo const target;"), runCheckOnCode<ValueRTransform>(Cat(S)));
+  EXPECT_EQ(Cat("Foo const target;"),
+            runCheckOnCode<PointeeRTransform>(Cat(S)));
+
+  S = "Foo (target);";
+  EXPECT_EQ(Cat("const Foo (target);"),
+            runCheckOnCode<ValueLTransform>(Cat(S)));
+  EXPECT_EQ(Cat("const Foo (target);"),
+            runCheckOnCode<PointeeLTransform>(Cat(S)));
+
+  EXPECT_EQ(Cat("Foo const (target);"),
+            runCheckOnCode<ValueRTransform>(Cat(S)));
+  EXPECT_EQ(Cat("Foo const (target);"),
+            runCheckOnCode<PointeeRTransform>(Cat(S)));
+}
+TEST(TagTypes, Enum) {
+  StringRef T = "enum Foo { N_ONE, N_TWO, N_THREE };\n";
+  StringRef S = "enum Foo target;";
+  auto Cat = [&T](StringRef S) { return (T + S).str(); };
+
+  EXPECT_EQ(Cat("const enum Foo target;"),
+            runCheckOnCode<ValueLTransform>(Cat(S)));
+  EXPECT_EQ(Cat("const enum Foo target;"),
+            runCheckOnCode<PointeeLTransform>(Cat(S)));
+
+  EXPECT_EQ(Cat("enum Foo const target;"),
+            runCheckOnCode<ValueRTransform>(Cat(S)));
+  EXPECT_EQ(Cat("enum Foo const target;"),
+            runCheckOnCode<PointeeRTransform>(Cat(S)));
+
+  S = "Foo target;";
+  EXPECT_EQ(Cat("const Foo target;"), runCheckOnCode<ValueLTransform>(Cat(S)));
+  EXPECT_EQ(Cat("const Foo target;"),
+            runCheckOnCode<PointeeLTransform>(Cat(S)));
+
+  EXPECT_EQ(Cat("Foo const target;"), runCheckOnCode<ValueRTransform>(Cat(S)));
+  EXPECT_EQ(Cat("Foo const target;"),
+            runCheckOnCode<PointeeRTransform>(Cat(S)));
+
+  S = "Foo (target);";
+  EXPECT_EQ(Cat("const Foo (target);"),
+            runCheckOnCode<ValueLTransform>(Cat(S)));
+  EXPECT_EQ(Cat("const Foo (target);"),
+            runCheckOnCode<PointeeLTransform>(Cat(S)));
+
+  EXPECT_EQ(Cat("Foo const (target);"),
+            runCheckOnCode<ValueRTransform>(Cat(S)));
+  EXPECT_EQ(Cat("Foo const (target);"),
+            runCheckOnCode<PointeeRTransform>(Cat(S)));
+}
+TEST(TagTypes, Union) {
+  StringRef T = "union Foo { int yay; float nej; };\n";
+  StringRef S = "union Foo target;";
+  auto Cat = [&T](StringRef S) { return (T + S).str(); };
+
+  EXPECT_EQ(Cat("const union Foo target;"),
+            runCheckOnCode<ValueLTransform>(Cat(S)));
+  EXPECT_EQ(Cat("const union Foo target;"),
+            runCheckOnCode<PointeeLTransform>(Cat(S)));
+
+  EXPECT_EQ(Cat("union Foo const target;"),
+            runCheckOnCode<ValueRTransform>(Cat(S)));
+  EXPECT_EQ(Cat("union Foo const target;"),
+            runCheckOnCode<PointeeRTransform>(Cat(S)));
+
+  S = "Foo target;";
+  EXPECT_EQ(Cat("const Foo target;"), runCheckOnCode<ValueLTransform>(Cat(S)));
+  EXPECT_EQ(Cat("const Foo target;"),
+            runCheckOnCode<PointeeLTransform>(Cat(S)));
+
+  EXPECT_EQ(Cat("Foo const target;"), runCheckOnCode<ValueRTransform>(Cat(S)));
+  EXPECT_EQ(Cat("Foo const target;"),
+            runCheckOnCode<PointeeRTransform>(Cat(S)));
+
+  S = "Foo (target);";
+  EXPECT_EQ(Cat("const Foo (target);"),
+            runCheckOnCode<ValueLTransform>(Cat(S)));
+  EXPECT_EQ(Cat("const Foo (target);"),
+            runCheckOnCode<PointeeLTransform>(Cat(S)));
+
+  EXPECT_EQ(Cat("Foo const (target);"),
+            runCheckOnCode<ValueRTransform>(Cat(S)));
+  EXPECT_EQ(Cat("Foo const (target);"),
+            runCheckOnCode<PointeeRTransform>(Cat(S)));
+}
 } // namespace test
 } // namespace tidy
 } // namespace clang
