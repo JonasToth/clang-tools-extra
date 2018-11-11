@@ -646,7 +646,7 @@ TEST(TagTypes, Union) {
 }
 
 // ----------------------------------------------------------------------------
-// Test TagTypes (struct, class, unions, enums)
+// Test Macro expansions.
 // ----------------------------------------------------------------------------
 
 TEST(Macro, AllInMacro) {
@@ -700,7 +700,7 @@ TEST(Macro, MacroTypePointer) {
   EXPECT_EQ(Cat("BAD_TYPEDEF const target = nullptr;"),
             runCheckOnCode<ValueRTransform>(Cat(S)));
 
-  // TODO: Failing even all parts seem to bail-out in for isMacroID()
+  // FIXME: Failing even all parts seem to bail-out in for isMacroID()
   EXPECT_NE(Cat("BAD_TYPEDEF target = nullptr;"),
             runCheckOnCode<PointeeRTransform>(Cat(S)));
   EXPECT_EQ(Cat("BAD_TYPEDEF target = nullptr;"),
@@ -713,14 +713,112 @@ TEST(Macro, MacroTypeReference) {
 
   EXPECT_EQ(Cat("BAD_TYPEDEF target = g;"),
             runCheckOnCode<ValueLTransform>(Cat(S)));
-  // TODO: Failing even all parts seem to bail-out in for isMacroID()
+  // FIXME: Failing even all parts seem to bail-out in for isMacroID()
   EXPECT_NE(Cat("BAD_TYPEDEF target = g;"),
             runCheckOnCode<ValueRTransform>(Cat(S)));
 
   EXPECT_EQ(Cat("BAD_TYPEDEF target = g;"),
             runCheckOnCode<PointeeLTransform>(Cat(S)));
-  // TODO: Failing even all parts seem to bail-out in for isMacroID()
+  // FIXME: Failing even all parts seem to bail-out in for isMacroID()
   EXPECT_NE(Cat("BAD_TYPEDEF target = g;"),
+            runCheckOnCode<PointeeRTransform>(Cat(S)));
+}
+
+// ----------------------------------------------------------------------------
+// Test template code.
+// ----------------------------------------------------------------------------
+
+TEST(Template, FunctionValue) {
+  StringRef T = "template <typename T> void f(T v) \n";
+  StringRef S = "{ T target = v; }";
+  auto Cat = [&T](StringRef S) { return (T + S).str(); };
+
+  EXPECT_EQ(Cat("{ const T target = v; }"),
+            runCheckOnCode<ValueLTransform>(Cat(S)));
+  EXPECT_EQ(Cat("{ T const target = v; }"),
+            runCheckOnCode<ValueRTransform>(Cat(S)));
+
+  EXPECT_EQ(Cat("{ const T target = v; }"),
+            runCheckOnCode<PointeeLTransform>(Cat(S)));
+  EXPECT_EQ(Cat("{ T const target = v; }"),
+            runCheckOnCode<PointeeRTransform>(Cat(S)));
+}
+TEST(Template, FunctionPointer) {
+  StringRef T = "template <typename T> void f(T* v) \n";
+  StringRef S = "{ T* target = v; }";
+  auto Cat = [&T](StringRef S) { return (T + S).str(); };
+
+  EXPECT_EQ(Cat("{ T* const target = v; }"),
+            runCheckOnCode<ValueLTransform>(Cat(S)));
+  EXPECT_EQ(Cat("{ T* const target = v; }"),
+            runCheckOnCode<ValueRTransform>(Cat(S)));
+
+  EXPECT_EQ(Cat("{ const T* target = v; }"),
+            runCheckOnCode<PointeeLTransform>(Cat(S)));
+  EXPECT_EQ(Cat("{ T const* target = v; }"),
+            runCheckOnCode<PointeeRTransform>(Cat(S)));
+}
+TEST(Template, FunctionReference) {
+  StringRef T = "template <typename T> void f(T& v) \n";
+  StringRef S = "{ T& target = v; }";
+  auto Cat = [&T](StringRef S) { return (T + S).str(); };
+
+  EXPECT_EQ(Cat("{ const T& target = v; }"),
+            runCheckOnCode<ValueLTransform>(Cat(S)));
+  EXPECT_EQ(Cat("{ T const& target = v; }"),
+            runCheckOnCode<ValueRTransform>(Cat(S)));
+
+  EXPECT_EQ(Cat("{ const T& target = v; }"),
+            runCheckOnCode<PointeeLTransform>(Cat(S)));
+  EXPECT_EQ(Cat("{ T const& target = v; }"),
+            runCheckOnCode<PointeeRTransform>(Cat(S)));
+}
+TEST(Template, StructValue) {
+  StringRef T = "template <typename T> struct S { void f(T& v) \n";
+  StringRef S = "{ T target = v; }";
+  StringRef End = "\n};";
+  auto Cat = [&T, &End](StringRef S) { return (T + S + End).str(); };
+
+  EXPECT_EQ(Cat("{ const T target = v; }"),
+            runCheckOnCode<ValueLTransform>(Cat(S)));
+  EXPECT_EQ(Cat("{ T const target = v; }"),
+            runCheckOnCode<ValueRTransform>(Cat(S)));
+
+  EXPECT_EQ(Cat("{ const T target = v; }"),
+            runCheckOnCode<PointeeLTransform>(Cat(S)));
+  EXPECT_EQ(Cat("{ T const target = v; }"),
+            runCheckOnCode<PointeeRTransform>(Cat(S)));
+}
+TEST(Template, StructPointer) {
+  StringRef T = "template <typename T> struct S { void f(T* v) \n";
+  StringRef S = "{ T* target = v; }";
+  StringRef End = "\n};";
+  auto Cat = [&T, &End](StringRef S) { return (T + S + End).str(); };
+
+  EXPECT_EQ(Cat("{ T* const target = v; }"),
+            runCheckOnCode<ValueLTransform>(Cat(S)));
+  EXPECT_EQ(Cat("{ T* const target = v; }"),
+            runCheckOnCode<ValueRTransform>(Cat(S)));
+
+  EXPECT_EQ(Cat("{ const T* target = v; }"),
+            runCheckOnCode<PointeeLTransform>(Cat(S)));
+  EXPECT_EQ(Cat("{ T const* target = v; }"),
+            runCheckOnCode<PointeeRTransform>(Cat(S)));
+}
+TEST(Template, StructReference) {
+  StringRef T = "template <typename T> struct S { void f(T& v) \n";
+  StringRef S = "{ T& target = v; }";
+  StringRef End = "\n};";
+  auto Cat = [&T, &End](StringRef S) { return (T + S + End).str(); };
+
+  EXPECT_EQ(Cat("{ const T& target = v; }"),
+            runCheckOnCode<ValueLTransform>(Cat(S)));
+  EXPECT_EQ(Cat("{ T const& target = v; }"),
+            runCheckOnCode<ValueRTransform>(Cat(S)));
+
+  EXPECT_EQ(Cat("{ const T& target = v; }"),
+            runCheckOnCode<PointeeLTransform>(Cat(S)));
+  EXPECT_EQ(Cat("{ T const& target = v; }"),
             runCheckOnCode<PointeeRTransform>(Cat(S)));
 }
 } // namespace test
