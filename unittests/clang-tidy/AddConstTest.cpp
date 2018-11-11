@@ -48,7 +48,6 @@ using ValueRTransform = ConstTransform<ConstTarget::Value, ConstPolicy::Right>;
 // ----------------------------------------------------------------------------
 
 // TODO: Template-code
-// TODO: Macros
 
 TEST(Values, Builtin) {
   StringRef Snippet = "int target = 0;";
@@ -643,6 +642,85 @@ TEST(TagTypes, Union) {
   EXPECT_EQ(Cat("Foo const (target);"),
             runCheckOnCode<ValueRTransform>(Cat(S)));
   EXPECT_EQ(Cat("Foo const (target);"),
+            runCheckOnCode<PointeeRTransform>(Cat(S)));
+}
+
+// ----------------------------------------------------------------------------
+// Test TagTypes (struct, class, unions, enums)
+// ----------------------------------------------------------------------------
+
+TEST(Macro, AllInMacro) {
+  StringRef T = "#define DEFINE_VARIABLE int target = 42\n";
+  StringRef S = "DEFINE_VARIABLE;";
+  auto Cat = [&T](StringRef S) { return (T + S).str(); };
+
+  EXPECT_EQ(Cat("DEFINE_VARIABLE;"), runCheckOnCode<ValueLTransform>(Cat(S)));
+  EXPECT_EQ(Cat("DEFINE_VARIABLE;"), runCheckOnCode<ValueRTransform>(Cat(S)));
+
+  EXPECT_EQ(Cat("DEFINE_VARIABLE;"), runCheckOnCode<PointeeLTransform>(Cat(S)));
+  EXPECT_EQ(Cat("DEFINE_VARIABLE;"), runCheckOnCode<PointeeRTransform>(Cat(S)));
+}
+TEST(Macro, MacroParameter) {
+  StringRef T = "#define DEFINE_VARIABLE(X) int X = 42\n";
+  StringRef S = "DEFINE_VARIABLE(target);";
+  auto Cat = [&T](StringRef S) { return (T + S).str(); };
+
+  EXPECT_EQ(Cat("DEFINE_VARIABLE(target);"),
+            runCheckOnCode<ValueLTransform>(Cat(S)));
+  EXPECT_EQ(Cat("DEFINE_VARIABLE(target);"),
+            runCheckOnCode<ValueRTransform>(Cat(S)));
+
+  EXPECT_EQ(Cat("DEFINE_VARIABLE(target);"),
+            runCheckOnCode<PointeeLTransform>(Cat(S)));
+  EXPECT_EQ(Cat("DEFINE_VARIABLE(target);"),
+            runCheckOnCode<PointeeRTransform>(Cat(S)));
+}
+TEST(Macro, MacroTypeValue) {
+  StringRef T = "#define BAD_TYPEDEF int\n";
+  StringRef S = "BAD_TYPEDEF target = 42;";
+  auto Cat = [&T](StringRef S) { return (T + S).str(); };
+
+  EXPECT_EQ(Cat("BAD_TYPEDEF target = 42;"),
+            runCheckOnCode<ValueLTransform>(Cat(S)));
+  EXPECT_EQ(Cat("BAD_TYPEDEF target = 42;"),
+            runCheckOnCode<PointeeLTransform>(Cat(S)));
+
+  EXPECT_EQ(Cat("BAD_TYPEDEF const target = 42;"),
+            runCheckOnCode<PointeeRTransform>(Cat(S)));
+  EXPECT_EQ(Cat("BAD_TYPEDEF const target = 42;"),
+            runCheckOnCode<ValueRTransform>(Cat(S)));
+}
+TEST(Macro, MacroTypePointer) {
+  StringRef T = "#define BAD_TYPEDEF int *\n";
+  StringRef S = "BAD_TYPEDEF target = nullptr;";
+  auto Cat = [&T](StringRef S) { return (T + S).str(); };
+
+  EXPECT_EQ(Cat("BAD_TYPEDEF const target = nullptr;"),
+            runCheckOnCode<ValueLTransform>(Cat(S)));
+  EXPECT_EQ(Cat("BAD_TYPEDEF const target = nullptr;"),
+            runCheckOnCode<ValueRTransform>(Cat(S)));
+
+  // TODO: Failing even all parts seem to bail-out in for isMacroID()
+  EXPECT_NE(Cat("BAD_TYPEDEF target = nullptr;"),
+            runCheckOnCode<PointeeRTransform>(Cat(S)));
+  EXPECT_EQ(Cat("BAD_TYPEDEF target = nullptr;"),
+            runCheckOnCode<PointeeLTransform>(Cat(S)));
+}
+TEST(Macro, MacroTypeReference) {
+  StringRef T = "static int g = 42;\n#define BAD_TYPEDEF int&\n";
+  StringRef S = "BAD_TYPEDEF target = g;";
+  auto Cat = [&T](StringRef S) { return (T + S).str(); };
+
+  EXPECT_EQ(Cat("BAD_TYPEDEF target = g;"),
+            runCheckOnCode<ValueLTransform>(Cat(S)));
+  // TODO: Failing even all parts seem to bail-out in for isMacroID()
+  EXPECT_NE(Cat("BAD_TYPEDEF target = g;"),
+            runCheckOnCode<ValueRTransform>(Cat(S)));
+
+  EXPECT_EQ(Cat("BAD_TYPEDEF target = g;"),
+            runCheckOnCode<PointeeLTransform>(Cat(S)));
+  // TODO: Failing even all parts seem to bail-out in for isMacroID()
+  EXPECT_NE(Cat("BAD_TYPEDEF target = g;"),
             runCheckOnCode<PointeeRTransform>(Cat(S)));
 }
 } // namespace test
