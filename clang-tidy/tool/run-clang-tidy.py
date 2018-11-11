@@ -345,12 +345,14 @@ def run_tidy(args, tmpdir, build_path, queue, lock, failed_files, parser):
         parser.reset_parser()
       else:
         sys.stdout.write(invoc + output.decode('utf-8') + '\n')
+      sys.stdout.flush()
 
       if len(err) > 0:
         err_lines = err.splitlines()
         errors = [l for l in err_lines if not l.endswith("warnings generated.")]
         for l in errors:
             sys.stderr.write(l.decode('utf-8'))
+      sys.stderr.flush()
 
     queue.task_done()
 
