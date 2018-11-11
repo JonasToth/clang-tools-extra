@@ -32,16 +32,13 @@ static bool isValueType(const Type *T) {
 }
 static bool isValueType(QualType QT) { return isValueType(QT.getTypePtr()); }
 static bool isArrayType(QualType QT) { return isa<ArrayType>(QT.getTypePtr()); }
-
 static bool isReferenceType(QualType QT) {
   return isa<ReferenceType>(QT.getTypePtr());
 }
-
 static bool isPointerType(const Type *T) { return isa<PointerType>(T); }
 static bool isPointerType(QualType QT) {
   return isPointerType(QT.getTypePtr());
 }
-
 static bool isMemberOrFunctionPointer(QualType QT) {
   return (isPointerType(QT) && QT->isFunctionPointerType()) ||
          isa<MemberPointerType>(QT.getTypePtr());
@@ -49,8 +46,9 @@ static bool isMemberOrFunctionPointer(QualType QT) {
 static bool locDangerous(SourceLocation S) {
   return S.isInvalid() || S.isMacroID();
 }
-static Optional<SourceLocation> skipLParensBackwards(SourceLocation Start,
-                                                     ASTContext &Context) {
+
+static Optional<SourceLocation>
+skipLParensBackwards(SourceLocation Start, const ASTContext &Context) {
   Token T;
   auto PreviousTokenLParen = [&]() {
     T = lexer::getPreviousToken(Start, Context.getSourceManager(),
@@ -76,18 +74,14 @@ static Optional<FixItHint> fixIfNotDangerous(SourceLocation Loc,
 }
 
 static Optional<FixItHint> changeValue(const VarDecl &Var, ConstTarget CT,
-                                       ConstPolicy CP, ASTContext *Context) {
-  llvm::dbgs() << "Change Value for " << Var.getName() << "\n";
+                                       ConstPolicy CP,
+                                       const ASTContext &Context) {
   switch (CP) {
   case ConstPolicy::Left:
     return fixIfNotDangerous(Var.getTypeSpecStartLoc(), "const ");
   case ConstPolicy::Right:
-    if (locDangerous(Var.getLocation()))
-      return None;
-
-    assert(Context && "Require ASTContext for Lexing");
     Optional<SourceLocation> IgnoredParens =
-        skipLParensBackwards(Var.getLocation(), *Context);
+        skipLParensBackwards(Var.getLocation(), Context);
 
     if (IgnoredParens)
       return fixIfNotDangerous(*IgnoredParens, "const ");
@@ -96,15 +90,12 @@ static Optional<FixItHint> changeValue(const VarDecl &Var, ConstTarget CT,
 }
 
 static Optional<FixItHint> changePointerItself(const VarDecl &Var,
-                                               ASTContext &Context) {
-  llvm::dbgs() << "Pointer itself const - policy irrelevant\n";
-
+                                               const ASTContext &Context) {
   if (locDangerous(Var.getLocation()))
-      return None;
+    return None;
 
   Optional<SourceLocation> IgnoredParens =
       skipLParensBackwards(Var.getLocation(), Context);
-
   if (IgnoredParens)
     return fixIfNotDangerous(*IgnoredParens, "const ");
   return None;
@@ -112,42 +103,32 @@ static Optional<FixItHint> changePointerItself(const VarDecl &Var,
 
 static Optional<FixItHint> changePointer(const VarDecl &Var,
                                          const Type *Pointee, ConstTarget CT,
-                                         ConstPolicy CP, ASTContext *Context) {
-  llvm::dbgs() << "Change Pointer for " << Var.getName() << "\n";
+                                         ConstPolicy CP,
+                                         const ASTContext &Context) {
   // The pointer itself shall be marked as `const`. This is always right
   // of the '*' or in front of the identifier.
-  //
   if (CT == ConstTarget::Value)
-    return changePointerItself(Var, *Context);
+    return changePointerItself(Var, Context);
 
   // Mark the pointee `const` that is a normal value (`int* p = nullptr;`).
   if (CT == ConstTarget::Pointee && isValueType(Pointee)) {
-    llvm::dbgs() << "Pointee - ValueType\n";
     // Adding the `const` on the left side is just the beginning of the type
     // specification. (`const int* p = nullptr;`)
-    if (CP == ConstPolicy::Left) {
-      llvm::dbgs() << "Policy: Left\n";
+    if (CP == ConstPolicy::Left)
       return fixIfNotDangerous(Var.getTypeSpecStartLoc(), "const ");
-    }
 
     // Adding the `const` on the right side of the value type requires finding
     // the `*` token and placing the `const` left of it.
     // (`int const* p = nullptr;`)
     if (CP == ConstPolicy::Right) {
-      llvm::dbgs() << "Policy: Right\n";
-      assert(Context && "Require ASTContext!");
-
-      if (locDangerous(Var.getLocation()))
-        return None;
-
       SourceLocation BeforeStar = lexer::findPreviousTokenKind(
-          Var.getLocation(), Context->getSourceManager(),
-          Context->getLangOpts(), tok::star);
+          Var.getLocation(), Context.getSourceManager(), Context.getLangOpts(),
+          tok::star);
       if (locDangerous(BeforeStar))
         return None;
 
       Optional<SourceLocation> IgnoredParens =
-          skipLParensBackwards(BeforeStar, *Context);
+          skipLParensBackwards(BeforeStar, Context);
 
       if (IgnoredParens)
         return fixIfNotDangerous(*IgnoredParens, " const");
@@ -156,18 +137,12 @@ static Optional<FixItHint> changePointer(const VarDecl &Var,
   }
 
   if (CT == ConstTarget::Pointee && isPointerType(Pointee)) {
-    llvm::dbgs() << "Pointee - PointerType - Policy doesn't matter\n";
     // Adding the `const` to the pointee if the pointee is a pointer
     // is the same as 'CP == Right && isValueType(Pointee)'.
     // The `const` must be left of the last `*` token.
     // (`int * const* p = nullptr;`)
-    assert(Context && "Require ASTContext!");
-
-    if (locDangerous(Var.getLocation()))
-      return None;
-
     SourceLocation BeforeStar = lexer::findPreviousTokenKind(
-        Var.getLocation(), Context->getSourceManager(), Context->getLangOpts(),
+        Var.getLocation(), Context.getSourceManager(), Context.getLangOpts(),
         tok::star);
     return fixIfNotDangerous(BeforeStar, " const");
   }
@@ -178,27 +153,15 @@ static Optional<FixItHint> changePointer(const VarDecl &Var,
 static Optional<FixItHint> changeReferencee(const VarDecl &Var,
                                             QualType Pointee, ConstTarget CT,
                                             ConstPolicy CP,
-                                            ASTContext *Context) {
-  llvm::dbgs() << "Change Referencee for " << Var.getName() << "\n";
-  if (CP == ConstPolicy::Left && isValueType(Pointee)) {
-    llvm::dbgs() << "Policy: Left\n";
+                                            const ASTContext &Context) {
+  if (CP == ConstPolicy::Left && isValueType(Pointee))
     return fixIfNotDangerous(Var.getTypeSpecStartLoc(), "const ");
-  }
 
-  llvm::dbgs() << "Policy: Right || Pointee not Value\n";
-
-  if (locDangerous(Var.getLocation()))
-    return None;
-
-  assert(Context && "Require ASTContext!");
   SourceLocation BeforeRef = lexer::findPreviousAnyTokenKind(
-      Var.getLocation(), Context->getSourceManager(), Context->getLangOpts(),
+      Var.getLocation(), Context.getSourceManager(), Context.getLangOpts(),
       tok::amp, tok::ampamp);
-  if (locDangerous(BeforeRef))
-    return None;
-
   Optional<SourceLocation> IgnoredParens =
-      skipLParensBackwards(BeforeRef, *Context);
+      skipLParensBackwards(BeforeRef, Context);
   if (IgnoredParens)
     return fixIfNotDangerous(*IgnoredParens, " const");
 
@@ -206,7 +169,8 @@ static Optional<FixItHint> changeReferencee(const VarDecl &Var,
 }
 
 Optional<FixItHint> changeVarDeclToConst(const VarDecl &Var, ConstTarget CT,
-                                         ConstPolicy CP, ASTContext *Context) {
+                                         ConstPolicy CP,
+                                         const ASTContext *Context) {
   assert((CP == ConstPolicy::Left || CP == ConstPolicy::Right) &&
          "Unexpected Insertion Policy");
   assert((CT == ConstTarget::Pointee || CT == ConstTarget::Value) &&
@@ -214,36 +178,34 @@ Optional<FixItHint> changeVarDeclToConst(const VarDecl &Var, ConstTarget CT,
 
   QualType ParenStrippedType = Var.getType().IgnoreParens();
   if (isValueType(ParenStrippedType))
-    return changeValue(Var, CT, CP, Context);
+    return changeValue(Var, CT, CP, *Context);
 
   if (isReferenceType(ParenStrippedType))
     return changeReferencee(Var, Var.getType()->getPointeeType(), CT, CP,
-                            Context);
+                            *Context);
 
   if (isMemberOrFunctionPointer(ParenStrippedType))
     return changePointerItself(Var, *Context);
 
   if (isPointerType(ParenStrippedType))
     return changePointer(Var, ParenStrippedType->getPointeeType().getTypePtr(),
-                         CT, CP, Context);
+                         CT, CP, *Context);
 
   if (isArrayType(ParenStrippedType)) {
-    llvm::dbgs() << "Found Array - dispatch\n";
     const Type *AT = ParenStrippedType->getBaseElementTypeUnsafe();
     assert(AT && "Did not retrieve array element type for an array.");
 
     if (isValueType(AT))
-      return changeValue(Var, CT, CP, Context);
+      return changeValue(Var, CT, CP, *Context);
 
     if (isPointerType(AT))
       return changePointer(Var, AT->getPointeeType().getTypePtr(), CT, CP,
-                           Context);
+                           *Context);
   }
 
   llvm_unreachable(
       "All possible combinations should have been handled already");
 }
-
 } // namespace fixit
 } // namespace utils
 } // namespace tidy
