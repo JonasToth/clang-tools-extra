@@ -169,6 +169,19 @@ TEST(Arrays, Builtin) {
   EXPECT_EQ("int const target[][1] = {{1}, {2}, {3}};",
             runCheckOnCode<ValueRTransform>(Snippet));
 }
+TEST(Arrays, BuiltinParens) {
+  StringRef Snippet = "int ((target))[][1] = {{1}, {2}, {3}};";
+
+  EXPECT_EQ("const int ((target))[][1] = {{1}, {2}, {3}};",
+            runCheckOnCode<PointeeLTransform>(Snippet));
+  EXPECT_EQ("const int ((target))[][1] = {{1}, {2}, {3}};",
+            runCheckOnCode<ValueLTransform>(Snippet));
+
+  EXPECT_EQ("int const ((target))[][1] = {{1}, {2}, {3}};",
+            runCheckOnCode<PointeeRTransform>(Snippet));
+  EXPECT_EQ("int const ((target))[][1] = {{1}, {2}, {3}};",
+            runCheckOnCode<ValueRTransform>(Snippet));
+}
 TEST(Arrays, Pointers) {
   StringRef Snippet = "int x; int* target[] = {&x, &x, &x};";
 
@@ -193,6 +206,19 @@ TEST(Arrays, PointerPointers) {
   EXPECT_EQ("int* x = nullptr; int* const* target[] = {&x, &x, &x};",
             runCheckOnCode<PointeeRTransform>(Snippet));
   EXPECT_EQ("int* x = nullptr; int** const target[] = {&x, &x, &x};",
+            runCheckOnCode<ValueRTransform>(Snippet));
+}
+TEST(Arrays, PointersParens) {
+  StringRef Snippet = "int x; int* (target)[] = {&x, &x, &x};";
+
+  EXPECT_EQ("int x; const int* (target)[] = {&x, &x, &x};",
+            runCheckOnCode<PointeeLTransform>(Snippet));
+  EXPECT_EQ("int x; int const* (target)[] = {&x, &x, &x};",
+            runCheckOnCode<PointeeRTransform>(Snippet));
+
+  EXPECT_EQ("int x; int* const (target)[] = {&x, &x, &x};",
+            runCheckOnCode<ValueLTransform>(Snippet));
+  EXPECT_EQ("int x; int* const (target)[] = {&x, &x, &x};",
             runCheckOnCode<ValueRTransform>(Snippet));
 }
 
