@@ -354,7 +354,21 @@ TEST(Pointers, Auto) {
   EXPECT_EQ(Cat("auto const* target = f();"),
             runCheckOnCode<PointeeRTransform>(Cat(S)));
 }
-#if 0
+TEST(Pointers, AutoParens) {
+  StringRef T = "int* f() { return nullptr; }\n";
+  StringRef S = "auto (((* target))) = f();";
+  auto Cat = [&T](StringRef S) { return (T + S).str(); };
+
+  EXPECT_EQ(Cat("auto (((* const target))) = f();"),
+            runCheckOnCode<ValueLTransform>(Cat(S)));
+  EXPECT_EQ(Cat("auto (((* const target))) = f();"),
+            runCheckOnCode<ValueRTransform>(Cat(S)));
+
+  EXPECT_EQ(Cat("const auto (((* target))) = f();"),
+            runCheckOnCode<PointeeLTransform>(Cat(S)));
+  EXPECT_EQ(Cat("auto  const(((* target))) = f();"),
+            runCheckOnCode<PointeeRTransform>(Cat(S)));
+}
 TEST(Pointers, FunctionPointer) {
   StringRef S = "int (*target)(float, int, double) = nullptr;";
 
@@ -367,28 +381,49 @@ TEST(Pointers, FunctionPointer) {
             runCheckOnCode<PointeeLTransform>(S));
   EXPECT_EQ("int (*const target)(float, int, double) = nullptr;",
             runCheckOnCode<PointeeRTransform>(S));
-}
-TEST(Pointers, MemberFunctionPointer) {
-  StringRef S = "int (*target)(float, int, double) = nullptr;";
 
-  EXPECT_EQ("int (*const target)(float, int, double) = nullptr;",
-            runCheckOnCode<ValueLTransform>(S));
-  EXPECT_EQ("int (*const target)(float, int, double) = nullptr;",
-            runCheckOnCode<ValueRTransform>(S));
-
-  EXPECT_EQ("int (*const target)(float, int, double) = nullptr;",
-            runCheckOnCode<PointeeLTransform>(S));
-  EXPECT_EQ("int (*const target)(float, int, double) = nullptr;",
+  S = "int (((*target)))(float, int, double) = nullptr;";
+  EXPECT_EQ("int (((*const target)))(float, int, double) = nullptr;",
             runCheckOnCode<PointeeRTransform>(S));
 }
-TEST(Pointers, MemberDataPointer) {
+TEST(Pointers, MemberFunctionPointer) {
+  StringRef T = "struct A { int f() { return 1; } };";
+  StringRef S = "int (A::*target)() = &A::f;";
+  auto Cat = [&T](StringRef S) { return (T + S).str(); };
 
+  EXPECT_EQ(Cat("int (A::*const target)() = &A::f;"),
+            runCheckOnCode<ValueLTransform>(Cat(S)));
+  EXPECT_EQ(Cat("int (A::*const target)() = &A::f;"),
+            runCheckOnCode<ValueRTransform>(Cat(S)));
+
+  EXPECT_EQ(Cat("int (A::*const target)() = &A::f;"),
+            runCheckOnCode<PointeeLTransform>(Cat(S)));
+  EXPECT_EQ(Cat("int (A::*const target)() = &A::f;"),
+            runCheckOnCode<PointeeRTransform>(Cat(S)));
+
+  S = "int (A::*((target)))() = &A::f;";
+  EXPECT_EQ(Cat("int (A::*const ((target)))() = &A::f;"),
+            runCheckOnCode<ValueLTransform>(Cat(S)));
 }
-#endif
+TEST(Pointers, MemberDataPointer) {
+  StringRef T = "struct A { int member = 0; };";
+  StringRef S = "int A::*target = &A::member;";
+  auto Cat = [&T](StringRef S) { return (T + S).str(); };
 
-// TODO: Function pointers
-// TODO: Member-data pointers
-// TODO: Member-function pointers
+  EXPECT_EQ(Cat("int A::*const target = &A::member;"),
+            runCheckOnCode<ValueLTransform>(Cat(S)));
+  EXPECT_EQ(Cat("int A::*const target = &A::member;"),
+            runCheckOnCode<ValueRTransform>(Cat(S)));
+
+  EXPECT_EQ(Cat("int A::*const target = &A::member;"),
+            runCheckOnCode<PointeeLTransform>(Cat(S)));
+  EXPECT_EQ(Cat("int A::*const target = &A::member;"),
+            runCheckOnCode<PointeeRTransform>(Cat(S)));
+
+  S = "int A::*((target)) = &A::member;";
+  EXPECT_EQ(Cat("int A::*const ((target)) = &A::member;"),
+            runCheckOnCode<PointeeRTransform>(Cat(S)));
+}
 
 } // namespace test
 } // namespace tidy

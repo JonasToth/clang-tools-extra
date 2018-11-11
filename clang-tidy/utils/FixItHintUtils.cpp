@@ -27,7 +27,8 @@ FixItHint changeVarDeclToReference(const VarDecl &Var, ASTContext &Context) {
 }
 
 static bool isValueType(const Type *T) {
-  return !(isa<PointerType>(T) || isa<ReferenceType>(T) || isa<ArrayType>(T));
+  return !(isa<PointerType>(T) || isa<ReferenceType>(T) || isa<ArrayType>(T) ||
+           isa<MemberPointerType>(T));
 }
 static bool isValueType(QualType QT) { return isValueType(QT.getTypePtr()); }
 static bool isArrayType(QualType QT) { return isa<ArrayType>(QT.getTypePtr()); }
@@ -41,6 +42,10 @@ static bool isPointerType(QualType QT) {
   return isPointerType(QT.getTypePtr());
 }
 
+static bool isMemberOrFunctionPointer(QualType QT) {
+  return (isPointerType(QT) && QT->isFunctionPointerType()) ||
+         isa<MemberPointerType>(QT.getTypePtr());
+}
 static bool locDangerous(SourceLocation S) {
   return S.isInvalid() || S.isMacroID();
 }
@@ -80,18 +85,29 @@ static Optional<FixItHint> changeValue(const VarDecl &Var, ConstTarget CT,
   }
 }
 
+static Optional<FixItHint> changePointerItself(const VarDecl &Var,
+                                               ASTContext &Context) {
+  llvm::dbgs() << "Pointer itself const - policy irrelevant\n";
+  if (locDangerous(Var.getLocation()))
+    return None;
+
+  Optional<SourceLocation> IgnoredParens =
+      skipLParensBackwards(Var.getLocation(), Context);
+
+  if (IgnoredParens)
+    return FixItHint::CreateInsertion(*IgnoredParens, "const ");
+  return None;
+}
+
 static Optional<FixItHint> changePointer(const VarDecl &Var,
                                          const Type *Pointee, ConstTarget CT,
                                          ConstPolicy CP, ASTContext *Context) {
   llvm::dbgs() << "Change Pointer for " << Var.getName() << "\n";
   // The pointer itself shall be marked as `const`. This is always right
   // of the '*' or in front of the identifier.
-  if (CT == ConstTarget::Value) {
-    llvm::dbgs() << "Pointer itself const - policy irrelevant\n";
-    if (locDangerous(Var.getLocation()))
-      return None;
-    return FixItHint::CreateInsertion(Var.getLocation(), "const ");
-  }
+  //
+  if (CT == ConstTarget::Value)
+    return changePointerItself(Var, *Context);
 
   // Mark the pointee `const` that is a normal value (`int* p = nullptr;`).
   if (CT == ConstTarget::Pointee && isValueType(Pointee)) {
@@ -141,7 +157,7 @@ static Optional<FixItHint> changePointer(const VarDecl &Var,
   }
 
   llvm_unreachable("All paths should have been handled");
-} // namespace fixit
+}
 
 static Optional<FixItHint> changeReferencee(const VarDecl &Var,
                                             QualType Pointee, ConstTarget CT,
@@ -179,20 +195,25 @@ Optional<FixItHint> changeVarDeclToConst(const VarDecl &Var, ConstTarget CT,
   assert((CT == ConstTarget::Pointee || CT == ConstTarget::Value) &&
          "Unexpected Target");
 
-  if (isValueType(Var.getType()))
+  QualType ParenStrippedType = Var.getType().IgnoreParens();
+
+  if (isValueType(ParenStrippedType))
     return changeValue(Var, CT, CP, Context);
 
-  if (isReferenceType(Var.getType()))
+  if (isReferenceType(ParenStrippedType))
     return changeReferencee(Var, Var.getType()->getPointeeType(), CT, CP,
                             Context);
 
-  if (isPointerType(Var.getType()))
-    return changePointer(Var, Var.getType()->getPointeeType().getTypePtr(), CT,
-                         CP, Context);
+  if (isMemberOrFunctionPointer(ParenStrippedType))
+    return changePointerItself(Var, *Context);
 
-  if (isArrayType(Var.getType())) {
+  if (isPointerType(ParenStrippedType))
+    return changePointer(Var, ParenStrippedType->getPointeeType().getTypePtr(),
+                         CT, CP, Context);
+
+  if (isArrayType(ParenStrippedType)) {
     llvm::dbgs() << "Found Array - dispatch\n";
-    const Type *AT = Var.getType()->getBaseElementTypeUnsafe();
+    const Type *AT = ParenStrippedType->getBaseElementTypeUnsafe();
     assert(AT && "Did not retrieve array element type for an array.");
 
     if (isValueType(AT))
