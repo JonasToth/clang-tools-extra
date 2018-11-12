@@ -11,6 +11,7 @@
 #include "../ClangTidyModule.h"
 #include "../ClangTidyModuleRegistry.h"
 #include "DurationDivisionCheck.h"
+#include "DurationFactoryFloatCheck.h"
 #include "FasterStrsplitDelimiterCheck.h"
 #include "NoInternalDependenciesCheck.h"
 #include "NoNamespaceCheck.h"
@@ -27,6 +28,8 @@ public:
   void addCheckFactories(ClangTidyCheckFactories &CheckFactories) override {
     CheckFactories.registerCheck<DurationDivisionCheck>(
         "abseil-duration-division");
+    CheckFactories.registerCheck<DurationFactoryFloatCheck>(
+        "abseil-duration-factory-float");
     CheckFactories.registerCheck<FasterStrsplitDelimiterCheck>(
         "abseil-faster-strsplit-delimiter");
     CheckFactories.registerCheck<NoInternalDependenciesCheck>(
@@ -34,10 +37,10 @@ public:
     CheckFactories.registerCheck<NoNamespaceCheck>("abseil-no-namespace");
     CheckFactories.registerCheck<RedundantStrcatCallsCheck>(
         "abseil-redundant-strcat-calls");
-    CheckFactories.registerCheck<StringFindStartswithCheck>(
-        "abseil-string-find-startswith");
     CheckFactories.registerCheck<StrCatAppendCheck>(
         "abseil-str-cat-append");
+    CheckFactories.registerCheck<StringFindStartswithCheck>(
+        "abseil-string-find-startswith");
   }
 };
 

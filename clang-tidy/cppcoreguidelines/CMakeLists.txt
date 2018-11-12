@@ -5,6 +5,7 @@ add_clang_library(clangTidyCppCoreGuidelinesModule
   ConstCorrectnessCheck.cpp
   CppCoreGuidelinesTidyModule.cpp
   InterfacesGlobalInitCheck.cpp
+  MacroUsageCheck.cpp
   NarrowingConversionsCheck.cpp
   NoMallocCheck.cpp
   OwningMemoryCheck.cpp
@@ -18,8 +19,8 @@ add_clang_library(clangTidyCppCoreGuidelinesModule
   ProTypeStaticCastDowncastCheck.cpp
   ProTypeUnionAccessCheck.cpp
   ProTypeVarargCheck.cpp
-  SpecialMemberFunctionsCheck.cpp
   SlicingCheck.cpp
+  SpecialMemberFunctionsCheck.cpp
 
   LINK_LIBS
   clangAST
