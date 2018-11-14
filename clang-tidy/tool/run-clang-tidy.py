@@ -172,6 +172,12 @@ class ParseClangTidyDiagnostics(object):
 
     def parse_string(self, input_str):
         """Parse a string, e.g. captured stdout."""
+        if self._current_diag:
+            print("WARNING: FOUND CURRENT DIAG TO BE SET! BUG!!")
+            print("DIAGNOSTIC MESSAGE:")
+            print(str(self._current_diag))
+            print("SETTING _current_diag TO NONE")
+            self._current_diag = None
         self._parse_lines(input_str.splitlines())
 
     def _parse_line(self, line):
