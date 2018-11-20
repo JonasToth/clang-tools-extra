@@ -24,6 +24,7 @@ using testing::ElementsAre;
 using testing::Field;
 using testing::IsEmpty;
 using testing::Pair;
+using testing::UnorderedElementsAre;
 
 testing::Matcher<const Diag &> WithFix(testing::Matcher<Fix> FixMatcher) {
   return Field(&Diag::Fixes, ElementsAre(FixMatcher));
@@ -126,6 +127,39 @@ TEST(DiagnosticsTest, FlagsMatter) {
       ElementsAre(AllOf(
           Diag(Test.range(), "return type of 'main' is not 'int'"),
           WithFix(Fix(Test.range(), "int", "change return type to 'int'")))));
+}
+
+TEST(DiagnosticsTest, ClangTidy) {
+  Annotations Test(R"cpp(
+    #include $deprecated[["assert.h"]]
+
+    #define $macrodef[[SQUARE]](X) (X)*(X)
+    int main() {
+      return $doubled[[sizeof]](sizeof(int));
+      int y = 4;
+      return SQUARE($macroarg[[++]]y);
+    }
+  )cpp");
+  auto TU = TestTU::withCode(Test.code());
+  TU.HeaderFilename = "assert.h"; // Suppress "not found" error.
+  EXPECT_THAT(
+      TU.build().getDiagnostics(),
+      UnorderedElementsAre(
+          AllOf(Diag(Test.range("deprecated"),
+                     "inclusion of deprecated C++ header 'assert.h'; consider "
+                     "using 'cassert' instead [modernize-deprecated-headers]"),
+                WithFix(Fix(Test.range("deprecated"), "<cassert>",
+                            "change '\"assert.h\"' to '<cassert>'"))),
+          Diag(Test.range("doubled"),
+               "suspicious usage of 'sizeof(sizeof(...))' "
+               "[bugprone-sizeof-expression]"),
+          AllOf(
+              Diag(Test.range("macroarg"),
+                   "side effects in the 1st macro argument 'X' are repeated in "
+                   "macro expansion [bugprone-macro-repeated-side-effects]"),
+              WithNote(Diag(Test.range("macrodef"),
+                            "macro 'SQUARE' defined here "
+                            "[bugprone-macro-repeated-side-effects]")))));
 }
 
 TEST(DiagnosticsTest, Preprocessor) {
@@ -255,6 +289,28 @@ Bar* bar;
         SourceMgr.getFileOffset(SourceMgr.getSpellingLoc(Actual)));
     EXPECT_EQ(TestCase.points().front(), ActualPos) << Text;
   }
+}
+
+MATCHER_P(DeclNamed, Name, "") {
+  if (NamedDecl *ND = dyn_cast<NamedDecl>(arg))
+    if (ND->getName() == Name)
+      return true;
+  if (auto *Stream = result_listener->stream()) {
+    llvm::raw_os_ostream OS(*Stream);
+    arg->dump(OS);
+  }
+  return false;
+}
+
+TEST(ClangdUnitTest, TopLevelDecls) {
+  TestTU TU;
+  TU.HeaderCode = R"(
+    int header1();
+    int header2;
+  )";
+  TU.Code = "int main();";
+  auto AST = TU.build();
+  EXPECT_THAT(AST.getLocalTopLevelDecls(), ElementsAre(DeclNamed("main")));
 }
 
 } // namespace
