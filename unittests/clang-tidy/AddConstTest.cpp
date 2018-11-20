@@ -773,6 +773,37 @@ TEST(Template, FunctionReference) {
   EXPECT_EQ(Cat("{ T const& target = v; }"),
             runCheckOnCode<PointeeRTransform>(Cat(S)));
 }
+TEST(Template, MultiInstantiationsFunction) {
+  StringRef T = "template <typename T> void f(T v) \n";
+  StringRef S = "{ T target = v; }";
+  StringRef InstantStart = "void calls() {\n";
+  StringRef InstValue = "f<int>(42);\n";
+  StringRef InstConstValue = "f<const int>(42);\n";
+  StringRef InstPointer = "f<int*>(nullptr);\n";
+  StringRef InstPointerConst = "f<int* const>(nullptr);\n";
+  StringRef InstConstPointer = "f<const int*>(nullptr);\n";
+  StringRef InstConstPointerConst = "f<const int* const>(nullptr);\n";
+  StringRef InstRef = "int i = 42;\nf<int&>(i);\n";
+  StringRef InstConstRef = "f<const int&>(i);\n";
+  StringRef InstantEnd = "}";
+  auto Cat = [&](StringRef Target) {
+    return (T + Target + InstantStart + InstValue + InstConstValue +
+            InstPointer + InstPointerConst + InstConstPointer +
+            InstConstPointerConst + InstRef + InstConstRef + InstantEnd)
+        .str();
+  };
+
+  EXPECT_EQ(Cat("{ const T target = v; }"),
+            runCheckOnCode<ValueLTransform>(Cat(S)));
+  EXPECT_EQ(Cat("{ T const target = v; }"),
+            runCheckOnCode<ValueRTransform>(Cat(S)));
+
+  EXPECT_EQ(Cat("{ const T target = v; }"),
+            runCheckOnCode<PointeeLTransform>(Cat(S)));
+  EXPECT_EQ(Cat("{ T const target = v; }"),
+            runCheckOnCode<PointeeRTransform>(Cat(S)));
+}
+
 TEST(Template, StructValue) {
   StringRef T = "template <typename T> struct S { void f(T& v) \n";
   StringRef S = "{ T target = v; }";
