@@ -139,6 +139,7 @@ void ConstCorrectnessCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "WarnPointersAsValues", WarnPointersAsValues);
   Options.store(Opts, "TransformValues", TransformValues);
   Options.store(Opts, "TransformReferences", TransformReferences);
+  // Options.store(Opts, "TransformPointees", TransformPointees);
   Options.store(Opts, "TransformPointersAsValues", TransformPointersAsValues);
 }
 
@@ -153,6 +154,8 @@ void ConstCorrectnessCheck::registerMatchers(MatchFinder *Finder) {
   // Example: `int i = 10`, `int i` (will be used if program is correct)
   const auto LocalValDecl = varDecl(allOf(
       isLocal(), hasInitializer(anything()),
+      // Trick to optionally match on the DeclStmt the variable might be in.
+      anyOf(hasParent(declStmt().bind("decl-stmt")), anything()),
       unless(hasType(cxxRecordDecl(isLambda()))), unless(ConstType),
       unless(ConstReference), unless(TemplateType), unless(isImplicit())));
 
@@ -175,10 +178,10 @@ void ConstCorrectnessCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *Variable = Result.Nodes.getNodeAs<VarDecl>("new-local-value");
   assert(Variable && "Did not match local variable definition");
 
-  const VariableCategory VC = [](const Type *T) {
-    if (T->isReferenceType())
+  const VariableCategory VC = [](QualType QT) {
+    if (QT->isReferenceType())
       return VariableCategory::Reference;
-    if (T->isPointerType())
+    if (QT->isPointerType())
       return VariableCategory::Pointer;
     return VariableCategory::Value;
   }(Variable->getType());
@@ -203,8 +206,43 @@ void ConstCorrectnessCheck::check(const MatchFinder::MatchResult &Result) {
                    "variable %0 of type %1 can be declared 'const'")
               << Variable << Variable->getType();
 
+  const auto *VarDeclStmt = Result.Nodes.getNodeAs<DeclStmt>("decl-stmt");
+
+  // It can not be guaranteed that the variable is declared isolated, therefore
+  // a transformation might effect the other variables as well and be incorrect.
+  if (VarDeclStmt == nullptr || !VarDeclStmt->isSingleDecl())
+    return;
+
+  using namespace utils::fixit;
+  using llvm::Optional;
   if (VC == VariableCategory::Value && TransformValues) {
-      Optional<FixItHint> Fix = utils::fixit::changeVarDeclToConst();
+    if (Optional<FixItHint> Fix = changeVarDeclToConst(
+            *Variable, ConstTarget::Value, ConstPolicy::Right, Result.Context))
+      Diag << *Fix;
+    return;
+  }
+
+  if (VC == VariableCategory::Reference && TransformReferences) {
+    if (Optional<FixItHint> Fix = changeVarDeclToConst(
+            *Variable, ConstTarget::Value, ConstPolicy::Right, Result.Context))
+      Diag << *Fix;
+    return;
+  }
+
+  if (VC == VariableCategory::Pointer) {
+    if (WarnPointersAsValues && TransformPointersAsValues) {
+      if (Optional<FixItHint> Fix =
+              changeVarDeclToConst(*Variable, ConstTarget::Value,
+                                   ConstPolicy::Right, Result.Context))
+        Diag << *Fix;
+    }
+    if (TransformPointees) {
+      if (Optional<FixItHint> Fix =
+              changeVarDeclToConst(*Variable, ConstTarget::Pointee,
+                                   ConstPolicy::Right, Result.Context))
+        Diag << *Fix;
+    }
+    return;
   }
 }
 

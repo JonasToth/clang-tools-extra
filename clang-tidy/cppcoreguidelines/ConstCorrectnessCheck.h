@@ -31,6 +31,7 @@ public:
         WarnPointersAsValues(Options.get("WarnPointersAsValues", 0)),
         TransformValues(Options.get("TransformValues", 0)),
         TransformReferences(Options.get("TransformReferences", 0)),
+        // TransformPointees(Options.get("TransformPointees", 0)),
         TransformPointersAsValues(Options.get("TransformPointersAsValues", 0)) {}
 
   void storeOptions(ClangTidyOptions::OptionMap &Opts) override;
@@ -49,6 +50,7 @@ private:
 
   const bool TransformValues;
   const bool TransformReferences;
+  const bool TransformPointees = false;
   const bool TransformPointersAsValues;
 };
 
