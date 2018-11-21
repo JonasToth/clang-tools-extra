@@ -182,6 +182,11 @@ Improvements to clang-tidy
   which means this type can't represent all values which are part of the
   iteration range.
 
+- New :doc:`cppcoreguidelines-const-correctness
+  <clang-tidy/checks/cppcoreguidelines-const-correctness>` check.
+
+  Suggest adding ``const`` to unmodified local variables.
+
 - New :doc:`cppcoreguidelines-macro-usage
   <clang-tidy/checks/cppcoreguidelines-macro-usage>` check.
 
@@ -237,6 +242,7 @@ Improvements to clang-tidy
 
   Checks for functions with a ``const``-qualified return type and recommends
   removal of the ``const`` keyword.
+>>>>>>> master
 
 - New :doc:`readability-magic-numbers
   <clang-tidy/checks/readability-magic-numbers>` check.
