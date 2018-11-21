@@ -342,12 +342,12 @@ def run_tidy(args, tmpdir, build_path, queue, lock, failed_files, parser):
       failed_files.append(name)
 
     with lock:
-      invoc = ' '.join(invocation)
+      invoc = u' '.join(invocation)
       if parser:
-        parser.parse_string(output.encode('utf-8', 'backslashreplace'))
+        parser.parse_string(output.decode('utf-8', 'backslashreplace'))
         diags = [str(diag) for diag in parser.get_diags()]
-        diag_str = '\n'.join(diags)
-        sys.stdout.write('\n'.join([invoc, diag_str]).encode('utf-8', 'backslashreplace'))
+        diag_str = u'\n'.join(diags)
+        sys.stdout.write(u'\n'.join([invoc, diag_str]).encode('ascii', 'backslashreplace'))
         sys.stdout.write('\n')
         parser.reset_parser()
       else:
