@@ -204,8 +204,7 @@ Optional<FixItHint> changeVarDeclToConst(const VarDecl &Var, ConstTarget CT,
                            *Context);
   }
 
-  llvm_unreachable(
-      "All possible combinations should have been handled already");
+  return None;
 }
 } // namespace fixit
 } // namespace utils
