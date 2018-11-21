@@ -10,6 +10,7 @@
 #include "ConstCorrectnessCheck.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
+#include "../utils/FixItHintUtils.h"
 
 using namespace clang::ast_matchers;
 
@@ -136,6 +137,9 @@ void ConstCorrectnessCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "AnalyzeValues", AnalyzeValues);
   Options.store(Opts, "AnalyzeReferences", AnalyzeReferences);
   Options.store(Opts, "WarnPointersAsValues", WarnPointersAsValues);
+  Options.store(Opts, "TransformValues", TransformValues);
+  Options.store(Opts, "TransformReferences", TransformReferences);
+  Options.store(Opts, "TransformPointersAsValues", TransformPointersAsValues);
 }
 
 void ConstCorrectnessCheck::registerMatchers(MatchFinder *Finder) {
@@ -160,6 +164,9 @@ void ConstCorrectnessCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(FunctionScope, this);
 }
 
+/// Classify for a variable in what the Const-Check is interested.
+enum class VariableCategory { Value, Reference, Pointer };
+
 void ConstCorrectnessCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *LocalScope = Result.Nodes.getNodeAs<CompoundStmt>("scope");
   assert(LocalScope && "Did not match scope for local variable");
@@ -168,17 +175,23 @@ void ConstCorrectnessCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *Variable = Result.Nodes.getNodeAs<VarDecl>("new-local-value");
   assert(Variable && "Did not match local variable definition");
 
+  const VariableCategory VC = [](const Type *T) {
+    if (T->isReferenceType())
+      return VariableCategory::Reference;
+    if (T->isPointerType())
+      return VariableCategory::Pointer;
+    return VariableCategory::Value;
+  }(Variable->getType());
+
   // Each variable can only in one category: Value, Pointer, Reference.
   // Analysis can be controlled for every category.
-  if (Variable->getType()->isReferenceType() && !AnalyzeReferences)
+  if (VC == VariableCategory::Reference && !AnalyzeReferences)
     return;
 
-  if (Variable->getType()->isPointerType() && !WarnPointersAsValues)
+  if (VC == VariableCategory::Pointer && !WarnPointersAsValues)
     return;
 
-  if (!(Variable->getType()->isReferenceType() ||
-        Variable->getType()->isPointerType()) &&
-      !AnalyzeValues)
+  if (VC == VariableCategory::Value && !AnalyzeValues)
     return;
 
   // Offload const-analysis to utility function.
@@ -186,9 +199,13 @@ void ConstCorrectnessCheck::check(const MatchFinder::MatchResult &Result) {
     return;
 
   // TODO Implement automatic code transformation to add the 'const'.
-  diag(Variable->getBeginLoc(),
-       "variable %0 of type %1 can be declared 'const'")
-      << Variable << Variable->getType();
+  auto Diag = diag(Variable->getBeginLoc(),
+                   "variable %0 of type %1 can be declared 'const'")
+              << Variable << Variable->getType();
+
+  if (VC == VariableCategory::Value && TransformValues) {
+      Optional<FixItHint> Fix = utils::fixit::changeVarDeclToConst();
+  }
 }
 
 void ConstCorrectnessCheck::registerScope(const CompoundStmt *LocalScope,
