@@ -143,27 +143,41 @@ void ConstCorrectnessCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "TransformPointersAsValues", TransformPointersAsValues);
 }
 
+namespace {
+AST_MATCHER_P(DeclStmt, containsDeclaration2,
+              ast_matchers::internal::Matcher<Decl>, InnerMatcher) {
+  return ast_matchers::internal::matchesFirstInPointerRange(
+      InnerMatcher, Node.decl_begin(), Node.decl_end(), Finder, Builder);
+}
+AST_MATCHER(ReferenceType, isSpelledAsLValue) {
+  return Node.isSpelledAsLValue();
+}
+} // namespace
+
 void ConstCorrectnessCheck::registerMatchers(MatchFinder *Finder) {
   const auto ConstType = hasType(isConstQualified());
   const auto ConstReference = hasType(references(isConstQualified()));
+  const auto RValueReference = hasType(
+      referenceType(anyOf(rValueReferenceType(), unless(isSpelledAsLValue()))));
   const auto TemplateType = anyOf(hasType(templateTypeParmType()),
                                   hasType(substTemplateTypeParmType()));
 
   // FIXME Investigate the DeMorgan-simplification for the logical expression.
   // Match local variables which could be const.
   // Example: `int i = 10`, `int i` (will be used if program is correct)
-  const auto LocalValDecl = varDecl(allOf(
-      isLocal(), hasInitializer(anything()),
-      // Trick to optionally match on the DeclStmt the variable might be in.
-      anyOf(hasParent(declStmt().bind("decl-stmt")), anything()),
-      unless(hasType(cxxRecordDecl(isLambda()))), unless(ConstType),
-      unless(ConstReference), unless(TemplateType), unless(isImplicit())));
+  const auto LocalValDecl = varDecl(
+      allOf(isLocal(), hasInitializer(anything()),
+            unless(hasType(cxxRecordDecl(isLambda()))), unless(ConstType),
+            unless(ConstReference), unless(RValueReference),
+            unless(TemplateType), unless(isImplicit())));
 
   // Match the function scope for which the analysis of all local variables
   // shall be run.
-  const auto FunctionScope =
-      functionDecl(allOf(hasBody(compoundStmt().bind("scope")),
-                         findAll(LocalValDecl.bind("new-local-value"))));
+  const auto FunctionScope = functionDecl(hasBody(
+      compoundStmt(findAll(declStmt(containsDeclaration2(
+                                        LocalValDecl.bind("new-local-value")))
+                               .bind("decl-stmt")))
+          .bind("scope")));
   Finder->addMatcher(FunctionScope, this);
 }
 
