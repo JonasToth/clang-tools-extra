@@ -347,11 +347,11 @@ def run_tidy(args, tmpdir, build_path, queue, lock, failed_files, parser):
         parser.parse_string(output.decode('utf-8', 'backslashreplace'))
         diags = [str(diag).encode('ascii', 'backslashreplace') for diag in parser.get_diags()]
         diag_str = u'\n'.join(diags)
-        sys.stdout.write(u'\n'.join([invoc, diag_str]).encode('ascii', 'backslashreplace'))
+        sys.stdout.write(''.join([invoc, diag_str]).encode('ascii', 'backslashreplace').rstrip())
         sys.stdout.write('\n')
         parser.reset_parser()
       else:
-        sys.stdout.write(invoc + output.decode('utf-8', 'backslashreplace') + '\n')
+        sys.stdout.write(invoc + output.decode('utf-8', 'backslashreplace').rstrip() + '\n')
       sys.stdout.flush()
 
       if len(err) > 0:
