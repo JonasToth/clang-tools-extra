@@ -345,20 +345,21 @@ def run_tidy(args, tmpdir, build_path, queue, lock, failed_files, parser):
       invoc = u' '.join(invocation)
       if parser:
         parser.parse_string(output.decode('utf-8', 'backslashreplace'))
-        diags = [str(diag) for diag in parser.get_diags()]
+        diags = [unicode(diag, 'utf-8', 'replace') for diag in parser.get_diags()]
         diag_str = u'\n'.join(diags)
         sys.stdout.write(u'\n'.join([invoc, diag_str]).encode('ascii', 'backslashreplace'))
         sys.stdout.write('\n')
         parser.reset_parser()
       else:
-        sys.stdout.write(invoc + output.decode('utf-8') + '\n')
+        sys.stdout.write(invoc + output.decode('utf-8', 'backslashreplace') + '\n')
       sys.stdout.flush()
 
       if len(err) > 0:
         err_lines = err.splitlines()
         errors = [l for l in err_lines if not l.endswith("warnings generated.")]
         for l in errors:
-            sys.stderr.write(l.decode('utf-8'))
+            sys.stderr.write(l.decode('utf-8', 'backslashreplace'))
+        sys.stderr.write('\n')
       sys.stderr.flush()
 
     queue.task_done()
