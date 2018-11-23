@@ -89,12 +89,12 @@ class Diagnostic(object):
 
     def get_fingerprint(self):
         """Return a secure fingerprint (SHA256 hash) of the diagnostic."""
-        return hashlib.sha256(self.__str__().encode("utf-8")).hexdigest()
+        return hashlib.sha256(self.__str__().encode("utf-8", "backslachreplace")).hexdigest()
 
     def __str__(self):
         """Transform the object back into a raw diagnostic."""
-        return self._path + ":" + str(self._line) + ":" + str(self._column)\
-                          + ": " + self._diag + self._additional
+        return (self._path + ":" + str(self._line) + ":" + str(self._column)\
+                           + ": " + self._diag + self._additional).encode("ascii", "backslashreplace")
 
 
 class Deduplication(object):
