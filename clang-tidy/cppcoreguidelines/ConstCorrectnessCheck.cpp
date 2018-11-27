@@ -192,13 +192,11 @@ void ConstCorrectnessCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *Variable = Result.Nodes.getNodeAs<VarDecl>("new-local-value");
   assert(Variable && "Did not match local variable definition");
 
-  const VariableCategory VC = [](QualType QT) {
-    if (QT->isReferenceType())
-      return VariableCategory::Reference;
-    if (QT->isPointerType())
-      return VariableCategory::Pointer;
-    return VariableCategory::Value;
-  }(Variable->getType());
+  VariableCategory VC = VariableCategory::Value;
+  if (Variable->getType()->isReferenceType())
+    VC = VariableCategory::Reference;
+  if (Variable->getType()->isPointerType())
+    VC = VariableCategory::Pointer;
 
   // Each variable can only in one category: Value, Pointer, Reference.
   // Analysis can be controlled for every category.
@@ -215,7 +213,6 @@ void ConstCorrectnessCheck::check(const MatchFinder::MatchResult &Result) {
   if (ScopesCache[LocalScope]->isMutated(Variable))
     return;
 
-  // TODO Implement automatic code transformation to add the 'const'.
   auto Diag = diag(Variable->getBeginLoc(),
                    "variable %0 of type %1 can be declared 'const'")
               << Variable << Variable->getType();
