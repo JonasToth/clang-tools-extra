@@ -217,6 +217,14 @@ Improvements to clang-tidy
   <clang-tidy/checks/readability-redundant-smartptr-get>` check does not warn
   about calls inside macros anymore by default.
 
+- The :doc:`cppcoreguidelines-narrowing-conversions
+  <clang-tidy/checks/cppcoreguidelines-narrowing-conversions>` check now
+  detects more narrowing conversions:
+  - integer to narrower signed integer (this is compiler implementation defined),
+  - integer - floating point narrowing conversions,
+  - floating point - integer narrowing conversions,
+  - constants with narrowing conversions (even in ternary operator).
+
 - `run-clang-tidy.py` support deduplication of `clang-tidy` diagnostics
   to reduce the amount of output with the optional `-deduplicate` flag.
 
