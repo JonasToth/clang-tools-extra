@@ -347,7 +347,7 @@ def run_tidy(args, tmpdir, build_path, queue, lock, failed_files, parser):
         parser.parse_string(output.decode('utf-8', 'backslashreplace'))
         diags = [str(diag) for diag in parser.get_diags()]
         diag_str = ''.join(diags)
-        sys.stdout.write(''.join([invoc, diag_str]).encode('utf-8', 'backslashreplace').strip())
+        sys.stdout.write(''.join([invoc, diag_str]).rstrip().encode('utf-8', 'backslashreplace'))
         sys.stdout.write('\n')
         parser.reset_parser()
       else:
@@ -356,10 +356,9 @@ def run_tidy(args, tmpdir, build_path, queue, lock, failed_files, parser):
 
       if len(err) > 0:
         err_lines = err.splitlines()
-        errors = [l for l in err_lines if not l.endswith("warnings generated.")]
+        errors = [l for l in err_lines if not "warnings generated" in l]
         for l in errors:
             sys.stderr.write(l.decode('utf-8', 'backslashreplace'))
-        sys.stderr.write('\n')
       sys.stderr.flush()
 
     queue.task_done()
