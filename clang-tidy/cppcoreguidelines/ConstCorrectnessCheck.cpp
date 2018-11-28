@@ -131,6 +131,14 @@ namespace cppcoreguidelines {
 
 namespace {
 AST_MATCHER(VarDecl, isLocal) { return Node.isLocalVarDecl(); }
+AST_MATCHER_P(DeclStmt, containsDeclaration2,
+              ast_matchers::internal::Matcher<Decl>, InnerMatcher) {
+  return ast_matchers::internal::matchesFirstInPointerRange(
+      InnerMatcher, Node.decl_begin(), Node.decl_end(), Finder, Builder);
+}
+AST_MATCHER(ReferenceType, isSpelledAsLValue) {
+  return Node.isSpelledAsLValue();
+}
 } // namespace
 
 void ConstCorrectnessCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
@@ -142,17 +150,6 @@ void ConstCorrectnessCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   // Options.store(Opts, "TransformPointees", TransformPointees);
   Options.store(Opts, "TransformPointersAsValues", TransformPointersAsValues);
 }
-
-namespace {
-AST_MATCHER_P(DeclStmt, containsDeclaration2,
-              ast_matchers::internal::Matcher<Decl>, InnerMatcher) {
-  return ast_matchers::internal::matchesFirstInPointerRange(
-      InnerMatcher, Node.decl_begin(), Node.decl_end(), Finder, Builder);
-}
-AST_MATCHER(ReferenceType, isSpelledAsLValue) {
-  return Node.isSpelledAsLValue();
-}
-} // namespace
 
 void ConstCorrectnessCheck::registerMatchers(MatchFinder *Finder) {
   const auto ConstType = hasType(isConstQualified());
