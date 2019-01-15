@@ -18,14 +18,15 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ScopedPrinter.h"
 
-using namespace llvm;
 namespace clang {
 namespace clangd {
 
 // Returns true if the complete name of decl \p D is spelled in the source code.
-// This is not the case for symbols formed via macro concatenation.
-// (We used to attempt to treat names spelled on the command-line this way too,
-// but the preamble doesn't preserve the required information).
+// This is not the case for:
+//   * symbols formed via macro concatenation, the spelling location will
+//     be "<scratch space>"
+//   * symbols controlled and defined by a compile command-line option
+//     `-DName=foo`, the spelling location will be "<command line>".
 bool isSpelledInSourceCode(const Decl *D) {
   const auto &SM = D->getASTContext().getSourceManager();
   auto Loc = D->getLocation();
@@ -33,7 +34,8 @@ bool isSpelledInSourceCode(const Decl *D) {
   // macros, we should use the location where the whole definition occurs.
   if (Loc.isMacroID()) {
     std::string PrintLoc = SM.getSpellingLoc(Loc).printToString(SM);
-    if (StringRef(PrintLoc).startswith("<scratch"))
+    if (llvm::StringRef(PrintLoc).startswith("<scratch") ||
+        llvm::StringRef(PrintLoc).startswith("<command line>"))
       return false;
   }
   return true;
@@ -41,7 +43,7 @@ bool isSpelledInSourceCode(const Decl *D) {
 
 bool isImplementationDetail(const Decl *D) { return !isSpelledInSourceCode(D); }
 
-SourceLocation findNameLoc(const clang::Decl* D) {
+SourceLocation findNameLoc(const clang::Decl *D) {
   const auto &SM = D->getASTContext().getSourceManager();
   if (!isSpelledInSourceCode(D))
     // Use the expansion location as spelling location is not interesting.
@@ -51,7 +53,7 @@ SourceLocation findNameLoc(const clang::Decl* D) {
 
 std::string printQualifiedName(const NamedDecl &ND) {
   std::string QName;
-  raw_string_ostream OS(QName);
+  llvm::raw_string_ostream OS(QName);
   PrintingPolicy Policy(ND.getASTContext().getLangOpts());
   // Note that inline namespaces are treated as transparent scopes. This
   // reflects the way they're most commonly used for lookup. Ideally we'd
@@ -112,18 +114,19 @@ std::string printNamespaceScope(const DeclContext &DC) {
   return "";
 }
 
-Optional<SymbolID> getSymbolID(const Decl *D) {
-  SmallString<128> USR;
+llvm::Optional<SymbolID> getSymbolID(const Decl *D) {
+  llvm::SmallString<128> USR;
   if (index::generateUSRForDecl(D, USR))
     return None;
   return SymbolID(USR);
 }
 
-Optional<SymbolID> getSymbolID(const IdentifierInfo &II, const MacroInfo *MI,
-                               const SourceManager &SM) {
+llvm::Optional<SymbolID> getSymbolID(const IdentifierInfo &II,
+                                     const MacroInfo *MI,
+                                     const SourceManager &SM) {
   if (MI == nullptr)
     return None;
-  SmallString<128> USR;
+  llvm::SmallString<128> USR;
   if (index::generateUSRForMacro(II.getName(), MI->getDefinitionLoc(), SM, USR))
     return None;
   return SymbolID(USR);
