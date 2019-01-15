@@ -10,10 +10,13 @@
 #include "../ClangTidy.h"
 #include "../ClangTidyModule.h"
 #include "../ClangTidyModuleRegistry.h"
+#include "../misc/NonPrivateMemberVariablesInClassesCheck.h"
 #include "../misc/UnconventionalAssignOperatorCheck.h"
+#include "../modernize/AvoidCArraysCheck.h"
 #include "../readability/MagicNumbersCheck.h"
 #include "AvoidGotoCheck.h"
 #include "InterfacesGlobalInitCheck.h"
+#include "MacroUsageCheck.h"
 #include "MixedIntArithmeticCheck.h"
 #include "NarrowingConversionsCheck.h"
 #include "NoMallocCheck.h"
@@ -39,17 +42,23 @@ namespace cppcoreguidelines {
 class CppCoreGuidelinesModule : public ClangTidyModule {
 public:
   void addCheckFactories(ClangTidyCheckFactories &CheckFactories) override {
+    CheckFactories.registerCheck<modernize::AvoidCArraysCheck>(
+        "cppcoreguidelines-avoid-c-arrays");
     CheckFactories.registerCheck<AvoidGotoCheck>(
         "cppcoreguidelines-avoid-goto");
-    CheckFactories.registerCheck<InterfacesGlobalInitCheck>(
-        "cppcoreguidelines-interfaces-global-init");
     CheckFactories.registerCheck<readability::MagicNumbersCheck>(
         "cppcoreguidelines-avoid-magic-numbers");
+    CheckFactories.registerCheck<InterfacesGlobalInitCheck>(
+        "cppcoreguidelines-interfaces-global-init");
+    CheckFactories.registerCheck<MacroUsageCheck>(
+        "cppcoreguidelines-macro-usage");
     CheckFactories.registerCheck<MixedIntArithmeticCheck>(
         "cppcoreguidelines-mixed-int-arithmetic");
     CheckFactories.registerCheck<NarrowingConversionsCheck>(
         "cppcoreguidelines-narrowing-conversions");
     CheckFactories.registerCheck<NoMallocCheck>("cppcoreguidelines-no-malloc");
+    CheckFactories.registerCheck<misc::NonPrivateMemberVariablesInClassesCheck>(
+        "cppcoreguidelines-non-private-member-variables-in-classes");
     CheckFactories.registerCheck<OwningMemoryCheck>(
         "cppcoreguidelines-owning-memory");
     CheckFactories.registerCheck<ProBoundsArrayToPointerDecayCheck>(
@@ -77,6 +86,16 @@ public:
     CheckFactories.registerCheck<SlicingCheck>("cppcoreguidelines-slicing");
     CheckFactories.registerCheck<misc::UnconventionalAssignOperatorCheck>(
         "cppcoreguidelines-c-copy-assignment-signature");
+  }
+
+  ClangTidyOptions getModuleOptions() override {
+    ClangTidyOptions Options;
+    ClangTidyOptions::OptionMap &Opts = Options.CheckOptions;
+
+    Opts["cppcoreguidelines-non-private-member-variables-in-classes."
+         "IgnoreClassesWithAllMemberVariablesBeingPublic"] = "1";
+
+    return Options;
   }
 };
 
