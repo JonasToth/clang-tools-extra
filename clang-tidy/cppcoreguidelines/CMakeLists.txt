@@ -27,6 +27,7 @@ add_clang_library(clangTidyCppCoreGuidelinesModule
   clangASTMatchers
   clangBasic
   clangLex
+  clangSerialization
   clangTidy
   clangTidyMiscModule
   clangTidyModernizeModule

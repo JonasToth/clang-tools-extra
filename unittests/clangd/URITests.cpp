@@ -13,7 +13,6 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
-using namespace llvm;
 namespace clang {
 namespace clangd {
 
@@ -29,14 +28,15 @@ MATCHER_P(Scheme, S, "") { return arg.scheme() == S; }
 MATCHER_P(Authority, A, "") { return arg.authority() == A; }
 MATCHER_P(Body, B, "") { return arg.body() == B; }
 
-std::string createOrDie(StringRef AbsolutePath, StringRef Scheme = "file") {
+std::string createOrDie(llvm::StringRef AbsolutePath,
+                        llvm::StringRef Scheme = "file") {
   auto Uri = URI::create(AbsolutePath, Scheme);
   if (!Uri)
     llvm_unreachable(toString(Uri.takeError()).c_str());
   return Uri->toString();
 }
 
-URI parseOrDie(StringRef Uri) {
+URI parseOrDie(llvm::StringRef Uri) {
   auto U = URI::parse(Uri);
   if (!U)
     llvm_unreachable(toString(U.takeError()).c_str());
@@ -61,7 +61,7 @@ TEST(PercentEncodingTest, Decode) {
   EXPECT_EQ(parseOrDie("x:a:b%3bc").body(), "a:b;c");
 }
 
-std::string resolveOrDie(const URI &U, StringRef HintPath = "") {
+std::string resolveOrDie(const URI &U, llvm::StringRef HintPath = "") {
   auto Path = URI::resolve(U, HintPath);
   if (!Path)
     llvm_unreachable(toString(Path.takeError()).c_str());
@@ -135,6 +135,29 @@ TEST(URITest, Resolve) {
 #endif
   EXPECT_EQ(resolveOrDie(parseOrDie("unittest:///a"), testPath("x")),
             testPath("a"));
+}
+
+std::string resolvePathOrDie(llvm::StringRef AbsPath,
+                             llvm::StringRef HintPath = "") {
+  auto Path = URI::resolvePath(AbsPath, HintPath);
+  if (!Path)
+    llvm_unreachable(toString(Path.takeError()).c_str());
+  return *Path;
+}
+
+TEST(URITest, ResolvePath) {
+  StringRef FilePath =
+#ifdef _WIN32
+      "c:\\x\\y\\z";
+#else
+      "/a/b/c";
+#endif
+  EXPECT_EQ(resolvePathOrDie(FilePath), FilePath);
+  EXPECT_EQ(resolvePathOrDie(testPath("x"), testPath("hint")), testPath("x"));
+  // HintPath is not in testRoot(); resolution fails.
+  auto Resolve = URI::resolvePath(testPath("x"), FilePath);
+  EXPECT_FALSE(Resolve);
+  llvm::consumeError(Resolve.takeError());
 }
 
 TEST(URITest, Platform) {

@@ -11,11 +11,11 @@
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_INDEX_INDEX_H
 
 #include "ExpectedTypes.h"
+#include "SymbolID.h"
 #include "clang/Index/IndexSymbol.h"
 #include "clang/Lex/Lexer.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
-#include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
@@ -94,53 +94,6 @@ inline bool operator<(const SymbolLocation &L, const SymbolLocation &R) {
   return std::tie(L.Start, L.End) < std::tie(R.Start, R.End);
 }
 llvm::raw_ostream &operator<<(llvm::raw_ostream &, const SymbolLocation &);
-
-// The class identifies a particular C++ symbol (class, function, method, etc).
-//
-// As USRs (Unified Symbol Resolution) could be large, especially for functions
-// with long type arguments, SymbolID is using truncated SHA1(USR) values to
-// guarantee the uniqueness of symbols while using a relatively small amount of
-// memory (vs storing USRs directly).
-//
-// SymbolID can be used as key in the symbol indexes to lookup the symbol.
-class SymbolID {
-public:
-  SymbolID() = default;
-  explicit SymbolID(llvm::StringRef USR);
-
-  bool operator==(const SymbolID &Sym) const {
-    return HashValue == Sym.HashValue;
-  }
-  bool operator<(const SymbolID &Sym) const {
-    return HashValue < Sym.HashValue;
-  }
-
-  // The stored hash is truncated to RawSize bytes.
-  // This trades off memory against the number of symbols we can handle.
-  constexpr static size_t RawSize = 8;
-  llvm::StringRef raw() const {
-    return StringRef(reinterpret_cast<const char *>(HashValue.data()), RawSize);
-  }
-  static SymbolID fromRaw(llvm::StringRef);
-
-  // Returns a hex encoded string.
-  std::string str() const;
-  static llvm::Expected<SymbolID> fromStr(llvm::StringRef);
-
-private:
-  std::array<uint8_t, RawSize> HashValue;
-};
-
-inline llvm::hash_code hash_value(const SymbolID &ID) {
-  // We already have a good hash, just return the first bytes.
-  assert(sizeof(size_t) <= SymbolID::RawSize && "size_t longer than SHA1!");
-  size_t Result;
-  memcpy(&Result, ID.raw().data(), sizeof(size_t));
-  return llvm::hash_code(Result);
-}
-
-// Write SymbolID into the given stream. SymbolID is encoded as ID.str().
-llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const SymbolID &ID);
 
 } // namespace clangd
 } // namespace clang
@@ -232,19 +185,23 @@ struct Symbol {
   SymbolOrigin Origin = SymbolOrigin::Unknown;
   /// A brief description of the symbol that can be appended in the completion
   /// candidate list. For example, "(X x, Y y) const" is a function signature.
+  /// Only set when the symbol is indexed for completion.
   llvm::StringRef Signature;
   /// What to insert when completing this symbol, after the symbol name.
   /// This is in LSP snippet syntax (e.g. "({$0})" for a no-args function).
   /// (When snippets are disabled, the symbol name alone is used).
+  /// Only set when the symbol is indexed for completion.
   llvm::StringRef CompletionSnippetSuffix;
   /// Documentation including comment for the symbol declaration.
   llvm::StringRef Documentation;
   /// Type when this symbol is used in an expression. (Short display form).
   /// e.g. return type of a function, or type of a variable.
+  /// Only set when the symbol is indexed for completion.
   llvm::StringRef ReturnType;
 
   /// Raw representation of the OpaqueType of the symbol, used for scoring
   /// purposes.
+  /// Only set when the symbol is indexed for completion.
   llvm::StringRef Type;
 
   struct IncludeHeaderWithReferences {
@@ -270,17 +227,22 @@ struct Symbol {
   ///   - If we haven't seen a definition, this covers all declarations.
   ///   - If we have seen a definition, this covers declarations visible from
   ///   any definition.
+  /// Only set when the symbol is indexed for completion.
   llvm::SmallVector<IncludeHeaderWithReferences, 1> IncludeHeaders;
 
   enum SymbolFlag : uint8_t {
     None = 0,
     /// Whether or not this symbol is meant to be used for the code completion.
     /// See also isIndexedForCodeCompletion().
+    /// Note that we don't store completion information (signature, snippet,
+    /// type, inclues) if the symbol is not indexed for code completion.
     IndexedForCodeCompletion = 1 << 0,
     /// Indicates if the symbol is deprecated.
     Deprecated = 1 << 1,
     // Symbol is an implementation detail.
     ImplementationDetail = 1 << 2,
+    // Symbol is visible to other files (not e.g. a static helper function).
+    VisibleOutsideFile = 1 << 3,
   };
 
   SymbolFlag Flags = SymbolFlag::None;
@@ -514,6 +476,10 @@ struct LookupRequest {
 struct RefsRequest {
   llvm::DenseSet<SymbolID> IDs;
   RefKind Filter = RefKind::All;
+  /// If set, limit the number of refers returned from the index. The index may
+  /// choose to return less than this, e.g. it tries to avoid returning stale
+  /// results.
+  llvm::Optional<uint32_t> Limit;
 };
 
 /// Interface for symbol indexes that can be used for searching or
