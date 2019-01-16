@@ -121,7 +121,7 @@ static Optional<FixItHint>
 changePointer(const VarDecl &Var, DeclSpec::TQ Qualifier, const Type *Pointee,
               QualifierTarget QualTarget, QualifierPolicy QualPolicy,
               const ASTContext &Context) {
-  // The pointer itself shall be marked as `const`. This is always right
+  // The pointer itself shall be marked as `const`. This is always to the right
   // of the '*' or in front of the identifier.
   if (QualTarget == QualifierTarget::Value)
     return changePointerItself(Var, Qualifier, Context);
