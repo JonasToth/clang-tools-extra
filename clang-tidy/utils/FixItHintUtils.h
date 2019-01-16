@@ -11,6 +11,7 @@
 
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
+#include "clang/Sema/DeclSpec.h"
 
 namespace clang {
 namespace tidy {
@@ -21,7 +22,7 @@ namespace fixit {
 FixItHint changeVarDeclToReference(const VarDecl &Var, ASTContext &Context);
 
 /// This enum defines where the 'const' shall be preferably added.
-enum class ConstPolicy {
+enum class QualifierPolicy {
   Left,  // Add the `const` always to the left side, if that is possible.
   Right, // Add the `const` always to the right side.
 };
@@ -29,7 +30,7 @@ enum class ConstPolicy {
 /// This enum defines which entity is the target for adding the 'const'. This
 /// makes only a difference for pointer-types. Other types behave identical
 /// for either value of \c ConstTarget.
-enum class ConstTarget {
+enum class QualifierTarget {
   Pointee, /// Transforming a pointer goes for the pointee and not the pointer
            /// itself. For references and normal values this option has no
            /// effect.
@@ -43,10 +44,11 @@ enum class ConstTarget {
 ///
 /// If the 'FixItHint' would be applied inside a macro or at an invalid
 /// \c SourceLocation it is not returned.
-Optional<FixItHint> changeVarDeclToConst(const VarDecl &Var,
-                                         ConstTarget CT = ConstTarget::Pointee,
-                                         ConstPolicy CP = ConstPolicy::Left,
-                                         const ASTContext *Context = nullptr);
+Optional<FixItHint>
+addQualifierToVarDecl(const VarDecl &Var, DeclSpec::TQ Qualifier,
+                      QualifierTarget CT = QualifierTarget::Pointee,
+                      QualifierPolicy CP = QualifierPolicy::Left,
+                      const ASTContext *Context = nullptr);
 
 } // namespace fixit
 } // namespace utils
