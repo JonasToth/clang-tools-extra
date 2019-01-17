@@ -356,9 +356,9 @@ def run_tidy(args, tmpdir, build_path, queue, lock, failed_files, parser):
 
       if len(err) > 0:
         err_lines = err.splitlines()
-        errors = [l for l in err_lines if ("warnings generated" not in l) and ("warning generated" not in l)]
+        errors = [l for l in err_lines if not "warnings generated" in l]
         for l in errors:
-            sys.stderr.write((l + "\n").decode('utf-8', 'backslashreplace'))
+            sys.stderr.write(l.decode('utf-8', 'backslashreplace'))
       sys.stderr.flush()
 
     queue.task_done()
