@@ -17,7 +17,7 @@ static bool isBaseOf(const Type *DerivedType, const Type *BaseType) {
 namespace tidy {
 namespace utils {
 
-ExceptionTracer::TypeVec ExceptionTracer::throwsException(
+ExceptionAnalyzer::TypeVec ExceptionAnalyzer::throwsException(
     const FunctionDecl *Func,
     llvm::SmallSet<const FunctionDecl *, 32> &CallStack) {
   if (CallStack.count(Func))
@@ -39,7 +39,7 @@ ExceptionTracer::TypeVec ExceptionTracer::throwsException(
   return Result;
 }
 
-ExceptionTracer::TypeVec ExceptionTracer::throwsException(
+ExceptionAnalyzer::TypeVec ExceptionAnalyzer::throwsException(
     const Stmt *St, const TypeVec &Caught,
     llvm::SmallSet<const FunctionDecl *, 32> &CallStack) {
   TypeVec Results;
@@ -110,7 +110,7 @@ ExceptionTracer::TypeVec ExceptionTracer::throwsException(
   return Results;
 }
 
-bool ExceptionTracer::throwsException(const FunctionDecl *Func) {
+bool ExceptionAnalyzer::throwsException(const FunctionDecl *Func) {
   // Check if the function has already been analyzed and reuse that result.
   if (FunctionCache.count(Func) > 0)
     return FunctionCache[Func];
@@ -132,7 +132,7 @@ bool ExceptionTracer::throwsException(const FunctionDecl *Func) {
   return FunctionThrows;
 }
 
-bool ExceptionTracer::isIgnoredExceptionType(const Type *Exception) {
+bool ExceptionAnalyzer::isIgnoredExceptionType(const Type *Exception) {
   if (const auto *TD = Exception->getAsTagDecl()) {
     if (TD->getDeclName().isIdentifier())
       return IgnoredExceptions.count(TD->getName()) > 0;

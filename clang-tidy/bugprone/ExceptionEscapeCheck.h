@@ -36,7 +36,7 @@ private:
   std::string RawIgnoredExceptions;
 
   llvm::StringSet<> FunctionsThatShouldNotThrow;
-  utils::ExceptionTracer Tracer;
+  utils::ExceptionAnalyzer Tracer;
 };
 
 } // namespace bugprone

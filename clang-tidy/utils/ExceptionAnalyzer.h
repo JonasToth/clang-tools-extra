@@ -22,9 +22,9 @@ namespace utils {
 /// It can be configured to ignore some exception types, especially
 /// `std::bad_alloc` can be disabled as using dynamic memory will always
 /// give the possibility of an exception.
-class ExceptionTracer {
+class ExceptionAnalyzer {
 public:
-  ExceptionTracer() = default;
+  ExceptionAnalyzer() = default;
 
   bool throwsException(const FunctionDecl *Func);
   void ignoreExceptions(llvm::StringSet<> ExceptionNames) {
@@ -38,10 +38,10 @@ private:
                           llvm::SmallSet<const FunctionDecl *, 32> &CallStack);
   TypeVec throwsException(const Stmt *St, const TypeVec &Caught,
                           llvm::SmallSet<const FunctionDecl *, 32> &CallStack);
-  bool isIgnoredExceptionType(const Type* Exception);
+  bool isIgnoredExceptionType(const Type *Exception);
 
   llvm::StringSet<> IgnoredExceptions;
-  llvm::DenseMap<const FunctionDecl*, bool> FunctionCache;
+  llvm::DenseMap<const FunctionDecl *, bool> FunctionCache;
 };
 } // namespace utils
 } // namespace tidy
