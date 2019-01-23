@@ -8,9 +8,9 @@
 
 #include "ExceptionEscapeCheck.h"
 
+#include "../utils/OptionsUtils.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
-
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringSet.h"
 
@@ -31,14 +31,13 @@ ExceptionEscapeCheck::ExceptionEscapeCheck(StringRef Name,
     : ClangTidyCheck(Name, Context), RawFunctionsThatShouldNotThrow(Options.get(
                                          "FunctionsThatShouldNotThrow", "")),
       RawIgnoredExceptions(Options.get("IgnoredExceptions", "")) {
-  llvm::SmallVector<StringRef, 8> FunctionsThatShouldNotThrowVec,
-      IgnoredExceptionsVec;
-  StringRef(RawFunctionsThatShouldNotThrow)
-      .split(FunctionsThatShouldNotThrowVec, ",", -1, false);
+  std::vector<std::string> FunctionsThatShouldNotThrowVec =
+      utils::options::parseStringList(RawFunctionsThatShouldNotThrow);
   FunctionsThatShouldNotThrow.insert(FunctionsThatShouldNotThrowVec.begin(),
                                      FunctionsThatShouldNotThrowVec.end());
 
-  StringRef(RawIgnoredExceptions).split(IgnoredExceptionsVec, ",", -1, false);
+  std::vector<std::string> IgnoredExceptionsVec =
+      utils::options::parseStringList(RawIgnoredExceptions);
 
   llvm::StringSet<> IgnoredExceptions;
   IgnoredExceptions.insert(IgnoredExceptionsVec.begin(),
@@ -67,21 +66,19 @@ void ExceptionEscapeCheck::registerMatchers(MatchFinder *Finder) {
 }
 
 void ExceptionEscapeCheck::check(const MatchFinder::MatchResult &Result) {
-  const FunctionDecl *MatchedDecl =
-      Result.Nodes.getNodeAs<FunctionDecl>("thrower");
+  const auto *MatchedDecl = Result.Nodes.getNodeAs<FunctionDecl>("thrower");
 
   if (!MatchedDecl)
     return;
 
-  if (!Tracer.throwsException(MatchedDecl))
-    return;
+  if (Tracer.throwsException(MatchedDecl))
+    // FIXME: We should provide more information about the exact location where
+    // the exception is thrown, maybe the full path the exception escapes
+    diag(MatchedDecl->getLocation(),
+         "an exception may be thrown in function %0 "
 
-  // FIXME: We should provide more information about the exact location where
-  // the exception is thrown, maybe the full path the exception escapes
-  diag(MatchedDecl->getLocation(), "an exception may be thrown in function %0 "
-
-                                   "which should not throw exceptions")
-      << MatchedDecl;
+         "which should not throw exceptions")
+        << MatchedDecl;
 }
 
 } // namespace bugprone
