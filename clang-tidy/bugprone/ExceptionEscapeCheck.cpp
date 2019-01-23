@@ -21,8 +21,7 @@ typedef llvm::SmallVector<const clang::Type *, 8> TypeVec;
 } // namespace
 
 namespace clang {
-
-static bool isBaseOf(const Type *DerivedType, const Type *BaseType) {
+bool isBaseOf(const Type *DerivedType, const Type *BaseType) {
   const auto *DerivedClass = DerivedType->getAsCXXRecordDecl();
   const auto *BaseClass = BaseType->getAsCXXRecordDecl();
   if (!DerivedClass || !BaseClass)
@@ -32,13 +31,12 @@ static bool isBaseOf(const Type *DerivedType, const Type *BaseType) {
       [BaseClass](const CXXRecordDecl *Cur) { return Cur != BaseClass; });
 }
 
-static const TypeVec
-throwsException(const Stmt *St, const TypeVec &Caught,
-                llvm::SmallSet<const FunctionDecl *, 32> &CallStack);
+namespace tidy {
+namespace bugprone {
 
-static const TypeVec
-throwsException(const FunctionDecl *Func,
-                llvm::SmallSet<const FunctionDecl *, 32> &CallStack) {
+TypeVec ExceptionTracer::throwsException(
+    const FunctionDecl *Func,
+    llvm::SmallSet<const FunctionDecl *, 32> &CallStack) {
   if (CallStack.count(Func))
     return TypeVec();
 
@@ -58,9 +56,9 @@ throwsException(const FunctionDecl *Func,
   return Result;
 }
 
-static const TypeVec
-throwsException(const Stmt *St, const TypeVec &Caught,
-                llvm::SmallSet<const FunctionDecl *, 32> &CallStack) {
+TypeVec ExceptionTracer::throwsException(
+    const Stmt *St, const TypeVec &Caught,
+    llvm::SmallSet<const FunctionDecl *, 32> &CallStack) {
   TypeVec Results;
 
   if (!St)
@@ -76,8 +74,8 @@ throwsException(const Stmt *St, const TypeVec &Caught,
                          ->getUnqualifiedDesugaredType();
       }
       if (const auto *TD = ThrownType->getAsTagDecl()) {
-        if (TD->getDeclName().isIdentifier() && TD->getName() == "bad_alloc"
-            && TD->isInStdNamespace())
+        if (TD->getDeclName().isIdentifier() && TD->getName() == "bad_alloc" &&
+            TD->isInStdNamespace())
           return Results;
       }
       Results.push_back(ThrownExpr->getType()->getUnqualifiedDesugaredType());
@@ -129,10 +127,12 @@ throwsException(const Stmt *St, const TypeVec &Caught,
   return Results;
 }
 
-static const TypeVec throwsException(const FunctionDecl *Func) {
+TypeVec ExceptionTracer::throwsException(const FunctionDecl *Func) {
   llvm::SmallSet<const FunctionDecl *, 32> CallStack;
   return throwsException(Func, CallStack);
 }
+} // namespace bugprone
+} // namespace tidy
 
 namespace ast_matchers {
 AST_MATCHER_P(FunctionDecl, throws, internal::Matcher<Type>, InnerMatcher) {
@@ -208,7 +208,8 @@ void ExceptionEscapeCheck::check(const MatchFinder::MatchResult &Result) {
   // FIXME: We should provide more information about the exact location where
   // the exception is thrown, maybe the full path the exception escapes
   diag(MatchedDecl->getLocation(), "an exception may be thrown in function %0 "
-       "which should not throw exceptions") << MatchedDecl;
+                                   "which should not throw exceptions")
+      << MatchedDecl;
 }
 
 } // namespace bugprone

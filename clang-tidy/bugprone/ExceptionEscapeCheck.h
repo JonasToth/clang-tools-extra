@@ -14,8 +14,29 @@
 #include "llvm/ADT/StringSet.h"
 
 namespace clang {
+
+/// Check if 'DerivedType' has any base class 'BaseType'.
+bool isBaseOf(const Type *DerivedType, const Type *BaseType);
+
 namespace tidy {
 namespace bugprone {
+
+class ExceptionTracer {
+  using TypeVec = llvm::SmallVector<const Type *, 8>;
+
+public:
+  ExceptionTracer() = default;
+
+  TypeVec throwsException(const FunctionDecl *Func);
+
+private:
+  TypeVec throwsException(const Stmt *St, const TypeVec &Caught,
+                          llvm::SmallSet<const FunctionDecl *, 32> &CallStack);
+  TypeVec throwsException(const FunctionDecl *Func,
+                          llvm::SmallSet<const FunctionDecl *, 32> &CallStack);
+  TypeVec throwsException(const Stmt *St, const TypeVec &Caught,
+                          llvm::SmallSet<const FunctionDecl *, 32> &CallStack);
+};
 
 /// Finds functions which should not throw exceptions: Destructors, move
 /// constructors, move assignment operators, the main() function,
