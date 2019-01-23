@@ -61,8 +61,9 @@ void UseNoexceptCheck::registerMatchers(MatchFinder *Finder) {
 
   if (AddMissingNoexcept)
     Finder->addMatcher(
-        functionDecl(
-            unless(anyOf(isNoThrow(), hasDynamicExceptionSpec(), isImplicit())))
+        functionDecl(allOf(hasBody(stmt()),
+                           unless(anyOf(isNoThrow(), hasDynamicExceptionSpec(),
+                                        isImplicit()))))
             .bind("potentialNoexcept"),
         this);
 }
