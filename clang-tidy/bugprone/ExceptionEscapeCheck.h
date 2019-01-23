@@ -1,4 +1,4 @@
-//===--- ExceptionEscapeCheck.h - clang-tidy---------------------*- C++ -*-===//
+//===--- ExceptionEscapeCheck.h - clang-tidy --------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -10,43 +10,12 @@
 #define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_EXCEPTION_ESCAPE_H
 
 #include "../ClangTidy.h"
-
+#include "../utils/ExceptionAnalyzer.h"
 #include "llvm/ADT/StringSet.h"
 
 namespace clang {
-
-/// Check if 'DerivedType' has any base class 'BaseType'.
-bool isBaseOf(const Type *DerivedType, const Type *BaseType);
-
 namespace tidy {
 namespace bugprone {
-
-class ExceptionTracer {
-  using TypeVec = llvm::SmallVector<const Type *, 8>;
-
-public:
-  ExceptionTracer() = default;
-
-  bool throwsException(const FunctionDecl *Func);
-
-  bool isIgnoredExceptionType(const Type* T);
-
-  void ignoreExceptions(llvm::StringSet<> ExceptionNames) {
-    IgnoredExceptions = std::move(ExceptionNames);
-  }
-  void requireNonThrowing(llvm::StringSet<> FunctionNames) {
-    FunctionsThatShouldNotThrow = std::move(FunctionNames);
-  }
-
-private:
-  TypeVec throwsException(const FunctionDecl *Func,
-                          llvm::SmallSet<const FunctionDecl *, 32> &CallStack);
-  TypeVec throwsException(const Stmt *St, const TypeVec &Caught,
-                          llvm::SmallSet<const FunctionDecl *, 32> &CallStack);
-
-  llvm::StringSet<> IgnoredExceptions;
-  llvm::StringSet<> FunctionsThatShouldNotThrow;
-};
 
 /// Finds functions which should not throw exceptions: Destructors, move
 /// constructors, move assignment operators, the main() function,
@@ -67,9 +36,7 @@ private:
   std::string RawIgnoredExceptions;
 
   llvm::StringSet<> FunctionsThatShouldNotThrow;
-  llvm::StringSet<> IgnoredExceptions;
-
-  ExceptionTracer Tracer;
+  utils::ExceptionTracer Tracer;
 };
 
 } // namespace bugprone
