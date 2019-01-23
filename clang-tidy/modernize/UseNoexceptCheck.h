@@ -39,8 +39,9 @@ public:
 
 private:
   const std::string NoexceptMacro;
-  bool UseNoexceptFalse;
-  utils::ExceptionAnalyzer Analyzer;
+  const bool UseNoexceptFalse;
+  const bool AddMissingNoexcept;
+  utils::ExceptionTracer Analyzer;
 };
 
 } // namespace modernize

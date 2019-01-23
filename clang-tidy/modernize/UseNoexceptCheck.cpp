@@ -19,11 +19,13 @@ namespace modernize {
 UseNoexceptCheck::UseNoexceptCheck(StringRef Name, ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
       NoexceptMacro(Options.get("ReplacementString", "")),
-      UseNoexceptFalse(Options.get("UseNoexceptFalse", true)) {}
+      UseNoexceptFalse(Options.get("UseNoexceptFalse", true)),
+      AddMissingNoexcept(Options.get("AddMissingNoexcept", false)) {}
 
 void UseNoexceptCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "ReplacementString", NoexceptMacro);
   Options.store(Opts, "UseNoexceptFalse", UseNoexceptFalse);
+  Options.store(Opts, "AddMissingNoexcept", AddMissingNoexcept);
 }
 
 void UseNoexceptCheck::registerMatchers(MatchFinder *Finder) {
@@ -57,9 +59,12 @@ void UseNoexceptCheck::registerMatchers(MatchFinder *Finder) {
           .bind("parmVarDecl"),
       this);
 
-  Finder->addMatcher(
-      functionDecl(unless(hasDynamicExceptionSpec())).bind("potentialNoexcept"),
-      this);
+  if (AddMissingNoexcept)
+    Finder->addMatcher(
+        functionDecl(
+            unless(anyOf(isNoThrow(), hasDynamicExceptionSpec(), isImplicit())))
+            .bind("potentialNoexcept"),
+        this);
 }
 
 void UseNoexceptCheck::check(const MatchFinder::MatchResult &Result) {
@@ -88,7 +93,8 @@ void UseNoexceptCheck::check(const MatchFinder::MatchResult &Result) {
                   .getExceptionSpecRange();
   } else if (const auto *PotentialNoexcept =
                  Result.Nodes.getNodeAs<FunctionDecl>("potentialNoexcept")) {
-    if (!Analyzer.throws(PotentialNoexcept))
+    if (!Analyzer.throwsException(PotentialNoexcept) &&
+        PotentialNoexcept->getBeginLoc().isValid())
       diag(PotentialNoexcept->getBeginLoc(),
            "this function can not throw an exception, consider adding "
            "'noexcept'");
