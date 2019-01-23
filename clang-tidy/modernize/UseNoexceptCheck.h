@@ -10,6 +10,7 @@
 #define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MODERNIZE_USE_NOEXCEPT_H
 
 #include "../ClangTidy.h"
+#include "../utils/ExceptionAnalyzer.h"
 
 namespace clang {
 namespace tidy {
@@ -39,6 +40,7 @@ public:
 private:
   const std::string NoexceptMacro;
   bool UseNoexceptFalse;
+  utils::ExceptionAnalyzer Analyzer;
 };
 
 } // namespace modernize

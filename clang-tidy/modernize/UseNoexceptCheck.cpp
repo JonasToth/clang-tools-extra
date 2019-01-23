@@ -56,6 +56,10 @@ void UseNoexceptCheck::registerMatchers(MatchFinder *Finder) {
                             functionProtoType(hasDynamicExceptionSpec()))))))))
           .bind("parmVarDecl"),
       this);
+
+  Finder->addMatcher(
+      functionDecl(unless(hasDynamicExceptionSpec())).bind("potentialNoexcept"),
+      this);
 }
 
 void UseNoexceptCheck::check(const MatchFinder::MatchResult &Result) {
@@ -82,6 +86,13 @@ void UseNoexceptCheck::check(const MatchFinder::MatchResult &Result) {
                   .IgnoreParens()
                   .castAs<FunctionProtoTypeLoc>()
                   .getExceptionSpecRange();
+  } else if (const auto *PotentialNoexcept =
+                 Result.Nodes.getNodeAs<FunctionDecl>("potentialNoexcept")) {
+    if (!Analyzer.throws(PotentialNoexcept))
+      diag(PotentialNoexcept->getBeginLoc(),
+           "this function can not throw an exception, consider adding "
+           "'noexcept'");
+    return;
   }
   CharSourceRange CRange = Lexer::makeFileCharRange(
       CharSourceRange::getTokenRange(Range), *Result.SourceManager,
@@ -92,10 +103,10 @@ void UseNoexceptCheck::check(const MatchFinder::MatchResult &Result) {
   StringRef ReplacementStr =
       IsNoThrow
           ? NoexceptMacro.empty() ? "noexcept" : NoexceptMacro.c_str()
-          : NoexceptMacro.empty()
-                ? (DtorOrOperatorDel || UseNoexceptFalse) ? "noexcept(false)"
-                                                          : ""
-                : "";
+          : NoexceptMacro.empty() ? (DtorOrOperatorDel || UseNoexceptFalse)
+                                        ? "noexcept(false)"
+                                        : ""
+                                  : "";
 
   FixItHint FixIt;
   if ((IsNoThrow || NoexceptMacro.empty()) && CRange.isValid())
