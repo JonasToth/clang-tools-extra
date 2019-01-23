@@ -127,31 +127,29 @@ TypeVec ExceptionTracer::throwsException(
   return Results;
 }
 
-TypeVec ExceptionTracer::throwsException(const FunctionDecl *Func) {
+bool ExceptionTracer::throwsException(const FunctionDecl *Func) {
   llvm::SmallSet<const FunctionDecl *, 32> CallStack;
-  return throwsException(Func, CallStack);
+  TypeVec ExceptionList = throwsException(Func, CallStack);
+
+  // Remove all ignored exceptions from the list of exceptions that can be
+  // thrown.
+  auto NewEnd = llvm::remove_if(ExceptionList, [this](const Type *Exception) {
+    if (const auto *TD = Exception->getAsTagDecl()) {
+      if (TD->getDeclName().isIdentifier())
+        return IgnoredExceptions.count(TD->getName()) > 0;
+    }
+    return false;
+  });
+  ExceptionList.erase(NewEnd, ExceptionList.end());
+  return ExceptionList.size();
 }
 } // namespace bugprone
 } // namespace tidy
 
 namespace ast_matchers {
 AST_MATCHER_P(FunctionDecl, throws, internal::Matcher<Type>, InnerMatcher) {
-    tidy::bugprone::ExceptionTracer ET;
-  TypeVec ExceptionList = ET.throwsException(&Node);
-  auto NewEnd = llvm::remove_if(
-      ExceptionList, [this, Finder, Builder](const Type *Exception) {
-        return !InnerMatcher.matches(*Exception, Finder, Builder);
-      });
-  ExceptionList.erase(NewEnd, ExceptionList.end());
-  return ExceptionList.size();
-}
-
-AST_MATCHER_P(Type, isIgnored, llvm::StringSet<>, IgnoredExceptions) {
-  if (const auto *TD = Node.getAsTagDecl()) {
-    if (TD->getDeclName().isIdentifier())
-      return IgnoredExceptions.count(TD->getName()) > 0;
-  }
-  return false;
+  tidy::bugprone::ExceptionTracer ET;
+  return ET.throwsException(&Node);
 }
 
 AST_MATCHER_P(FunctionDecl, isEnabled, llvm::StringSet<>,
@@ -174,9 +172,13 @@ ExceptionEscapeCheck::ExceptionEscapeCheck(StringRef Name,
       .split(FunctionsThatShouldNotThrowVec, ",", -1, false);
   FunctionsThatShouldNotThrow.insert(FunctionsThatShouldNotThrowVec.begin(),
                                      FunctionsThatShouldNotThrowVec.end());
+  Tracer.requireNonThrowing(FunctionsThatShouldNotThrow);
+
   StringRef(RawIgnoredExceptions).split(IgnoredExceptionsVec, ",", -1, false);
   IgnoredExceptions.insert(IgnoredExceptionsVec.begin(),
                            IgnoredExceptionsVec.end());
+
+  Tracer.ignoreExceptions(IgnoredExceptions);
 }
 
 void ExceptionEscapeCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
@@ -194,8 +196,7 @@ void ExceptionEscapeCheck::registerMatchers(MatchFinder *Finder) {
                          cxxConstructorDecl(isMoveConstructor()),
                          cxxMethodDecl(isMoveAssignmentOperator()),
                          hasName("main"), hasName("swap"),
-                         isEnabled(FunctionsThatShouldNotThrow)),
-                   throws(unless(isIgnored(IgnoredExceptions))))
+                         isEnabled(FunctionsThatShouldNotThrow)))
           .bind("thrower"),
       this);
 }
@@ -203,7 +204,11 @@ void ExceptionEscapeCheck::registerMatchers(MatchFinder *Finder) {
 void ExceptionEscapeCheck::check(const MatchFinder::MatchResult &Result) {
   const FunctionDecl *MatchedDecl =
       Result.Nodes.getNodeAs<FunctionDecl>("thrower");
+
   if (!MatchedDecl)
+    return;
+
+  if (!Tracer.throwsException(MatchedDecl))
     return;
 
   // FIXME: We should provide more information about the exact location where

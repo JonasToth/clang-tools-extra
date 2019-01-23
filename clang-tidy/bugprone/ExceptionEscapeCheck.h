@@ -27,13 +27,25 @@ class ExceptionTracer {
 public:
   ExceptionTracer() = default;
 
-  TypeVec throwsException(const FunctionDecl *Func);
+  bool throwsException(const FunctionDecl *Func);
+
+  bool isIgnoredExceptionType(const Type* T);
+
+  void ignoreExceptions(llvm::StringSet<> ExceptionNames) {
+    IgnoredExceptions = std::move(ExceptionNames);
+  }
+  void requireNonThrowing(llvm::StringSet<> FunctionNames) {
+    FunctionsThatShouldNotThrow = std::move(FunctionNames);
+  }
 
 private:
   TypeVec throwsException(const FunctionDecl *Func,
                           llvm::SmallSet<const FunctionDecl *, 32> &CallStack);
   TypeVec throwsException(const Stmt *St, const TypeVec &Caught,
                           llvm::SmallSet<const FunctionDecl *, 32> &CallStack);
+
+  llvm::StringSet<> IgnoredExceptions;
+  llvm::StringSet<> FunctionsThatShouldNotThrow;
 };
 
 /// Finds functions which should not throw exceptions: Destructors, move
@@ -56,6 +68,8 @@ private:
 
   llvm::StringSet<> FunctionsThatShouldNotThrow;
   llvm::StringSet<> IgnoredExceptions;
+
+  ExceptionTracer Tracer;
 };
 
 } // namespace bugprone
