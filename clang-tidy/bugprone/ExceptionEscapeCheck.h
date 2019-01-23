@@ -30,8 +30,6 @@ public:
   TypeVec throwsException(const FunctionDecl *Func);
 
 private:
-  TypeVec throwsException(const Stmt *St, const TypeVec &Caught,
-                          llvm::SmallSet<const FunctionDecl *, 32> &CallStack);
   TypeVec throwsException(const FunctionDecl *Func,
                           llvm::SmallSet<const FunctionDecl *, 32> &CallStack);
   TypeVec throwsException(const Stmt *St, const TypeVec &Caught,

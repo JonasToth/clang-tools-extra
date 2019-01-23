@@ -136,7 +136,8 @@ TypeVec ExceptionTracer::throwsException(const FunctionDecl *Func) {
 
 namespace ast_matchers {
 AST_MATCHER_P(FunctionDecl, throws, internal::Matcher<Type>, InnerMatcher) {
-  TypeVec ExceptionList = throwsException(&Node);
+    tidy::bugprone::ExceptionTracer ET;
+  TypeVec ExceptionList = ET.throwsException(&Node);
   auto NewEnd = llvm::remove_if(
       ExceptionList, [this, Finder, Builder](const Type *Exception) {
         return !InnerMatcher.matches(*Exception, Finder, Builder);
