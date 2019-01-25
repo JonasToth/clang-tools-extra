@@ -17,12 +17,14 @@ namespace tidy {
 namespace modernize {
 
 void UseRangesCheck::registerMatchers(MatchFinder *Finder) {
-  // FIXME: Add matchers.
-  Finder->addMatcher(functionDecl().bind("x"), this);
+    // 1. Match all call-exprs that are known STL algorithms
+    // 2. require either (std::begin(), or Object.begin()) form
+    // 3. find a way on how to specify easily which argument of STL calls
+    //    belongs to which range.
+  Finder->addMatcher(callExpr().bind("x"), this);
 }
 
 void UseRangesCheck::check(const MatchFinder::MatchResult &Result) {
-  // FIXME: Add callback implementation.
   const auto *MatchedDecl = Result.Nodes.getNodeAs<FunctionDecl>("x");
   if (MatchedDecl->getName().startswith("awesome_"))
     return;

@@ -15,7 +15,7 @@ namespace clang {
 namespace tidy {
 namespace modernize {
 
-/// FIXME: Write a short description.
+/// Transform traditional STL-algorithm calls into their range-version.
 ///
 /// For the user-facing documentation see:
 /// http://clang.llvm.org/extra/clang-tidy/checks/modernize-use-ranges.html
