@@ -73,6 +73,11 @@ Improvements to clang-tidy
   Checks for casts of ``absl::Duration`` conversion functions, and recommends
   the right conversion function instead.
 
+- New :doc:`modernize-use-ranges
+  <clang-tidy/checks/modernize-use-ranges>` check.
+
+  FIXME: add release notes.
+
 Improvements to include-fixer
 -----------------------------
 
