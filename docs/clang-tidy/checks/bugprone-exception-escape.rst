@@ -28,12 +28,12 @@ Options
 
 .. option:: FunctionsThatShouldNotThrow
 
-   Semicolon separated list containing function names which should not throw. An
+   Comma separated list containing function names which should not throw. An
    example value for this parameter can be ``WinMain`` which adds function
    ``WinMain()`` in the Windows API to the list of the funcions which should
    not throw. Default value is an empty string.
 
 .. option:: IgnoredExceptions
 
-   Semicolon separated list containing type names which are not counted as thrown
+   Comma separated list containing type names which are not counted as thrown
    exceptions in the check. Default value is an empty string.
