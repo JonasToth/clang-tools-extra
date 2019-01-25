@@ -8,7 +8,6 @@
 
 #include "ExceptionEscapeCheck.h"
 
-#include "../utils/OptionsUtils.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "llvm/ADT/SmallSet.h"
@@ -31,15 +30,15 @@ ExceptionEscapeCheck::ExceptionEscapeCheck(StringRef Name,
     : ClangTidyCheck(Name, Context), RawFunctionsThatShouldNotThrow(Options.get(
                                          "FunctionsThatShouldNotThrow", "")),
       RawIgnoredExceptions(Options.get("IgnoredExceptions", "")) {
-  std::vector<std::string> FunctionsThatShouldNotThrowVec =
-      utils::options::parseStringList(RawFunctionsThatShouldNotThrow);
+  llvm::SmallVector<StringRef, 8> FunctionsThatShouldNotThrowVec,
+      IgnoredExceptionsVec;
+  StringRef(RawFunctionsThatShouldNotThrow)
+      .split(FunctionsThatShouldNotThrowVec, ",", -1, false);
   FunctionsThatShouldNotThrow.insert(FunctionsThatShouldNotThrowVec.begin(),
                                      FunctionsThatShouldNotThrowVec.end());
 
-  std::vector<std::string> IgnoredExceptionsVec =
-      utils::options::parseStringList(RawIgnoredExceptions);
-
   llvm::StringSet<> IgnoredExceptions;
+  StringRef(RawIgnoredExceptions).split(IgnoredExceptionsVec, ",", -1, false);
   IgnoredExceptions.insert(IgnoredExceptionsVec.begin(),
                            IgnoredExceptionsVec.end());
   Tracer.ignoreExceptions(std::move(IgnoredExceptions));
