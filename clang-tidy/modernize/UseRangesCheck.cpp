@@ -9,6 +9,7 @@
 #include "UseRangesCheck.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
+#include "../utils/LexerUtils.h"
 
 using namespace clang::ast_matchers;
 
@@ -108,6 +109,23 @@ static bool isAlgorithm(const MatchFinder::MatchResult &R,
   return R.Nodes.getNodeAs<FunctionDecl>(Name) != nullptr;
 }
 
+static FixItHint rewriteAlgorithmName(const CallExpr *Call,
+                                      SourceLocation EndOfName,
+                                      StringRef NewNamespace) {
+  std::string CallName = Call->getDirectCallee()->getQualifiedNameAsString();
+
+  // Matching happens only on STL algorithms. The qualified named is of the
+  // form 'std::all_of' therefor dropping the first five characters will
+  // return the name of the algorithm. That one can be rewritten with a new
+  // namespace for the according ranges library.
+  StringRef OnlyName = StringRef(CallName).drop_front(5);
+  std::string NewCall =
+      (llvm::Twine(NewNamespace).concat("::").concat(OnlyName)).str();
+
+  SourceRange NameToLParen(Call->getBeginLoc(), EndOfName);
+  return FixItHint::CreateReplacement(NameToLParen, NewCall);
+}
+
 void UseRangesCheck::registerMatchers(MatchFinder *Finder) {
   // 1. Match all call-exprs that are known STL algorithms that have a range
   //    version.
@@ -150,8 +168,18 @@ void UseRangesCheck::check(const MatchFinder::MatchResult &Result) {
   auto Diag = diag(AlgoCall->getBeginLoc(),
                    "algorithm could be rewritten with std::ranges");
 
-  if (RangeTransform)
-    Diag << *RangeTransform;
+  if (RangeTransform) {
+    // FIXME: Not the best solution to find the end of the function-name
+    // in the call. I think LexerUtils.h should be extended.
+    SourceLocation EndOfNextToken = utils::lexer::findNextAnyTokenKind(
+        AlgoCall->getBeginLoc(), *Result.SourceManager, getLangOpts(),
+        tok::TokenKind::l_paren, tok::TokenKind::comment);
+    SourceLocation EndOfName = utils::lexer::findPreviousTokenStart(
+        EndOfNextToken, *Result.SourceManager, getLangOpts());
+
+    Diag << *RangeTransform
+         << rewriteAlgorithmName(AlgoCall, EndOfName, NewNamespace);
+  }
 }
 
 } // namespace modernize
