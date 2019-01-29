@@ -3,6 +3,7 @@
 
 namespace std {
 using size_t = unsigned long long;
+using ptrdiff_t = long long;
 
 template <typename T>
 typename T::iterator begin(T& t);
