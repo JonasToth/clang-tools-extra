@@ -27,7 +27,7 @@ public:
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
 
 private:
-  const std::string NewNamespace = "llvm";
+  const std::string NewNamespace = "std::ranges";
 };
 
 } // namespace modernize

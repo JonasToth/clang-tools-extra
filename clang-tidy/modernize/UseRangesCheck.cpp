@@ -61,19 +61,34 @@ static const NamedDecl *isValidRangeOn(const Expr *Arg1, const Expr *Arg2,
 ///
 /// At the moment all algorithms the Ranges-TS specifies are considered.
 namespace algo {
+
+/// Baseclass to ensure a consistent interface between the algorithm
+/// variant structs.
+struct abstract_algorithm {
+  abstract_algorithm(const CallExpr *Call, ASTContext &C) : Call(Call), C(C) {}
+  virtual ~abstract_algorithm() = default;
+
+  virtual bool isRangeable() const = 0;
+  virtual llvm::Optional<FixItHint> getTransformation() const = 0;
+
+protected:
+  const CallExpr *const Call;
+  ASTContext &C;
+};
+
 /// Catch algorithms statically and group similar algorithm together.
 /// The simplest algorithms are of the form `std::algo(range, functor)`.
 /// C++17 standarized a parallel version for each of these algorithms
-/// that takes 4 arguments, as a execution policy is added.
-struct single_range {
+/// that takes 4 arguments, as a execution policy.
+struct single_range : public abstract_algorithm {
   single_range(const CallExpr *Call, ASTContext &C)
-      : IsRangeable(Call->getNumArgs() == 3),
-        Container(isValidRangeOn(Call->getArg(0), Call->getArg(1), C)),
-        Call(Call) {}
+      : abstract_algorithm(Call, C),
+        IsRangeable(Call->getNumArgs() == 3 || Call->getNumArgs() == 2),
+        Container(isValidRangeOn(Call->getArg(0), Call->getArg(1), C)) {}
 
-  bool isRangeable() const { return IsRangeable && Container != nullptr; }
+  bool isRangeable() const final { return IsRangeable && Container != nullptr; }
 
-  llvm::Optional<FixItHint> getTransformation() {
+  llvm::Optional<FixItHint> getTransformation() const final {
     SourceRange OldRange(Call->getArg(0)->getBeginLoc(),
                          Call->getArg(1)->getEndLoc());
     std::string ContainerName = Container->getName();
@@ -83,8 +98,7 @@ struct single_range {
 private:
   const bool IsRangeable;
   const NamedDecl *const Container;
-  const CallExpr *const Call;
-};
+}; // namespace algo
 
 /// Missmatch algorithm has many variations and changes between the standards.
 struct missmatch {
@@ -133,15 +147,19 @@ void UseRangesCheck::registerMatchers(MatchFinder *Finder) {
   // 3. Extract the container that is used as range
   // 4. Rewrite the container ranges in the call.
   Finder->addMatcher(
-      callExpr(anyOf(callee(functionDecl(
-                                hasAnyName("::std::any_of", "::std::all_of",
-                                           "::std::none_of", "::std::for_each",
-                                           "::std::count", "::std::count_if",
-                                           "::std::find", "::std::find_if",
-                                           "::std::find_if_not"))
-                                .bind("single-range")),
-                     callee(functionDecl(hasName("::std::missmatch"))
-                                .bind("missmatch"))))
+      callExpr(
+          anyOf(
+              callee(functionDecl(
+                         hasAnyName(
+                             "::std::any_of", "::std::all_of", "::std::none_of",
+                             "::std::for_each", "::std::count",
+                             "::std::count_if", "::std::find", "::std::find_if",
+                             "::std::find_if_not", "::std::adjacent_find",
+                             "::std::fill", "::std::generate", "::std::remove",
+                             "::std::remove_if", "::std::unique"))
+                         .bind("single-range")),
+              callee(
+                  functionDecl(hasName("::std::missmatch")).bind("missmatch"))))
           .bind("algo-call"),
       this);
 }

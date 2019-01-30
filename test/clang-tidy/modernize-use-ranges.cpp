@@ -111,6 +111,36 @@ void single_range_others() {
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: algorithm could be rewritten with std::ranges
   // CHECK-FIXES: std::ranges::find_if_not(foo, [](int x) { return x % 2 == 0; });
   std::find_if_not(SomePolicy(42), std::begin(foo), std::end(foo), [](int x) { return x % 2 == 0; });
+
+  std::adjacent_find(foo.begin(), foo.end());
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: algorithm could be rewritten with std::ranges
+  // CHECK-FIXES: std::ranges::adjacent_find(foo);
+  std::adjacent_find(SomePolicy(42), std::begin(foo), std::end(foo));
+
+  std::adjacent_find(foo.begin(), foo.end(), [](int x, int y) { return x + 2 == y; });
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: algorithm could be rewritten with std::ranges
+  // CHECK-FIXES: std::ranges::adjacent_find(foo, [](int x, int y) { return x + 2 == y; });
+  std::adjacent_find(SomePolicy(42), std::begin(foo), std::end(foo), [](int x, int y) { return x + 2 == y; });
+
+  std::fill(foo.begin(), foo.end(), 42);
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: algorithm could be rewritten with std::ranges
+  // CHECK-FIXES: std::ranges::fill(foo, 42);
+  std::fill(SomePolicy(42), std::begin(foo), std::end(foo), 42);
+
+  std::generate(foo.begin(), foo.end(), 42);
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: algorithm could be rewritten with std::ranges
+  // CHECK-FIXES: std::ranges::generate(foo, 42);
+  std::generate(SomePolicy(42), std::begin(foo), std::end(foo), 42);
+
+  std::remove(foo.begin(), foo.end(), 42);
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: algorithm could be rewritten with std::ranges
+  // CHECK-FIXES: std::ranges::remove(foo, 42);
+  std::remove(SomePolicy(42), std::begin(foo), std::end(foo), 42);
+
+  std::remove_if(foo.begin(), foo.end(), [](int x) { return x == 4; });
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: algorithm could be rewritten with std::ranges
+  // CHECK-FIXES: std::ranges::remove_if(foo, [](int x) { return x == 4; });
+  std::remove_if(SomePolicy(42), std::begin(foo), std::end(foo), [](int x) { return x == 4; });
 }
 
 void missmatch_algorithm() {

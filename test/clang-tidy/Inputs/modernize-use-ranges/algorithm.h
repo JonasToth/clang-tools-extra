@@ -52,6 +52,45 @@ template <class ExecutionPolicy, class ForwardIt, class UnaryPredicate>
 ForwardIt find_if_not(ExecutionPolicy &&policy, ForwardIt first, ForwardIt last,
                       UnaryPredicate q) { return first; }
 
+template <class ForwardIterator>
+ForwardIterator adjacent_find(ForwardIterator first, ForwardIterator last) { return first; }
+template <class ExecutionPolicy, class ForwardIterator>
+ForwardIterator adjacent_find(ExecutionPolicy &&policy, ForwardIterator first,
+                              ForwardIterator last) { return first; }
+
+template <class ForwardIterator, class BinaryPredicate>
+ForwardIterator adjacent_find(ForwardIterator first, ForwardIterator last,
+                              BinaryPredicate pred) { return first; }
+template <class ExecutionPolicy, class ForwardIterator, class BinaryPredicate>
+ForwardIterator adjacent_find(ExecutionPolicy &&policy, ForwardIterator first,
+                              ForwardIterator last, BinaryPredicate pred) { return first; }
+
+template <class ForwardIterator, class T>
+void fill(ForwardIterator first, ForwardIterator last, const T &value);
+template <class ExecutionPolicy, class ForwardIterator, class T>
+void fill(ExecutionPolicy &&policy, ForwardIterator first, ForwardIterator last, const T &value);
+
+template <class ForwardIterator, class Generator>
+void generate(ForwardIterator first, ForwardIterator last, Generator gen) {}
+template <class ExecutionPolicy, class ForwardIterator, class Generator>
+void generate(ExecutionPolicy &&policy, ForwardIterator first, ForwardIterator last, Generator gen) {}
+
+template <class ForwardIterator, class T>
+ForwardIterator remove(ForwardIterator first, ForwardIterator last, const T &value) { return first; }
+template <class ExecutionPolicy, class ForwardIterator, class T>
+ForwardIterator remove(ExecutionPolicy &&policy, ForwardIterator first, ForwardIterator last, const T &value) { return first; }
+
+template <class ForwardIterator, class Predicate>
+ForwardIterator remove_if(ForwardIterator first, ForwardIterator last, 
+                          Predicate pred) { return first; }
+template <class ExecutionPolicy, class ForwardIterator, class Predicate>
+ForwardIterator remove_if(ExecutionPolicy &&policy, ForwardIterator first,
+                          ForwardIterator last, Predicate pred) { return first; }
+
+template <class ForwardIterator>
+ForwardIterator unique(ForwardIterator first, ForwardIterator last) { return first; }
+template <class ExecutionPolicy, class ForwardIterator>
+ForwardIterator unique(ExecutionPolicy &&policy, ForwardIterator first, ForwardIterator last) { return first; }
 
 //  ------------- 2 Range-algorithms ----------------
 
