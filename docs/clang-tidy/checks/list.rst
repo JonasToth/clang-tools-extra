@@ -4,6 +4,7 @@ Clang-Tidy Checks
 =================
 
 .. toctree::
+   abseil-duration-addition
    abseil-duration-comparison
    abseil-duration-conversion-cast
    abseil-duration-division
@@ -131,6 +132,7 @@ Clang-Tidy Checks
    google-objc-avoid-throwing-exception
    google-objc-function-naming
    google-objc-global-variable-declaration
+   google-readability-avoid-underscore-in-googletest-name
    google-readability-braces-around-statements (redirects to readability-braces-around-statements) <google-readability-braces-around-statements>
    google-readability-casting
    google-readability-function-size (redirects to readability-function-size) <google-readability-function-size>

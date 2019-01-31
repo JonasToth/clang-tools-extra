@@ -19,9 +19,7 @@ namespace utils {
 
 /// This class analysis if a `FunctionDecl` can in principle throw an exception,
 /// either directly or indirectly.
-/// It can be configured to ignore some exception types, especially
-/// `std::bad_alloc` can be disabled as using dynamic memory will always
-/// give the possibility of an exception.
+/// It can be configured to ignore custom exception types.
 class ExceptionAnalyzer {
 public:
   ExceptionAnalyzer() = default;

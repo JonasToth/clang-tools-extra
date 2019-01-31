@@ -16,6 +16,7 @@
 #include "Headers.h"
 #include "Path.h"
 #include "Protocol.h"
+#include "index/Index.h"
 #include "clang/Frontend/FrontendAction.h"
 #include "clang/Frontend/PrecompiledPreamble.h"
 #include "clang/Lex/Preprocessor.h"
@@ -31,7 +32,7 @@ class raw_ostream;
 
 namespace vfs {
 class FileSystem;
-}
+} // namespace vfs
 } // namespace llvm
 
 namespace clang {
@@ -39,7 +40,7 @@ class PCHContainerOperations;
 
 namespace tooling {
 struct CompileCommand;
-}
+} // namespace tooling
 
 namespace clangd {
 
@@ -70,8 +71,8 @@ public:
         std::shared_ptr<const PreambleData> Preamble,
         std::unique_ptr<llvm::MemoryBuffer> Buffer,
         std::shared_ptr<PCHContainerOperations> PCHs,
-        IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS,
-        const tidy::ClangTidyOptions &ClangTidyOpts);
+        IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS, const SymbolIndex *Index,
+        const ParseOptions &Opts);
 
   ParsedAST(ParsedAST &&Other);
   ParsedAST &operator=(ParsedAST &&Other);

@@ -137,7 +137,7 @@ public:
                       SourceLocation Loc,
                       index::IndexDataConsumer::ASTNodeInfo ASTNode) override {
     if (Loc == SearchedLocation) {
-      auto isImplicitExpr = [](const Expr *E) {
+      auto IsImplicitExpr = [](const Expr *E) {
         if (!E)
           return false;
         // We assume that a constructor expression is implict (was inserted by
@@ -149,7 +149,7 @@ public:
         return isa<ImplicitCastExpr>(E);
       };
 
-      bool IsExplicit = !isImplicitExpr(ASTNode.OrigE);
+      bool IsExplicit = !IsImplicitExpr(ASTNode.OrigE);
       // Find and add definition declarations (for GoToDefinition).
       // We don't use parameter `D`, as Parameter `D` is the canonical
       // declaration, which is the first declaration of a redeclarable
@@ -794,7 +794,8 @@ std::vector<SymbolDetails> getSymbolInfo(ParsedAST &AST, Position Pos) {
     SymbolDetails NewMacro;
     NewMacro.name = Macro.Name;
     llvm::SmallString<32> USR;
-    if (!index::generateUSRForMacro(NewMacro.name, Loc, SM, USR)) {
+    if (!index::generateUSRForMacro(NewMacro.name,
+                                    Macro.Info->getDefinitionLoc(), SM, USR)) {
       NewMacro.USR = USR.str();
       NewMacro.ID = SymbolID(NewMacro.USR);
     }

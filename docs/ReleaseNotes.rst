@@ -67,11 +67,24 @@ The improvements are...
 Improvements to clang-tidy
 --------------------------
 
+- New :doc:`abseil-duration-addition
+  <clang-tidy/checks/abseil-duration-addition>` check.
+
+  Checks for cases where addition should be performed in the ``absl::Time``
+  domain.
+
 - New :doc:`abseil-duration-conversion-cast
   <clang-tidy/checks/abseil-duration-conversion-cast>` check.
 
   Checks for casts of ``absl::Duration`` conversion functions, and recommends
   the right conversion function instead.
+
+- New :doc:`google-readability-avoid-underscore-in-googletest-name
+  <clang-tidy/checks/google-readability-avoid-underscore-in-googletest-name>`
+  check.
+
+  Checks whether there are underscores in googletest test and test case names in
+  test macros, which is prohibited by the Googletest FAQ.
 
 Improvements to include-fixer
 -----------------------------
