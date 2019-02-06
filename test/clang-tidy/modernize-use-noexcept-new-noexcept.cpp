@@ -51,12 +51,14 @@ void instantiate() {
 
 void lambdas() {
   auto L1 = []() { return 42; };
+  // CHECK-MESSAGES: :[[@LINE-1]]:16: warning: this function can not throw an exception, consider adding 'noexcept'
   auto L2 = []() { throw 42; };
 
   auto L3 = []() { undefined(); };
   // FIXME: False positive, we cant say its noexcept because undefined()
   // can not be proven to be noexcept.
   auto L4 = []() { undefinedNoexcept(); };
+  // CHECK-MESSAGES: :[[@LINE-1]]:16: warning: this function can not throw an exception, consider adding 'noexcept'
 
   auto L5 = []() noexcept { return 42; };
   auto L6 = []() noexcept { undefinedNoexcept(); };
