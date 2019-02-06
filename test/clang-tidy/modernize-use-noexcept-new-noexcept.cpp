@@ -30,6 +30,10 @@ struct ConstructorWithNoexcept {
   int Member;
 };
 
+struct VirtualMethods {
+  virtual int doesNotThrowButOverriderMaybe() const { return 42; }
+};
+
 template <typename T>
 void nonThrowingTemplateUnknown();
 
@@ -43,4 +47,17 @@ void instantiate() {
   (void)nonThrowingTemplateKnown<int>();
   (void)nonThrowingTemplateKnown<float>();
   (void)nonThrowingTemplateKnown<double>();
+}
+
+void lambdas() {
+  auto L1 = []() { return 42; };
+  auto L2 = []() { throw 42; };
+
+  auto L3 = []() { undefined(); };
+  // FIXME: False positive, we cant say its noexcept because undefined()
+  // can not be proven to be noexcept.
+  auto L4 = []() { undefinedNoexcept(); };
+
+  auto L5 = []() noexcept { return 42; };
+  auto L6 = []() noexcept { undefinedNoexcept(); };
 }

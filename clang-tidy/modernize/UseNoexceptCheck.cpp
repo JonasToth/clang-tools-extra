@@ -94,6 +94,13 @@ void UseNoexceptCheck::check(const MatchFinder::MatchResult &Result) {
                   .getExceptionSpecRange();
   } else if (const auto *PotentialNoexcept =
                  Result.Nodes.getNodeAs<FunctionDecl>("potentialNoexcept")) {
+    // `virtual` methods should not add `noexcept`, even if they could as
+    // on of its overriders could throw an exception. Having `noexcept`
+    // in these cases is a design decision.
+    if (const auto *MDecl = dyn_cast<CXXMethodDecl>(PotentialNoexcept))
+      if (MDecl->isVirtual())
+        return;
+
     if (!Analyzer.throwsException(PotentialNoexcept) &&
         PotentialNoexcept->getBeginLoc().isValid())
       diag(PotentialNoexcept->getBeginLoc(),
