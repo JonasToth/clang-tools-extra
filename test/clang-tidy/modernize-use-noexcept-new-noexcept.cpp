@@ -2,6 +2,7 @@
 // RUN:   -config="{CheckOptions: [{key: modernize-use-noexcept.AddMissingNoexcept, value: 1}]}" \
 // RUN:   -- -std=c++11 -fexceptions
 
+extern void conceptuallyUnknown();
 void undefined();
 void undefinedNoexcept() noexcept;
 
@@ -62,4 +63,6 @@ void lambdas() {
 
   auto L5 = []() noexcept { return 42; };
   auto L6 = []() noexcept { undefinedNoexcept(); };
+
+  auto L7 = []() { conceptuallyUnknown(); undefinedNoexcept(); };
 }
