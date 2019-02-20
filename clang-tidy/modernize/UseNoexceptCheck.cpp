@@ -101,7 +101,8 @@ void UseNoexceptCheck::check(const MatchFinder::MatchResult &Result) {
       if (MDecl->isVirtual())
         return;
 
-    if (!Analyzer.throwsException(PotentialNoexcept) &&
+    if (Analyzer.analyze(PotentialNoexcept).getBehaviour() ==
+            utils::ExceptionAnalyzer::State::NotThrowing &&
         PotentialNoexcept->getBeginLoc().isValid())
       diag(PotentialNoexcept->getBeginLoc(),
            "this function can not throw an exception, consider adding "
