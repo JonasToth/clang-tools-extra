@@ -58,9 +58,11 @@ void lambdas() {
   auto L3 = []() { undefined(); };
   auto L4 = []() { undefinedNoexcept(); };
   // CHECK-MESSAGES: :[[@LINE-1]]:16: warning: this function can not throw an exception, consider adding 'noexcept'
+  auto L5 = []() {};
+  // CHECK-MESSAGES: :[[@LINE-1]]:16: warning: this function can not throw an exception, consider adding 'noexcept'
 
-  auto L5 = []() noexcept { return 42; };
-  auto L6 = []() noexcept { undefinedNoexcept(); };
+  auto L6 = []() noexcept { return 42; };
+  auto L7 = []() noexcept { undefinedNoexcept(); };
 
-  auto L7 = []() { conceptuallyUnknown(); undefinedNoexcept(); };
+  auto L8 = []() { conceptuallyUnknown(); undefinedNoexcept(); };
 }
