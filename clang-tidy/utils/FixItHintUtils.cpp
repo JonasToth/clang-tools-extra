@@ -79,7 +79,8 @@ static std::string buildQualifier(DeclSpec::TQ Qualifier,
                                   bool WhitespaceBefore = false) {
   if (WhitespaceBefore)
     return (llvm::Twine(' ') + DeclSpec::getSpecifierName(Qualifier)).str();
-  return (llvm::Twine(DeclSpec::getSpecifierName(Qualifier)) + ' ').str();
+  return (llvm::Twine(DeclSpec::getSpecifierName(Qualifier)) + llvm::Twine(' '))
+      .str();
 }
 
 static Optional<FixItHint> changeValue(const VarDecl &Var,

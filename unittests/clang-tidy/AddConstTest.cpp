@@ -12,8 +12,7 @@ namespace {
 using namespace clang::ast_matchers;
 using namespace utils::fixit;
 
-template <QualifierTarget CT = QualifierTarget::Pointee,
-          QualifierPolicy CP = QualifierPolicy::Left>
+template <QualifierTarget CT, QualifierPolicy CP>
 class ConstTransform : public ClangTidyCheck {
 public:
   ConstTransform(StringRef CheckName, ClangTidyContext *Context)
@@ -49,8 +48,6 @@ using ValueRTransform =
 // ----------------------------------------------------------------------------
 // Test Value-like types. Everything with indirection is done later.
 // ----------------------------------------------------------------------------
-
-// TODO: Template-code
 
 TEST(Values, Builtin) {
   StringRef Snippet = "int target = 0;";
@@ -856,52 +853,52 @@ TEST(Template, StructReference) {
             runCheckOnCode<PointeeRTransform>(Cat(S)));
 }
 TEST(Template, DependentReturnFunction) {
-    StringRef TS = "template <typename T> struct TS { using value_type = T; };";
-    StringRef T = "template <typename T> void foo() ";
-    StringRef S = "{ typename T::value_type target; }";
-    auto Cat = [&TS, &T](StringRef S) { return (TS + T + S).str(); };
+  StringRef TS = "template <typename T> struct TS { using value_type = T; };";
+  StringRef T = "template <typename T> void foo() ";
+  StringRef S = "{ typename T::value_type target; }";
+  auto Cat = [&TS, &T](StringRef S) { return (TS + T + S).str(); };
 
-    EXPECT_EQ(Cat("{ const typename T::value_type target; }"),
-              runCheckOnCode<ValueLTransform>(Cat(S)));
-    EXPECT_EQ(Cat("{ typename T::value_type const target; }"),
-              runCheckOnCode<ValueRTransform>(Cat(S)));
+  EXPECT_EQ(Cat("{ const typename T::value_type target; }"),
+            runCheckOnCode<ValueLTransform>(Cat(S)));
+  EXPECT_EQ(Cat("{ typename T::value_type const target; }"),
+            runCheckOnCode<ValueRTransform>(Cat(S)));
 
-    EXPECT_EQ(Cat("{ const typename T::value_type target; }"),
-              runCheckOnCode<PointeeLTransform>(Cat(S)));
-    EXPECT_EQ(Cat("{ typename T::value_type const target; }"),
-              runCheckOnCode<PointeeRTransform>(Cat(S)));
+  EXPECT_EQ(Cat("{ const typename T::value_type target; }"),
+            runCheckOnCode<PointeeLTransform>(Cat(S)));
+  EXPECT_EQ(Cat("{ typename T::value_type const target; }"),
+            runCheckOnCode<PointeeRTransform>(Cat(S)));
 }
 TEST(Template, DependentReturnPointerFunction) {
-    StringRef TS = "template <typename T> struct TS { using value_type = T; };";
-    StringRef T = "template <typename T> void foo() ";
-    StringRef S = "{ typename T::value_type *target; }";
-    auto Cat = [&TS, &T](StringRef S) { return (TS + T + S).str(); };
+  StringRef TS = "template <typename T> struct TS { using value_type = T; };";
+  StringRef T = "template <typename T> void foo() ";
+  StringRef S = "{ typename T::value_type *target; }";
+  auto Cat = [&TS, &T](StringRef S) { return (TS + T + S).str(); };
 
-    EXPECT_EQ(Cat("{ typename T::value_type *const target; }"),
-              runCheckOnCode<ValueLTransform>(Cat(S)));
-    EXPECT_EQ(Cat("{ typename T::value_type *const target; }"),
-              runCheckOnCode<ValueRTransform>(Cat(S)));
+  EXPECT_EQ(Cat("{ typename T::value_type *const target; }"),
+            runCheckOnCode<ValueLTransform>(Cat(S)));
+  EXPECT_EQ(Cat("{ typename T::value_type *const target; }"),
+            runCheckOnCode<ValueRTransform>(Cat(S)));
 
-    EXPECT_EQ(Cat("{ const typename T::value_type *target; }"),
-              runCheckOnCode<PointeeLTransform>(Cat(S)));
-    EXPECT_EQ(Cat("{ typename T::value_type  const*target; }"),
-              runCheckOnCode<PointeeRTransform>(Cat(S)));
+  EXPECT_EQ(Cat("{ const typename T::value_type *target; }"),
+            runCheckOnCode<PointeeLTransform>(Cat(S)));
+  EXPECT_EQ(Cat("{ typename T::value_type  const*target; }"),
+            runCheckOnCode<PointeeRTransform>(Cat(S)));
 }
 TEST(Template, DependentReturnReferenceFunction) {
-    StringRef TS = "template <typename T> struct TS { using value_type = T; };";
-    StringRef T = "template <typename T> void foo(T& f) ";
-    StringRef S = "{ typename T::value_type &target = f; }";
-    auto Cat = [&TS, &T](StringRef S) { return (TS + T + S).str(); };
+  StringRef TS = "template <typename T> struct TS { using value_type = T; };";
+  StringRef T = "template <typename T> void foo(T& f) ";
+  StringRef S = "{ typename T::value_type &target = f; }";
+  auto Cat = [&TS, &T](StringRef S) { return (TS + T + S).str(); };
 
-    EXPECT_EQ(Cat("{ const typename T::value_type &target = f; }"),
-              runCheckOnCode<ValueLTransform>(Cat(S)));
-    EXPECT_EQ(Cat("{ typename T::value_type  const&target = f; }"),
-              runCheckOnCode<ValueRTransform>(Cat(S)));
+  EXPECT_EQ(Cat("{ const typename T::value_type &target = f; }"),
+            runCheckOnCode<ValueLTransform>(Cat(S)));
+  EXPECT_EQ(Cat("{ typename T::value_type  const&target = f; }"),
+            runCheckOnCode<ValueRTransform>(Cat(S)));
 
-    EXPECT_EQ(Cat("{ const typename T::value_type &target = f; }"),
-              runCheckOnCode<PointeeLTransform>(Cat(S)));
-    EXPECT_EQ(Cat("{ typename T::value_type  const&target = f; }"),
-              runCheckOnCode<PointeeRTransform>(Cat(S)));
+  EXPECT_EQ(Cat("{ const typename T::value_type &target = f; }"),
+            runCheckOnCode<PointeeLTransform>(Cat(S)));
+  EXPECT_EQ(Cat("{ typename T::value_type  const&target = f; }"),
+            runCheckOnCode<PointeeRTransform>(Cat(S)));
 }
 } // namespace test
 } // namespace tidy
