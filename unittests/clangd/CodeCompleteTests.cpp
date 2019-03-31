@@ -1,9 +1,8 @@
 //===-- CodeCompleteTests.cpp -----------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -17,6 +16,8 @@
 #include "SourceCode.h"
 #include "SyncAPI.h"
 #include "TestFS.h"
+#include "TestIndex.h"
+#include "TestTU.h"
 #include "index/MemIndex.h"
 #include "clang/Sema/CodeCompleteConsumer.h"
 #include "llvm/Support/Error.h"
@@ -138,53 +139,6 @@ CodeCompleteResult completions(llvm::StringRef Text,
                      FilePath);
 }
 
-std::string replace(llvm::StringRef Haystack, llvm::StringRef Needle,
-                    llvm::StringRef Repl) {
-  std::string Result;
-  llvm::raw_string_ostream OS(Result);
-  std::pair<llvm::StringRef, llvm::StringRef> Split;
-  for (Split = Haystack.split(Needle); !Split.second.empty();
-       Split = Split.first.split(Needle))
-    OS << Split.first << Repl;
-  Result += Split.first;
-  OS.flush();
-  return Result;
-}
-
-// Helpers to produce fake index symbols for memIndex() or completions().
-// USRFormat is a regex replacement string for the unqualified part of the USR.
-Symbol sym(llvm::StringRef QName, index::SymbolKind Kind,
-           llvm::StringRef USRFormat) {
-  Symbol Sym;
-  std::string USR = "c:"; // We synthesize a few simple cases of USRs by hand!
-  size_t Pos = QName.rfind("::");
-  if (Pos == llvm::StringRef::npos) {
-    Sym.Name = QName;
-    Sym.Scope = "";
-  } else {
-    Sym.Name = QName.substr(Pos + 2);
-    Sym.Scope = QName.substr(0, Pos + 2);
-    USR += "@N@" + replace(QName.substr(0, Pos), "::", "@N@"); // ns:: -> @N@ns
-  }
-  USR += llvm::Regex("^.*$").sub(USRFormat, Sym.Name); // e.g. func -> @F@func#
-  Sym.ID = SymbolID(USR);
-  Sym.SymInfo.Kind = Kind;
-  Sym.Flags |= Symbol::IndexedForCodeCompletion;
-  Sym.Origin = SymbolOrigin::Static;
-  return Sym;
-}
-Symbol func(llvm::StringRef Name) { // Assumes the function has no args.
-  return sym(Name, index::SymbolKind::Function, "@F@\\0#"); // no args
-}
-Symbol cls(llvm::StringRef Name) {
-  return sym(Name, index::SymbolKind::Class, "@S@\\0");
-}
-Symbol var(llvm::StringRef Name) {
-  return sym(Name, index::SymbolKind::Variable, "@\\0");
-}
-Symbol ns(llvm::StringRef Name) {
-  return sym(Name, index::SymbolKind::Namespace, "@N@\\0");
-}
 Symbol withReferences(int N, Symbol S) {
   S.References = N;
   return S;
@@ -692,6 +646,36 @@ TEST(CompletionTest, CompletionInPreamble) {
   EXPECT_THAT(Results, ElementsAre(Named("ifndef")));
 }
 
+TEST(CompletionTest, DynamicIndexIncludeInsertion) {
+  MockFSProvider FS;
+  MockCompilationDatabase CDB;
+  IgnoreDiagnostics DiagConsumer;
+  ClangdServer::Options Opts = ClangdServer::optsForTest();
+  Opts.BuildDynamicSymbolIndex = true;
+  ClangdServer Server(CDB, FS, DiagConsumer, Opts);
+
+  FS.Files[testPath("foo_header.h")] = R"cpp(
+    struct Foo {
+       // Member doc
+       int foo();
+    };
+  )cpp";
+  const std::string FileContent(R"cpp(
+    #include "foo_header.h"
+    int Foo::foo() {
+      return 42;
+    }
+  )cpp");
+  Server.addDocument(testPath("foo_impl.cpp"), FileContent);
+  // Wait for the dynamic index being built.
+  ASSERT_TRUE(Server.blockUntilIdleForTest());
+  EXPECT_THAT(
+      completions(Server, "Foo^ foo;").Completions,
+      ElementsAre(AllOf(Named("Foo"),
+                        HasInclude('"' + testPath("foo_header.h") + '"'),
+                        InsertInclude())));
+}
+
 TEST(CompletionTest, DynamicIndexMultiFile) {
   MockFSProvider FS;
   MockCompilationDatabase CDB;
@@ -1111,8 +1095,10 @@ TEST(CompletionTest, UnresolvedQualifierIdQuery) {
       } // namespace ns
   )cpp");
 
-  EXPECT_THAT(Requests, ElementsAre(Field(&FuzzyFindRequest::Scopes,
-                                          UnorderedElementsAre("bar::"))));
+  EXPECT_THAT(Requests,
+              ElementsAre(Field(
+                  &FuzzyFindRequest::Scopes,
+                  UnorderedElementsAre("a::bar::", "ns::bar::", "bar::"))));
 }
 
 TEST(CompletionTest, UnresolvedNestedQualifierIdQuery) {
@@ -2318,6 +2304,66 @@ TEST(CompletionTest, ObjectiveCMethodTwoArgumentsFromMiddle) {
   EXPECT_THAT(C, ElementsAre(ReturnType("id")));
   EXPECT_THAT(C, ElementsAre(Signature("(unsigned int)")));
   EXPECT_THAT(C, ElementsAre(SnippetSuffix("${1:(unsigned int)}")));
+}
+
+TEST(CompletionTest, WorksWithNullType) {
+  auto R = completions(R"cpp(
+    int main() {
+      for (auto [loopVar] : y ) { // y has to be unresolved.
+        int z = loopV^;
+      }
+    }
+  )cpp");
+  EXPECT_THAT(R.Completions, ElementsAre(Named("loopVar")));
+}
+
+TEST(CompletionTest, UsingDecl) {
+  const char *Header(R"cpp(
+    void foo(int);
+    namespace std {
+      using ::foo;
+    })cpp");
+  const char *Source(R"cpp(
+    void bar() {
+      std::^;
+    })cpp");
+  auto Index = TestTU::withHeaderCode(Header).index();
+  clangd::CodeCompleteOptions Opts;
+  Opts.Index = Index.get();
+  Opts.AllScopes = true;
+  auto R = completions(Source, {}, Opts);
+  EXPECT_THAT(R.Completions,
+              ElementsAre(AllOf(Scope("std::"), Named("foo"),
+                                Kind(CompletionItemKind::Reference))));
+}
+
+TEST(CompletionTest, ScopeIsUnresolved) {
+  clangd::CodeCompleteOptions Opts = {};
+  Opts.AllScopes = true;
+
+  auto Results = completions(R"cpp(
+    namespace a {
+    void f() { b::X^ }
+    }
+  )cpp",
+                             {cls("a::b::XYZ")}, Opts);
+  EXPECT_THAT(Results.Completions,
+              UnorderedElementsAre(AllOf(Qualifier(""), Named("XYZ"))));
+}
+
+TEST(CompletionTest, NestedScopeIsUnresolved) {
+  clangd::CodeCompleteOptions Opts = {};
+  Opts.AllScopes = true;
+
+  auto Results = completions(R"cpp(
+    namespace a {
+    namespace b {}
+    void f() { b::c::X^ }
+    }
+  )cpp",
+                             {cls("a::b::c::XYZ")}, Opts);
+  EXPECT_THAT(Results.Completions,
+              UnorderedElementsAre(AllOf(Qualifier(""), Named("XYZ"))));
 }
 
 } // namespace

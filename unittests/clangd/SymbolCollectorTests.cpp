@@ -1,9 +1,8 @@
 //===-- SymbolCollectorTests.cpp  -------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -213,6 +212,12 @@ public:
         return WrapperFrontendAction::CreateASTConsumer(CI, InFile);
       }
 
+      bool BeginInvocation(CompilerInstance &CI) override {
+        // Make the compiler parse all comments.
+        CI.getLangOpts().CommentOpts.ParseAllComments = true;
+        return WrapperFrontendAction::BeginInvocation(CI);
+      }
+
     private:
       index::IndexingOptions IndexOpts;
       CommentHandler *PragmaHandler;
@@ -326,9 +331,6 @@ TEST_F(SymbolCollectorTest, CollectSymbols) {
     // Namespace alias
     namespace baz = bar;
 
-    // FIXME: using declaration is not supported as the IndexAction will ignore
-    // implicit declarations (the implicit using shadow declaration) by default,
-    // and there is no way to customize this behavior at the moment.
     using bar::v2;
     } // namespace foo
   )";
@@ -355,6 +357,7 @@ TEST_F(SymbolCollectorTest, CollectSymbols) {
                    AllOf(QName("foo::int32_t"), ForCodeCompletion(true)),
                    AllOf(QName("foo::v1"), ForCodeCompletion(true)),
                    AllOf(QName("foo::bar::v2"), ForCodeCompletion(true)),
+                   AllOf(QName("foo::v2"), ForCodeCompletion(true)),
                    AllOf(QName("foo::baz"), ForCodeCompletion(true))}));
 }
 
@@ -389,17 +392,25 @@ TEST_F(SymbolCollectorTest, FileLocal) {
 
 TEST_F(SymbolCollectorTest, Template) {
   Annotations Header(R"(
-    // Template is indexed, specialization and instantiation is not.
-    template <class T> struct [[Tmpl]] {T $xdecl[[x]] = 0;};
-    template <> struct Tmpl<int> {};
-    extern template struct Tmpl<float>;
-    template struct Tmpl<double>;
+    // Primary template and explicit specialization are indexed, instantiation
+    // is not.
+    template <class T, class U> struct [[Tmpl]] {T $xdecl[[x]] = 0;};
+    template <> struct $specdecl[[Tmpl]]<int, bool> {};
+    template <class U> struct $partspecdecl[[Tmpl]]<bool, U> {};
+    extern template struct Tmpl<float, bool>;
+    template struct Tmpl<double, bool>;
   )");
   runSymbolCollector(Header.code(), /*Main=*/"");
   EXPECT_THAT(Symbols,
-              UnorderedElementsAreArray(
-                  {AllOf(QName("Tmpl"), DeclRange(Header.range())),
-                   AllOf(QName("Tmpl::x"), DeclRange(Header.range("xdecl")))}));
+              UnorderedElementsAre(
+                  AllOf(QName("Tmpl"), DeclRange(Header.range()),
+                        ForCodeCompletion(true)),
+                  AllOf(QName("Tmpl"), DeclRange(Header.range("specdecl")),
+                        ForCodeCompletion(false)),
+                  AllOf(QName("Tmpl"), DeclRange(Header.range("partspecdecl")),
+                        ForCodeCompletion(false)),
+                  AllOf(QName("Tmpl::x"), DeclRange(Header.range("xdecl")),
+                        ForCodeCompletion(false))));
 }
 
 TEST_F(SymbolCollectorTest, ObjCSymbols) {
@@ -436,6 +447,23 @@ TEST_F(SymbolCollectorTest, ObjCSymbols) {
                   QName("Person"), QName("Person::someMethodName:lastName:"),
                   QName("MyCategory"), QName("Person::someMethodName2:"),
                   QName("MyProtocol"), QName("MyProtocol::someMethodName3:")));
+}
+
+TEST_F(SymbolCollectorTest, ObjCPropertyImpl) {
+  const std::string Header = R"(
+    @interface Container
+    @property(nonatomic) int magic;
+    @end
+
+    @implementation Container
+    @end
+  )";
+  TestFileName = testPath("test.m");
+  runSymbolCollector(Header, /*Main=*/"", {"-xobjective-c++"});
+  EXPECT_THAT(Symbols, Contains(QName("Container")));
+  EXPECT_THAT(Symbols, Contains(QName("Container::magic")));
+  // FIXME: Results also contain Container::_magic on some platforms.
+  //        Figure out why it's platform-dependent.
 }
 
 TEST_F(SymbolCollectorTest, Locations) {
@@ -692,6 +720,31 @@ TEST_F(SymbolCollectorTest, SymbolsInMainFile) {
               UnorderedElementsAre(QName("Foo"), QName("f1"), QName("f2"),
                                    QName("ff"), QName("foo"), QName("foo::Bar"),
                                    QName("main_f")));
+}
+
+TEST_F(SymbolCollectorTest, Documentation) {
+  const std::string Header = R"(
+    // Doc Foo
+    class Foo {
+      // Doc f
+      int f();
+    };
+  )";
+  CollectorOpts.StoreAllDocumentation = false;
+  runSymbolCollector(Header, /* Main */ "");
+  EXPECT_THAT(Symbols,
+              UnorderedElementsAre(
+                  AllOf(QName("Foo"), Doc("Doc Foo"), ForCodeCompletion(true)),
+                  AllOf(QName("Foo::f"), Doc(""), ReturnType(""),
+                        ForCodeCompletion(false))));
+
+  CollectorOpts.StoreAllDocumentation = true;
+  runSymbolCollector(Header, /* Main */ "");
+  EXPECT_THAT(Symbols,
+              UnorderedElementsAre(
+                  AllOf(QName("Foo"), Doc("Doc Foo"), ForCodeCompletion(true)),
+                  AllOf(QName("Foo::f"), Doc("Doc f"), ReturnType(""),
+                        ForCodeCompletion(false))));
 }
 
 TEST_F(SymbolCollectorTest, ClassMembers) {
@@ -1053,21 +1106,27 @@ TEST_F(SymbolCollectorTest, CollectMacros) {
 
     MAC(p);
   )");
-  const std::string Main = R"(
-    #define MAIN 1  // not indexed
-    USED(t);
-  )";
+
+  Annotations Main(R"(
+    #define $main[[MAIN]] 1
+     USED(t);
+  )");
   CollectorOpts.CountReferences = true;
   CollectorOpts.CollectMacro = true;
-  runSymbolCollector(Header.code(), Main);
-  EXPECT_THAT(Symbols,
-              UnorderedElementsAre(QName("p"), QName("t"),
-                                   AllOf(QName("X"), DeclURI(TestHeaderURI),
-                                         IncludeHeader(TestHeaderURI)),
-                                   AllOf(Labeled("MAC(x)"), RefCount(0),
-                                         DeclRange(Header.range("mac"))),
-                                   AllOf(Labeled("USED(y)"), RefCount(1),
-                                         DeclRange(Header.range("used")))));
+  runSymbolCollector(Header.code(), Main.code());
+  EXPECT_THAT(
+      Symbols,
+      UnorderedElementsAre(
+          QName("p"), QName("t"),
+          AllOf(QName("X"), DeclURI(TestHeaderURI),
+                IncludeHeader(TestHeaderURI)),
+          AllOf(Labeled("MAC(x)"), RefCount(0),
+
+                DeclRange(Header.range("mac")), VisibleOutsideFile()),
+          AllOf(Labeled("USED(y)"), RefCount(1),
+                DeclRange(Header.range("used")), VisibleOutsideFile()),
+          AllOf(Labeled("MAIN"), RefCount(0), DeclRange(Main.range("main")),
+                Not(VisibleOutsideFile()))));
 }
 
 TEST_F(SymbolCollectorTest, DeprecatedSymbols) {
@@ -1094,6 +1153,16 @@ TEST_F(SymbolCollectorTest, ImplementationDetail) {
               UnorderedElementsAre(
                   AllOf(QName("X_Y_Decl"), ImplementationDetail()),
                   AllOf(QName("Public"), Not(ImplementationDetail()))));
+}
+
+TEST_F(SymbolCollectorTest, UsingDecl) {
+  const char *Header = R"(
+  void foo();
+  namespace std {
+    using ::foo;
+  })";
+  runSymbolCollector(Header, /**/ "");
+  EXPECT_THAT(Symbols, Contains(QName("std::foo")));
 }
 
 } // namespace

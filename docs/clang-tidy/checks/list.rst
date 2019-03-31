@@ -4,17 +4,22 @@ Clang-Tidy Checks
 =================
 
 .. toctree::
+   abseil-duration-addition
    abseil-duration-comparison
+   abseil-duration-conversion-cast
    abseil-duration-division
    abseil-duration-factory-float
    abseil-duration-factory-scale
    abseil-duration-subtraction
+   abseil-duration-unnecessary-conversion
    abseil-faster-strsplit-delimiter
    abseil-no-internal-dependencies
    abseil-no-namespace
    abseil-redundant-strcat-calls
    abseil-str-cat-append
    abseil-string-find-startswith
+   abseil-time-comparison
+   abseil-time-subtraction
    abseil-upgrade-duration-conversions
    android-cloexec-accept
    android-cloexec-accept4
@@ -96,6 +101,7 @@ Clang-Tidy Checks
    cppcoreguidelines-avoid-magic-numbers (redirects to readability-magic-numbers) <cppcoreguidelines-avoid-magic-numbers>
    cppcoreguidelines-c-copy-assignment-signature (redirects to misc-unconventional-assign-operator) <cppcoreguidelines-c-copy-assignment-signature>
    cppcoreguidelines-const-correctness
+   cppcoreguidelines-explicit-virtual-functions (redirects to modernize-use-override) <cppcoreguidelines-explicit-virtual-functions>
    cppcoreguidelines-interfaces-global-init
    cppcoreguidelines-macro-usage
    cppcoreguidelines-narrowing-conversions
@@ -131,6 +137,7 @@ Clang-Tidy Checks
    google-objc-avoid-throwing-exception
    google-objc-function-naming
    google-objc-global-variable-declaration
+   google-readability-avoid-underscore-in-googletest-name
    google-readability-braces-around-statements (redirects to readability-braces-around-statements) <google-readability-braces-around-statements>
    google-readability-casting
    google-readability-function-size (redirects to readability-function-size) <google-readability-function-size>
@@ -221,6 +228,8 @@ Clang-Tidy Checks
    objc-avoid-spinlock
    objc-forbidden-subclassing
    objc-property-declaration
+   openmp-exception-escape
+   openmp-use-default-none
    performance-faster-string-find
    performance-for-range-copy
    performance-implicit-conversion-in-loop

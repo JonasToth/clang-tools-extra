@@ -1,18 +1,20 @@
 //===--- ClangdMain.cpp - clangd server loop ------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
+#include "Features.inc"
 #include "ClangdLSPServer.h"
 #include "Path.h"
+#include "Protocol.h"
 #include "Trace.h"
 #include "Transport.h"
 #include "index/Serialization.h"
 #include "clang/Basic/Version.h"
+#include "llvm/ADT/Optional.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
@@ -31,7 +33,7 @@ namespace clangd {
 static llvm::cl::opt<bool>
     UseDex("use-dex-index",
            llvm::cl::desc("Use experimental Dex dynamic index."),
-           llvm::cl::init(false), llvm::cl::Hidden);
+           llvm::cl::init(true), llvm::cl::Hidden);
 
 static llvm::cl::opt<Path> CompileCommandsDir(
     "compile-commands-dir",
@@ -163,7 +165,7 @@ static llvm::cl::opt<Path> IndexFile(
     "index-file",
     llvm::cl::desc(
         "Index file to build the static index. The file must have been created "
-        "by a compatible clangd-index.\n"
+        "by a compatible clangd-indexer.\n"
         "WARNING: This option is experimental only, and will be removed "
         "eventually. Don't rely on it."),
     llvm::cl::init(""), llvm::cl::Hidden);
@@ -201,6 +203,34 @@ static llvm::cl::opt<bool> EnableFunctionArgSnippets(
                    "placeholders for method parameters."),
     llvm::cl::init(CodeCompleteOptions().EnableFunctionArgSnippets));
 
+static llvm::cl::opt<std::string> ClangTidyChecks(
+    "clang-tidy-checks",
+    llvm::cl::desc(
+        "List of clang-tidy checks to run (this will override "
+        ".clang-tidy files). Only meaningful when -clang-tidy flag is on."),
+    llvm::cl::init(""));
+
+static llvm::cl::opt<bool> EnableClangTidy(
+    "clang-tidy",
+    llvm::cl::desc("Enable clang-tidy diagnostics."),
+    llvm::cl::init(false));
+
+static llvm::cl::opt<bool> SuggestMissingIncludes(
+    "suggest-missing-includes",
+    llvm::cl::desc("Attempts to fix diagnostic errors caused by missing "
+                   "includes using index."),
+    llvm::cl::init(true));
+
+static llvm::cl::opt<OffsetEncoding> ForceOffsetEncoding(
+    "offset-encoding",
+    llvm::cl::desc("Force the offsetEncoding used for character positions. "
+                   "This bypasses negotiation via client capabilities."),
+    llvm::cl::values(clEnumValN(OffsetEncoding::UTF8, "utf-8",
+                                "Offsets are in UTF-8 bytes"),
+                     clEnumValN(OffsetEncoding::UTF16, "utf-16",
+                                "Offsets are in UTF-16 code units")),
+    llvm::cl::init(OffsetEncoding::UnsupportedEncoding));
+
 namespace {
 
 /// \brief Supports a test URI scheme with relaxed constraints for lit tests.
@@ -222,9 +252,7 @@ public:
     Body = Body.ltrim('/');
     llvm::SmallVector<char, 16> Path(Body.begin(), Body.end());
     path::native(Path);
-    auto Err = fs::make_absolute(TestScheme::TestDir, Path);
-    if (Err)
-      llvm_unreachable("Failed to make absolute path in test scheme.");
+    fs::make_absolute(TestScheme::TestDir, Path);
     return std::string(Path.begin(), Path.end());
   }
 
@@ -254,6 +282,11 @@ const char TestScheme::TestDir[] = "/clangd-test";
 } // namespace
 } // namespace clangd
 } // namespace clang
+
+enum class ErrorResultCode : int {
+  NoShutdownRequest = 1,
+  CantRunAsXPCService = 2
+};
 
 int main(int argc, char *argv[]) {
   using namespace clang;
@@ -405,17 +438,46 @@ int main(int argc, char *argv[]) {
   CCOpts.EnableFunctionArgSnippets = EnableFunctionArgSnippets;
   CCOpts.AllScopes = AllScopesCompletion;
 
+  RealFileSystemProvider FSProvider;
   // Initialize and run ClangdLSPServer.
   // Change stdin to binary to not lose \r\n on windows.
   llvm::sys::ChangeStdinToBinary();
-  auto Transport = newJSONTransport(
-      stdin, llvm::outs(),
-      InputMirrorStream ? InputMirrorStream.getPointer() : nullptr, PrettyPrint,
-      InputStyle);
+
+  std::unique_ptr<Transport> TransportLayer;
+  if (getenv("CLANGD_AS_XPC_SERVICE")) {
+#if CLANGD_BUILD_XPC
+    TransportLayer = newXPCTransport();
+#else
+    llvm::errs() << "This clangd binary wasn't built with XPC support.\n";
+    return (int)ErrorResultCode::CantRunAsXPCService;
+#endif
+  } else {
+    TransportLayer = newJSONTransport(
+        stdin, llvm::outs(),
+        InputMirrorStream ? InputMirrorStream.getPointer() : nullptr,
+        PrettyPrint, InputStyle);
+  }
+
+  // Create an empty clang-tidy option.
+  std::unique_ptr<tidy::ClangTidyOptionsProvider> ClangTidyOptProvider;
+  if (EnableClangTidy) {
+    auto OverrideClangTidyOptions = tidy::ClangTidyOptions::getDefaults();
+    OverrideClangTidyOptions.Checks = ClangTidyChecks;
+    ClangTidyOptProvider = llvm::make_unique<tidy::FileOptionsProvider>(
+        tidy::ClangTidyGlobalOptions(),
+        /* Default */ tidy::ClangTidyOptions::getDefaults(),
+        /* Override */ OverrideClangTidyOptions, FSProvider.getFileSystem());
+  }
+  Opts.ClangTidyOptProvider = ClangTidyOptProvider.get();
+  Opts.SuggestMissingIncludes = SuggestMissingIncludes;
+  llvm::Optional<OffsetEncoding> OffsetEncodingFromFlag;
+  if (ForceOffsetEncoding != OffsetEncoding::UnsupportedEncoding)
+    OffsetEncodingFromFlag = ForceOffsetEncoding;
   ClangdLSPServer LSPServer(
-      *Transport, CCOpts, CompileCommandsDirPath,
-      /*UseDirBasedCDB=*/CompileArgsFrom == FilesystemCompileArgs, Opts);
-  constexpr int NoShutdownRequestErrorCode = 1;
+      *TransportLayer, FSProvider, CCOpts, CompileCommandsDirPath,
+      /*UseDirBasedCDB=*/CompileArgsFrom == FilesystemCompileArgs,
+      OffsetEncodingFromFlag, Opts);
   llvm::set_thread_name("clangd.main");
-  return LSPServer.run() ? 0 : NoShutdownRequestErrorCode;
+  return LSPServer.run() ? 0
+                         : static_cast<int>(ErrorResultCode::NoShutdownRequest);
 }

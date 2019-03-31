@@ -1,9 +1,8 @@
 //===--- SymbolCollector.cpp -------------------------------------*- C++-*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -12,8 +11,10 @@
 #include "CanonicalIncludes.h"
 #include "CodeComplete.h"
 #include "CodeCompletionStrings.h"
+#include "ExpectedTypes.h"
 #include "Logger.h"
 #include "SourceCode.h"
+#include "SymbolLocation.h"
 #include "URI.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclBase.h"
@@ -210,7 +211,7 @@ getTokenLocation(SourceLocation TokLoc, const SourceManager &SM,
 // the first seen declaration as canonical declaration is not a good enough
 // heuristic.
 bool isPreferredDeclaration(const NamedDecl &ND, index::SymbolRoleSet Roles) {
-  const auto& SM = ND.getASTContext().getSourceManager();
+  const auto &SM = ND.getASTContext().getSourceManager();
   return (Roles & static_cast<unsigned>(index::SymbolRole::Definition)) &&
          isa<TagDecl>(&ND) &&
          !SM.isWrittenInMainFile(SM.getExpansionLoc(ND.getLocation()));
@@ -218,13 +219,6 @@ bool isPreferredDeclaration(const NamedDecl &ND, index::SymbolRoleSet Roles) {
 
 RefKind toRefKind(index::SymbolRoleSet Roles) {
   return static_cast<RefKind>(static_cast<unsigned>(RefKind::All) & Roles);
-}
-
-template <class T> bool explicitTemplateSpecialization(const NamedDecl &ND) {
-  if (const auto *TD = dyn_cast<T>(&ND))
-    if (TD->getTemplateSpecializationKind() == TSK_ExplicitSpecialization)
-      return true;
-  return false;
 }
 
 } // namespace
@@ -278,10 +272,6 @@ bool SymbolCollector::shouldCollectSymbol(const NamedDecl &ND,
     if (!isa<RecordDecl>(DeclCtx))
       return false;
   }
-  if (explicitTemplateSpecialization<FunctionDecl>(ND) ||
-      explicitTemplateSpecialization<CXXRecordDecl>(ND) ||
-      explicitTemplateSpecialization<VarDecl>(ND))
-    return false;
 
   // Avoid indexing internal symbols in protobuf generated headers.
   if (isPrivateProtoDecl(ND))
@@ -303,6 +293,10 @@ bool SymbolCollector::handleDeclOccurence(
   if ((ASTNode.OrigD->getFriendObjectKind() !=
        Decl::FriendObjectKind::FOK_None) &&
       !(Roles & static_cast<unsigned>(index::SymbolRole::Definition)))
+    return true;
+  // Skip non-semantic references, we should start processing these when we
+  // decide to implement renaming with index support.
+  if ((Roles & static_cast<unsigned>(index::SymbolRole::NameReference)))
     return true;
   // A declaration created for a friend declaration should not be used as the
   // canonical declaration in the index. Use OrigD instead, unless we've already
@@ -332,8 +326,8 @@ bool SymbolCollector::handleDeclOccurence(
 
   // ND is the canonical (i.e. first) declaration. If it's in the main file,
   // then no public declaration was visible, so assume it's main-file only.
-  bool IsMainFileOnly = SM.isWrittenInMainFile(SM.getExpansionLoc(
-    ND->getBeginLoc()));
+  bool IsMainFileOnly =
+      SM.isWrittenInMainFile(SM.getExpansionLoc(ND->getBeginLoc()));
   if (!shouldCollectSymbol(*ND, *ASTCtx, Opts, IsMainFileOnly))
     return true;
   // Do not store references to main-file symbols.
@@ -348,19 +342,25 @@ bool SymbolCollector::handleDeclOccurence(
   if (!ID)
     return true;
 
-  const NamedDecl &OriginalDecl = *cast<NamedDecl>(ASTNode.OrigD);
+  // FIXME: ObjCPropertyDecl are not properly indexed here:
+  // - ObjCPropertyDecl may have an OrigD of ObjCPropertyImplDecl, which is
+  // not a NamedDecl.
+  auto *OriginalDecl = dyn_cast<NamedDecl>(ASTNode.OrigD);
+  if (!OriginalDecl)
+    return true;
+
   const Symbol *BasicSymbol = Symbols.find(*ID);
   if (!BasicSymbol) // Regardless of role, ND is the canonical declaration.
     BasicSymbol = addDeclaration(*ND, std::move(*ID), IsMainFileOnly);
-  else if (isPreferredDeclaration(OriginalDecl, Roles))
+  else if (isPreferredDeclaration(*OriginalDecl, Roles))
     // If OriginalDecl is preferred, replace the existing canonical
     // declaration (e.g. a class forward declaration). There should be at most
     // one duplicate as we expect to see only one preferred declaration per
     // TU, because in practice they are definitions.
-    BasicSymbol = addDeclaration(OriginalDecl, std::move(*ID), IsMainFileOnly);
+    BasicSymbol = addDeclaration(*OriginalDecl, std::move(*ID), IsMainFileOnly);
 
   if (Roles & static_cast<unsigned>(index::SymbolRole::Definition))
-    addDefinition(OriginalDecl, *BasicSymbol);
+    addDefinition(*OriginalDecl, *BasicSymbol);
   return true;
 }
 
@@ -374,11 +374,19 @@ bool SymbolCollector::handleMacroOccurence(const IdentifierInfo *Name,
 
   const auto &SM = PP->getSourceManager();
   auto DefLoc = MI->getDefinitionLoc();
-  if (SM.isInMainFile(SM.getExpansionLoc(DefLoc)))
-    return true;
+
   // Header guards are not interesting in index. Builtin macros don't have
   // useful locations and are not needed for code completions.
   if (MI->isUsedForHeaderGuard() || MI->isBuiltinMacro())
+    return true;
+
+  // Skip main-file symbols if we are not collecting them.
+  bool IsMainFileSymbol = SM.isInMainFile(SM.getExpansionLoc(DefLoc));
+  if (IsMainFileSymbol && !Opts.CollectMainFileSymbols)
+    return false;
+
+  // Also avoid storing predefined macros like __DBL_MIN__.
+  if (SM.isWrittenInBuiltinFile(DefLoc))
     return true;
 
   // Mark the macro as referenced if this is a reference coming from the main
@@ -405,7 +413,10 @@ bool SymbolCollector::handleMacroOccurence(const IdentifierInfo *Name,
   Symbol S;
   S.ID = std::move(*ID);
   S.Name = Name->getName();
-  S.Flags |= Symbol::IndexedForCodeCompletion;
+  if (!IsMainFileSymbol) {
+    S.Flags |= Symbol::IndexedForCodeCompletion;
+    S.Flags |= Symbol::VisibleOutsideFile;
+  }
   S.SymInfo = index::getSymbolInfoForMacro(*MI);
   std::string FileURI;
   // FIXME: use the result to filter out symbols.
@@ -505,8 +516,7 @@ void SymbolCollector::finish() {
   FilesToIndexCache.clear();
 }
 
-const Symbol *SymbolCollector::addDeclaration(const NamedDecl &ND,
-                                              SymbolID ID,
+const Symbol *SymbolCollector::addDeclaration(const NamedDecl &ND, SymbolID ID,
                                               bool IsMainFileOnly) {
   auto &Ctx = ND.getASTContext();
   auto &SM = Ctx.getSourceManager();
@@ -550,18 +560,13 @@ const Symbol *SymbolCollector::addDeclaration(const NamedDecl &ND,
   std::string Documentation =
       formatDocumentation(*CCS, getDocComment(Ctx, SymbolCompletion,
                                               /*CommentsFromHeaders=*/true));
-  // For symbols not indexed for completion (class members), we also store their
-  // docs in the index, because Sema doesn't load the docs from the preamble, we
-  // rely on the index to get the docs.
-  // FIXME: this can be optimized by only storing the docs in dynamic index --
-  // dynamic index should index these symbols when Sema completes a member
-  // completion.
-  S.Documentation = Documentation;
   if (!(S.Flags & Symbol::IndexedForCodeCompletion)) {
+    if (Opts.StoreAllDocumentation)
+      S.Documentation = Documentation;
     Symbols.insert(S);
     return Symbols.find(S.ID);
   }
-
+  S.Documentation = Documentation;
   std::string Signature;
   std::string SnippetSuffix;
   getSignature(*CCS, &Signature, &SnippetSuffix);

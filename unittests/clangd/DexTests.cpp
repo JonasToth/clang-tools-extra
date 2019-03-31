@@ -1,9 +1,8 @@
 //===-- DexTests.cpp  ---------------------------------*- C++ -*-----------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -687,6 +686,63 @@ TEST(DexTests, Refs) {
     Files.push_back(R.Location.FileURI);
   });
   EXPECT_THAT(Files, ElementsAre(AnyOf("foo.h", "foo.cc")));
+}
+
+TEST(DexTest, PreferredTypesBoosting) {
+  auto Sym1 = symbol("t1");
+  Sym1.Type = "T1";
+  auto Sym2 = symbol("t2");
+  Sym2.Type = "T2";
+
+  std::vector<Symbol> Symbols{Sym1, Sym2};
+  Dex I(Symbols, RefSlab());
+
+  FuzzyFindRequest Req;
+  Req.AnyScope = true;
+  Req.Query = "t";
+  // The best candidate can change depending on the preferred type.
+  Req.Limit = 1;
+
+  Req.PreferredTypes = {Sym1.Type};
+  EXPECT_THAT(match(I, Req), ElementsAre("t1"));
+
+  Req.PreferredTypes = {Sym2.Type};
+  EXPECT_THAT(match(I, Req), ElementsAre("t2"));
+}
+
+TEST(DexTest, TemplateSpecialization) {
+  SymbolSlab::Builder B;
+
+  Symbol S = symbol("TempSpec");
+  S.ID = SymbolID("0");
+  B.insert(S);
+
+  S = symbol("TempSpec");
+  S.ID = SymbolID("1");
+  S.SymInfo.Properties = static_cast<index::SymbolPropertySet>(
+      index::SymbolProperty::TemplateSpecialization);
+  B.insert(S);
+
+  S = symbol("TempSpec");
+  S.ID = SymbolID("2");
+  S.SymInfo.Properties = static_cast<index::SymbolPropertySet>(
+      index::SymbolProperty::TemplatePartialSpecialization);
+  B.insert(S);
+
+  auto I = dex::Dex::build(std::move(B).build(), RefSlab());
+  FuzzyFindRequest Req;
+  Req.Query = "TempSpec";
+  Req.AnyScope = true;
+
+  std::vector<Symbol> Symbols;
+  I->fuzzyFind(Req, [&Symbols](const Symbol &Sym) { Symbols.push_back(Sym); });
+  EXPECT_EQ(Symbols.size(), 1U);
+  EXPECT_FALSE(Symbols.front().SymInfo.Properties &
+               static_cast<index::SymbolPropertySet>(
+                   index::SymbolProperty::TemplateSpecialization));
+  EXPECT_FALSE(Symbols.front().SymInfo.Properties &
+               static_cast<index::SymbolPropertySet>(
+                   index::SymbolProperty::TemplatePartialSpecialization));
 }
 
 } // namespace

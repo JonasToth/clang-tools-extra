@@ -1,9 +1,8 @@
 //===--- TUScheduler.cpp -----------------------------------------*-C++-*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 // For each file, managed by TUScheduler, we create a single ASTWorker that
@@ -46,6 +45,7 @@
 #include "Cancellation.h"
 #include "Logger.h"
 #include "Trace.h"
+#include "index/CanonicalIncludes.h"
 #include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Frontend/PCHContainerOperations.h"
 #include "llvm/ADT/ScopeExit.h"
@@ -62,7 +62,7 @@ using std::chrono::steady_clock;
 
 namespace {
 class ASTWorker;
-}
+} // namespace
 
 static clang::clangd::Key<std::string> kFileBeingProcessed;
 
@@ -386,8 +386,9 @@ void ASTWorker::update(ParseInputs Inputs, WantDiagnostics WantDiags) {
     std::shared_ptr<const PreambleData> NewPreamble = buildPreamble(
         FileName, *Invocation, OldPreamble, OldCommand, Inputs, PCHs,
         StorePreambleInMemory,
-        [this](ASTContext &Ctx, std::shared_ptr<clang::Preprocessor> PP) {
-          Callbacks.onPreambleAST(FileName, Ctx, std::move(PP));
+        [this](ASTContext &Ctx, std::shared_ptr<clang::Preprocessor> PP,
+               const CanonicalIncludes &CanonIncludes) {
+          Callbacks.onPreambleAST(FileName, Ctx, std::move(PP), CanonIncludes);
         });
 
     bool CanReuseAST = InputsAreTheSame && (OldPreamble == NewPreamble);

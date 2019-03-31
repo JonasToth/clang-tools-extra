@@ -1,26 +1,28 @@
 //===--- ClangdServer.cpp - Main clangd server code --------------*- C++-*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===-------------------------------------------------------------------===//
 
 #include "ClangdServer.h"
+#include "ClangdUnit.h"
 #include "CodeComplete.h"
 #include "FindSymbols.h"
 #include "Headers.h"
 #include "SourceCode.h"
 #include "Trace.h"
-#include "XRefs.h"
+#include "index/CanonicalIncludes.h"
 #include "index/FileIndex.h"
 #include "index/Merge.h"
+#include "refactor/Tweak.h"
 #include "clang/Format/Format.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Tooling/CompilationDatabase.h"
+#include "clang/Tooling/Core/Replacement.h"
 #include "clang/Tooling/Refactoring/RefactoringResultConsumer.h"
 #include "clang/Tooling/Refactoring/Rename/RenamingAction.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -28,20 +30,17 @@
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Errc.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
 #include <future>
+#include <memory>
 #include <mutex>
 
 namespace clang {
 namespace clangd {
 namespace {
-
-std::string getStandardResourceDir() {
-  static int Dummy; // Just an address in this process.
-  return CompilerInvocation::GetResourcesPath("clangd", (void *)&Dummy);
-}
 
 class RefactoringResultCollector final
     : public tooling::RefactoringResultConsumer {
@@ -71,9 +70,10 @@ struct UpdateIndexCallbacks : public ParsingCallbacks {
       : FIndex(FIndex), DiagConsumer(DiagConsumer) {}
 
   void onPreambleAST(PathRef Path, ASTContext &Ctx,
-                     std::shared_ptr<clang::Preprocessor> PP) override {
+                     std::shared_ptr<clang::Preprocessor> PP,
+                     const CanonicalIncludes &CanonIncludes) override {
     if (FIndex)
-      FIndex->updatePreamble(Path, Ctx, std::move(PP));
+      FIndex->updatePreamble(Path, Ctx, std::move(PP), CanonIncludes);
   }
 
   void onMainAST(PathRef Path, ParsedAST &AST) override {
@@ -108,11 +108,11 @@ ClangdServer::ClangdServer(const GlobalCompilationDatabase &CDB,
                            DiagnosticsConsumer &DiagConsumer,
                            const Options &Opts)
     : CDB(CDB), FSProvider(FSProvider),
-      ResourceDir(Opts.ResourceDir ? *Opts.ResourceDir
-                                   : getStandardResourceDir()),
       DynamicIdx(Opts.BuildDynamicSymbolIndex
                      ? new FileIndex(Opts.HeavyweightDynamicSymbolIndex)
                      : nullptr),
+      ClangTidyOptProvider(Opts.ClangTidyOptProvider),
+      SuggestMissingIncludes(Opts.SuggestMissingIncludes),
       WorkspaceRoot(Opts.WorkspaceRoot),
       PCHs(std::make_shared<PCHContainerOperations>()),
       // Pass a callback into `WorkScheduler` to extract symbols from a newly
@@ -137,7 +137,7 @@ ClangdServer::ClangdServer(const GlobalCompilationDatabase &CDB,
     AddIndex(Opts.StaticIndex);
   if (Opts.BackgroundIndex) {
     BackgroundIdx = llvm::make_unique<BackgroundIndex>(
-        Context::current().clone(), ResourceDir, FSProvider, CDB,
+        Context::current().clone(), FSProvider, CDB,
         BackgroundIndexStorage::createDiskBackedStorageFactory(),
         Opts.BackgroundIndexRebuildPeriodMs);
     AddIndex(BackgroundIdx.get());
@@ -148,14 +148,22 @@ ClangdServer::ClangdServer(const GlobalCompilationDatabase &CDB,
 
 void ClangdServer::addDocument(PathRef File, llvm::StringRef Contents,
                                WantDiagnostics WantDiags) {
+  ParseOptions Opts;
+  Opts.ClangTidyOpts = tidy::ClangTidyOptions::getDefaults();
+  if (ClangTidyOptProvider)
+    Opts.ClangTidyOpts = ClangTidyOptProvider->getOptions(File);
+  Opts.SuggestMissingIncludes = SuggestMissingIncludes;
   // FIXME: some build systems like Bazel will take time to preparing
   // environment to build the file, it would be nice if we could emit a
   // "PreparingBuild" status to inform users, it is non-trivial given the
   // current implementation.
-  WorkScheduler.update(File,
-                       ParseInputs{getCompileCommand(File),
-                                   FSProvider.getFileSystem(), Contents.str()},
-                       WantDiags);
+  ParseInputs Inputs;
+  Inputs.CompileCommand = getCompileCommand(File);
+  Inputs.FS = FSProvider.getFileSystem();
+  Inputs.Contents = Contents;
+  Inputs.Opts = std::move(Opts);
+  Inputs.Index = Index;
+  WorkScheduler.update(File, Inputs, WantDiags);
 }
 
 void ClangdServer::removeDocument(PathRef File) { WorkScheduler.remove(File); }
@@ -322,6 +330,63 @@ void ClangdServer::rename(PathRef File, Position Pos, llvm::StringRef NewName,
       "Rename", File, Bind(Action, File.str(), NewName.str(), std::move(CB)));
 }
 
+static llvm::Expected<Tweak::Selection>
+tweakSelection(const Range &Sel, const InputsAndAST &AST) {
+  auto Begin = positionToOffset(AST.Inputs.Contents, Sel.start);
+  if (!Begin)
+    return Begin.takeError();
+  auto End = positionToOffset(AST.Inputs.Contents, Sel.end);
+  if (!End)
+    return End.takeError();
+  return Tweak::Selection(AST.AST, *Begin, *End);
+}
+
+void ClangdServer::enumerateTweaks(PathRef File, Range Sel,
+                                   Callback<std::vector<TweakRef>> CB) {
+  auto Action = [Sel](decltype(CB) CB, std::string File,
+                      Expected<InputsAndAST> InpAST) {
+    if (!InpAST)
+      return CB(InpAST.takeError());
+    auto Selection = tweakSelection(Sel, *InpAST);
+    if (!Selection)
+      return CB(Selection.takeError());
+    std::vector<TweakRef> Res;
+    for (auto &T : prepareTweaks(*Selection))
+      Res.push_back({T->id(), T->title()});
+    CB(std::move(Res));
+  };
+
+  WorkScheduler.runWithAST("EnumerateTweaks", File,
+                           Bind(Action, std::move(CB), File.str()));
+}
+
+void ClangdServer::applyTweak(PathRef File, Range Sel, StringRef TweakID,
+                              Callback<tooling::Replacements> CB) {
+  auto Action = [Sel](decltype(CB) CB, std::string File, std::string TweakID,
+                      Expected<InputsAndAST> InpAST) {
+    if (!InpAST)
+      return CB(InpAST.takeError());
+    auto Selection = tweakSelection(Sel, *InpAST);
+    if (!Selection)
+      return CB(Selection.takeError());
+    auto A = prepareTweak(TweakID, *Selection);
+    if (!A)
+      return CB(A.takeError());
+    auto RawReplacements = (*A)->apply(*Selection);
+    if (!RawReplacements)
+      return CB(RawReplacements.takeError());
+    // FIXME: this function has I/O operations (find .clang-format file), figure
+    // out a way to cache the format style.
+    auto Style = getFormatStyleForFile(File, InpAST->Inputs.Contents,
+                                       InpAST->Inputs.FS.get());
+    return CB(
+        cleanupAndFormat(InpAST->Inputs.Contents, *RawReplacements, Style));
+  };
+  WorkScheduler.runWithAST(
+      "ApplyTweak", File,
+      Bind(Action, std::move(CB), File.str(), TweakID.str()));
+}
+
 void ClangdServer::dumpAST(PathRef File,
                            llvm::unique_function<void(std::string)> Callback) {
   auto Action = [](decltype(Callback) Callback,
@@ -342,13 +407,13 @@ void ClangdServer::dumpAST(PathRef File,
   WorkScheduler.runWithAST("DumpAST", File, Bind(Action, std::move(Callback)));
 }
 
-void ClangdServer::findDefinitions(PathRef File, Position Pos,
-                                   Callback<std::vector<Location>> CB) {
-  auto Action = [Pos, this](Callback<std::vector<Location>> CB,
+void ClangdServer::locateSymbolAt(PathRef File, Position Pos,
+                                  Callback<std::vector<LocatedSymbol>> CB) {
+  auto Action = [Pos, this](decltype(CB) CB,
                             llvm::Expected<InputsAndAST> InpAST) {
     if (!InpAST)
       return CB(InpAST.takeError());
-    CB(clangd::findDefinitions(InpAST->AST, Pos, Index));
+    CB(clangd::locateSymbolAt(InpAST->AST, Pos, Index));
   };
 
   WorkScheduler.runWithAST("Definitions", File, Bind(Action, std::move(CB)));
@@ -457,15 +522,24 @@ void ClangdServer::findHover(PathRef File, Position Pos,
   WorkScheduler.runWithAST("Hover", File, Bind(Action, std::move(CB)));
 }
 
+void ClangdServer::typeHierarchy(PathRef File, Position Pos, int Resolve,
+                                 TypeHierarchyDirection Direction,
+                                 Callback<Optional<TypeHierarchyItem>> CB) {
+  auto Action = [Pos, Resolve, Direction](decltype(CB) CB,
+                                          Expected<InputsAndAST> InpAST) {
+    if (!InpAST)
+      return CB(InpAST.takeError());
+    CB(clangd::getTypeHierarchy(InpAST->AST, Pos, Resolve, Direction));
+  };
+
+  WorkScheduler.runWithAST("Type Hierarchy", File, Bind(Action, std::move(CB)));
+}
+
 tooling::CompileCommand ClangdServer::getCompileCommand(PathRef File) {
   trace::Span Span("GetCompileCommand");
   llvm::Optional<tooling::CompileCommand> C = CDB.getCompileCommand(File);
   if (!C) // FIXME: Suppress diagnostics? Let the user know?
     C = CDB.getFallbackCommand(File);
-
-  // Inject the resource dir.
-  // FIXME: Don't overwrite it if it's already there.
-  C->CommandLine.push_back("-resource-dir=" + ResourceDir);
   return std::move(*C);
 }
 

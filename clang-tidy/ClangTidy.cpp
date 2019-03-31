@@ -1,9 +1,8 @@
 //===--- tools/extra/clang-tidy/ClangTidy.cpp - Clang tidy tool -----------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 ///
@@ -19,6 +18,7 @@
 #include "ClangTidyDiagnosticConsumer.h"
 #include "ClangTidyModuleRegistry.h"
 #include "ClangTidyProfiling.h"
+#include "ExpandModularHeadersPPCallbacks.h"
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
@@ -291,8 +291,10 @@ private:
 } // namespace
 
 ClangTidyASTConsumerFactory::ClangTidyASTConsumerFactory(
-    ClangTidyContext &Context)
-    : Context(Context), CheckFactories(new ClangTidyCheckFactories) {
+    ClangTidyContext &Context,
+    IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem> OverlayFS)
+    : Context(Context), OverlayFS(OverlayFS),
+      CheckFactories(new ClangTidyCheckFactories) {
   for (ClangTidyModuleRegistry::iterator I = ClangTidyModuleRegistry::begin(),
                                          E = ClangTidyModuleRegistry::end();
        I != E; ++I) {
@@ -352,14 +354,15 @@ ClangTidyASTConsumerFactory::CreateASTConsumer(
     clang::CompilerInstance &Compiler, StringRef File) {
   // FIXME: Move this to a separate method, so that CreateASTConsumer doesn't
   // modify Compiler.
-  Context.setSourceManager(&Compiler.getSourceManager());
+  SourceManager *SM = &Compiler.getSourceManager();
+  Context.setSourceManager(SM);
   Context.setCurrentFile(File);
   Context.setASTContext(&Compiler.getASTContext());
 
   auto WorkingDir = Compiler.getSourceManager()
                         .getFileManager()
                         .getVirtualFileSystem()
-                        ->getCurrentWorkingDirectory();
+                        .getCurrentWorkingDirectory();
   if (WorkingDir)
     Context.setCurrentBuildDirectory(WorkingDir.get());
 
@@ -378,9 +381,20 @@ ClangTidyASTConsumerFactory::CreateASTConsumer(
   std::unique_ptr<ast_matchers::MatchFinder> Finder(
       new ast_matchers::MatchFinder(std::move(FinderOptions)));
 
+  Preprocessor *PP = &Compiler.getPreprocessor();
+  Preprocessor *ModuleExpanderPP = PP;
+
+  if (Context.getLangOpts().Modules && OverlayFS != nullptr) {
+    auto ModuleExpander = llvm::make_unique<ExpandModularHeadersPPCallbacks>(
+        &Compiler, OverlayFS);
+    ModuleExpanderPP = ModuleExpander->getPreprocessor();
+    PP->addPPCallbacks(std::move(ModuleExpander));
+  }
+
   for (auto &Check : Checks) {
     Check->registerMatchers(&*Finder);
     Check->registerPPCallbacks(Compiler);
+    Check->registerPPCallbacks(*SM, PP, ModuleExpanderPP);
   }
 
   std::vector<std::unique_ptr<ASTConsumer>> Consumers;
@@ -435,51 +449,6 @@ ClangTidyOptions::OptionMap ClangTidyASTConsumerFactory::getCheckOptions() {
   return Options;
 }
 
-DiagnosticBuilder ClangTidyCheck::diag(SourceLocation Loc, StringRef Message,
-                                       DiagnosticIDs::Level Level) {
-  return Context->diag(CheckName, Loc, Message, Level);
-}
-
-void ClangTidyCheck::run(const ast_matchers::MatchFinder::MatchResult &Result) {
-  // For historical reasons, checks don't implement the MatchFinder run()
-  // callback directly. We keep the run()/check() distinction to avoid interface
-  // churn, and to allow us to add cross-cutting logic in the future.
-  check(Result);
-}
-
-OptionsView::OptionsView(StringRef CheckName,
-                         const ClangTidyOptions::OptionMap &CheckOptions)
-    : NamePrefix(CheckName.str() + "."), CheckOptions(CheckOptions) {}
-
-std::string OptionsView::get(StringRef LocalName, StringRef Default) const {
-  const auto &Iter = CheckOptions.find(NamePrefix + LocalName.str());
-  if (Iter != CheckOptions.end())
-    return Iter->second;
-  return Default;
-}
-
-std::string OptionsView::getLocalOrGlobal(StringRef LocalName,
-                                          StringRef Default) const {
-  auto Iter = CheckOptions.find(NamePrefix + LocalName.str());
-  if (Iter != CheckOptions.end())
-    return Iter->second;
-  // Fallback to global setting, if present.
-  Iter = CheckOptions.find(LocalName.str());
-  if (Iter != CheckOptions.end())
-    return Iter->second;
-  return Default;
-}
-
-void OptionsView::store(ClangTidyOptions::OptionMap &Options,
-                        StringRef LocalName, StringRef Value) const {
-  Options[NamePrefix + LocalName.str()] = Value;
-}
-
-void OptionsView::store(ClangTidyOptions::OptionMap &Options,
-                        StringRef LocalName, int64_t Value) const {
-  store(Options, LocalName, llvm::itostr(Value));
-}
-
 std::vector<std::string>
 getCheckNames(const ClangTidyOptions &Options,
               bool AllowEnablingAnalyzerAlphaCheckers) {
@@ -506,7 +475,7 @@ std::vector<ClangTidyError>
 runClangTidy(clang::tidy::ClangTidyContext &Context,
              const CompilationDatabase &Compilations,
              ArrayRef<std::string> InputFiles,
-             llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> BaseFS,
+             llvm::IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem> BaseFS,
              bool EnableCheckProfile, llvm::StringRef StoreCheckProfile) {
   ClangTool Tool(Compilations, InputFiles,
                  std::make_shared<PCHContainerOperations>(), BaseFS);
@@ -529,24 +498,8 @@ runClangTidy(clang::tidy::ClangTidyContext &Context,
         return AdjustedArgs;
       };
 
-  // Remove plugins arguments.
-  ArgumentsAdjuster PluginArgumentsRemover =
-      [](const CommandLineArguments &Args, StringRef Filename) {
-        CommandLineArguments AdjustedArgs;
-        for (size_t I = 0, E = Args.size(); I < E; ++I) {
-          if (I + 4 < Args.size() && Args[I] == "-Xclang" &&
-              (Args[I + 1] == "-load" || Args[I + 1] == "-add-plugin" ||
-               StringRef(Args[I + 1]).startswith("-plugin-arg-")) &&
-              Args[I + 2] == "-Xclang") {
-            I += 3;
-          } else
-            AdjustedArgs.push_back(Args[I]);
-        }
-        return AdjustedArgs;
-      };
-
   Tool.appendArgumentsAdjuster(PerFileExtraArgumentsInserter);
-  Tool.appendArgumentsAdjuster(PluginArgumentsRemover);
+  Tool.appendArgumentsAdjuster(getStripPluginsAdjuster());
   Context.setEnableProfiling(EnableCheckProfile);
   Context.setProfileStoragePrefix(StoreCheckProfile);
 
@@ -558,7 +511,9 @@ runClangTidy(clang::tidy::ClangTidyContext &Context,
 
   class ActionFactory : public FrontendActionFactory {
   public:
-    ActionFactory(ClangTidyContext &Context) : ConsumerFactory(Context) {}
+    ActionFactory(ClangTidyContext &Context,
+                  IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem> BaseFS)
+        : ConsumerFactory(Context, BaseFS) {}
     FrontendAction *create() override { return new Action(&ConsumerFactory); }
 
     bool runInvocation(std::shared_ptr<CompilerInvocation> Invocation,
@@ -589,7 +544,7 @@ runClangTidy(clang::tidy::ClangTidyContext &Context,
     ClangTidyASTConsumerFactory ConsumerFactory;
   };
 
-  ActionFactory Factory(Context);
+  ActionFactory Factory(Context, BaseFS);
   Tool.run(&Factory);
   return DiagConsumer.take();
 }
@@ -600,7 +555,7 @@ void handleErrors(llvm::ArrayRef<ClangTidyError> Errors,
                   llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> BaseFS) {
   ErrorReporter Reporter(Context, Fix, BaseFS);
   llvm::vfs::FileSystem &FileSystem =
-      *Reporter.getSourceManager().getFileManager().getVirtualFileSystem();
+      Reporter.getSourceManager().getFileManager().getVirtualFileSystem();
   auto InitialWorkingDir = FileSystem.getCurrentWorkingDirectory();
   if (!InitialWorkingDir)
     llvm::report_fatal_error("Cannot get current working path.");
