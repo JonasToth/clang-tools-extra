@@ -24,6 +24,34 @@ ForwardIt remove_if(ForwardIt, ForwardIt, UnaryPredicate);
 template <typename ForwardIt>
 ForwardIt unique(ForwardIt, ForwardIt);
 
+template <typename T>
+struct default_delete;
+
+template <typename T, typename Deleter = std::default_delete<T>>
+struct unique_ptr {
+  T *release() noexcept;
+};
+
+template <typename T>
+struct char_traits;
+
+template <typename T>
+struct allocator;
+
+template <typename CharT,
+          typename Traits = char_traits<CharT>,
+          typename Allocator = allocator<CharT>>
+struct basic_string {
+  bool empty() const;
+};
+
+typedef basic_string<char> string;
+
+template <typename T, typename Allocator = std::allocator<T>>
+struct vector {
+  bool empty() const noexcept;
+};
+
 // the check should be able to match std lib calls even if the functions are
 // declared inside inline namespaces
 inline namespace v1 {
@@ -46,81 +74,116 @@ void useFuture(const std::future &fut);
 
 void warning() {
   std::async(increment, 42);
-  // CHECK-MESSAGES: [[@LINE-1]]:3: warning: the value returned by this function should be used [bugprone-unused-return-value]
+  // CHECK-NOTES: [[@LINE-1]]:3: warning: the value returned by this function should be used
+  // CHECK-NOTES: [[@LINE-2]]:3: note: cast the expression to void to silence this warning
 
   std::async(std::launch::async, increment, 42);
-  // CHECK-MESSAGES: [[@LINE-1]]:3: warning: the value returned by this function should be used [bugprone-unused-return-value]
+  // CHECK-NOTES: [[@LINE-1]]:3: warning: the value {{.*}} should be used
+  // CHECK-NOTES: [[@LINE-2]]:3: note: cast {{.*}} this warning
 
   Foo F;
   std::launder(&F);
-  // CHECK-MESSAGES: [[@LINE-1]]:3: warning: the value returned by this function should be used [bugprone-unused-return-value]
+  // CHECK-NOTES: [[@LINE-1]]:3: warning: the value {{.*}} should be used
+  // CHECK-NOTES: [[@LINE-2]]:3: note: cast {{.*}} this warning
 
   std::remove(nullptr, nullptr, 1);
-  // CHECK-MESSAGES: [[@LINE-1]]:3: warning: the value returned by this function should be used [bugprone-unused-return-value]
+  // CHECK-NOTES: [[@LINE-1]]:3: warning: the value {{.*}} should be used
+  // CHECK-NOTES: [[@LINE-2]]:3: note: cast {{.*}} this warning
 
   std::remove_if(nullptr, nullptr, nullptr);
-  // CHECK-MESSAGES: [[@LINE-1]]:3: warning: the value returned by this function should be used [bugprone-unused-return-value]
+  // CHECK-NOTES: [[@LINE-1]]:3: warning: the value {{.*}} should be used
+  // CHECK-NOTES: [[@LINE-2]]:3: note: cast {{.*}} this warning
 
   std::unique(nullptr, nullptr);
-  // CHECK-MESSAGES: [[@LINE-1]]:3: warning: the value returned by this function should be used [bugprone-unused-return-value]
+  // CHECK-NOTES: [[@LINE-1]]:3: warning: the value {{.*}} should be used
+  // CHECK-NOTES: [[@LINE-2]]:3: note: cast {{.*}} this warning
+
+  std::unique_ptr<Foo> UPtr;
+  UPtr.release();
+  // CHECK-NOTES: [[@LINE-1]]:3: warning: the value {{.*}} should be used
+  // CHECK-NOTES: [[@LINE-2]]:3: note: cast {{.*}} this warning
+
+  std::string Str;
+  Str.empty();
+  // CHECK-NOTES: [[@LINE-1]]:3: warning: the value {{.*}} should be used
+  // CHECK-NOTES: [[@LINE-2]]:3: note: cast {{.*}} this warning
+
+  std::vector<Foo> Vec;
+  Vec.empty();
+  // CHECK-NOTES: [[@LINE-1]]:3: warning: the value {{.*}} should be used
+  // CHECK-NOTES: [[@LINE-2]]:3: note: cast {{.*}} this warning
 
   // test discarding return values inside different kinds of statements
 
   auto Lambda = [] { std::remove(nullptr, nullptr, 1); };
-  // CHECK-MESSAGES: [[@LINE-1]]:22: warning: the value returned by this function should be used [bugprone-unused-return-value]
+  // CHECK-NOTES: [[@LINE-1]]:22: warning: the value {{.*}} should be used
+  // CHECK-NOTES: [[@LINE-2]]:22: note: cast {{.*}} this warning
 
   if (true)
     std::remove(nullptr, nullptr, 1);
-  // CHECK-MESSAGES: [[@LINE-1]]:5: warning: the value returned by this function should be used [bugprone-unused-return-value]
+  // CHECK-NOTES: [[@LINE-1]]:5: warning: the value {{.*}} should be used
+  // CHECK-NOTES: [[@LINE-2]]:5: note: cast {{.*}} this warning
   else if (true)
     std::remove(nullptr, nullptr, 1);
-  // CHECK-MESSAGES: [[@LINE-1]]:5: warning: the value returned by this function should be used [bugprone-unused-return-value]
+  // CHECK-NOTES: [[@LINE-1]]:5: warning: the value {{.*}} should be used
+  // CHECK-NOTES: [[@LINE-2]]:5: note: cast {{.*}} this warning
   else
     std::remove(nullptr, nullptr, 1);
-  // CHECK-MESSAGES: [[@LINE-1]]:5: warning: the value returned by this function should be used [bugprone-unused-return-value]
+  // CHECK-NOTES: [[@LINE-1]]:5: warning: the value {{.*}} should be used
+  // CHECK-NOTES: [[@LINE-2]]:5: note: cast {{.*}} this warning
 
   while (true)
     std::remove(nullptr, nullptr, 1);
-  // CHECK-MESSAGES: [[@LINE-1]]:5: warning: the value returned by this function should be used [bugprone-unused-return-value]
+  // CHECK-NOTES: [[@LINE-1]]:5: warning: the value {{.*}} should be used
+  // CHECK-NOTES: [[@LINE-2]]:5: note: cast {{.*}} this warning
 
   do
     std::remove(nullptr, nullptr, 1);
-  // CHECK-MESSAGES: [[@LINE-1]]:5: warning: the value returned by this function should be used [bugprone-unused-return-value]
+  // CHECK-NOTES: [[@LINE-1]]:5: warning: the value {{.*}} should be used
+  // CHECK-NOTES: [[@LINE-2]]:5: note: cast {{.*}} this warning
   while (true);
 
   for (;;)
     std::remove(nullptr, nullptr, 1);
-  // CHECK-MESSAGES: [[@LINE-1]]:5: warning: the value returned by this function should be used [bugprone-unused-return-value]
+  // CHECK-NOTES: [[@LINE-1]]:5: warning: the value {{.*}} should be used
+  // CHECK-NOTES: [[@LINE-2]]:5: note: cast {{.*}} this warning
 
   for (std::remove(nullptr, nullptr, 1);;)
-    // CHECK-MESSAGES: [[@LINE-1]]:8: warning: the value returned by this function should be used [bugprone-unused-return-value]
+    // CHECK-NOTES: [[@LINE-1]]:8: warning: the value {{.*}} should be used
+    // CHECK-NOTES: [[@LINE-2]]:8: note: cast {{.*}} this warning
     ;
 
   for (;; std::remove(nullptr, nullptr, 1))
-    // CHECK-MESSAGES: [[@LINE-1]]:11: warning: the value returned by this function should be used [bugprone-unused-return-value]
+    // CHECK-NOTES: [[@LINE-1]]:11: warning: the value {{.*}} should be used
+    // CHECK-NOTES: [[@LINE-2]]:11: note: cast {{.*}} this warning
     ;
 
   for (auto C : "foo")
     std::remove(nullptr, nullptr, 1);
-  // CHECK-MESSAGES: [[@LINE-1]]:5: warning: the value returned by this function should be used [bugprone-unused-return-value]
+  // CHECK-NOTES: [[@LINE-1]]:5: warning: the value {{.*}} should be used
+  // CHECK-NOTES: [[@LINE-2]]:5: note: cast {{.*}} this warning
 
   switch (1) {
   case 1:
     std::remove(nullptr, nullptr, 1);
-    // CHECK-MESSAGES: [[@LINE-1]]:5: warning: the value returned by this function should be used [bugprone-unused-return-value]
+    // CHECK-NOTES: [[@LINE-1]]:5: warning: the value {{.*}} should be used
+    // CHECK-NOTES: [[@LINE-2]]:5: note: cast {{.*}} this warning
     break;
   default:
     std::remove(nullptr, nullptr, 1);
-    // CHECK-MESSAGES: [[@LINE-1]]:5: warning: the value returned by this function should be used [bugprone-unused-return-value]
+    // CHECK-NOTES: [[@LINE-1]]:5: warning: the value {{.*}} should be used
+    // CHECK-NOTES: [[@LINE-2]]:5: note: cast {{.*}} this warning
     break;
   }
 
   try {
     std::remove(nullptr, nullptr, 1);
-    // CHECK-MESSAGES: [[@LINE-1]]:5: warning: the value returned by this function should be used [bugprone-unused-return-value]
+    // CHECK-NOTES: [[@LINE-1]]:5: warning: the value {{.*}} should be used
+    // CHECK-NOTES: [[@LINE-2]]:5: note: cast {{.*}} this warning
   } catch (...) {
     std::remove(nullptr, nullptr, 1);
-    // CHECK-MESSAGES: [[@LINE-1]]:5: warning: the value returned by this function should be used [bugprone-unused-return-value]
+    // CHECK-NOTES: [[@LINE-1]]:5: warning: the value {{.*}} should be used
+    // CHECK-NOTES: [[@LINE-2]]:5: note: cast {{.*}} this warning
   }
 }
 
@@ -136,6 +199,15 @@ void noWarning() {
   auto RemoveIfRetval = std::remove_if(nullptr, nullptr, nullptr);
 
   auto UniqueRetval = std::unique(nullptr, nullptr);
+
+  std::unique_ptr<Foo> UPtrNoWarning;
+  auto ReleaseRetval = UPtrNoWarning.release();
+
+  std::string StrNoWarning;
+  auto StrEmptyRetval = StrNoWarning.empty();
+
+  std::vector<Foo> VecNoWarning;
+  auto VecEmptyRetval = VecNoWarning.empty();
 
   // test using the return value in different kinds of expressions
   useFuture(std::async(increment, 42));

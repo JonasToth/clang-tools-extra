@@ -9,32 +9,34 @@
 
 #include "ClangdServer.h"
 #include "CodeComplete.h"
+#include "FindSymbols.h"
 #include "Headers.h"
 #include "SourceCode.h"
+#include "Trace.h"
 #include "XRefs.h"
+#include "index/FileIndex.h"
 #include "index/Merge.h"
 #include "clang/Format/Format.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/CompilerInvocation.h"
+#include "clang/Lex/Preprocessor.h"
 #include "clang/Tooling/CompilationDatabase.h"
 #include "clang/Tooling/Refactoring/RefactoringResultConsumer.h"
 #include "clang/Tooling/Refactoring/Rename/RenamingAction.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/ScopeExit.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
 #include <future>
+#include <mutex>
 
-using namespace clang;
-using namespace clang::clangd;
-
+namespace clang {
+namespace clangd {
 namespace {
-
-void ignoreError(llvm::Error Err) {
-  handleAllErrors(std::move(Err), [](const llvm::ErrorInfoBase &) {});
-}
 
 std::string getStandardResourceDir() {
   static int Dummy; // Just an address in this process.
@@ -60,14 +62,38 @@ public:
     Result = std::move(SourceReplacements);
   }
 
-  Optional<Expected<tooling::AtomicChanges>> Result;
+  llvm::Optional<llvm::Expected<tooling::AtomicChanges>> Result;
 };
 
-} // namespace
+// Update the FileIndex with new ASTs and plumb the diagnostics responses.
+struct UpdateIndexCallbacks : public ParsingCallbacks {
+  UpdateIndexCallbacks(FileIndex *FIndex, DiagnosticsConsumer &DiagConsumer)
+      : FIndex(FIndex), DiagConsumer(DiagConsumer) {}
 
-IntrusiveRefCntPtr<vfs::FileSystem> RealFileSystemProvider::getFileSystem() {
-  return vfs::getRealFileSystem();
-}
+  void onPreambleAST(PathRef Path, ASTContext &Ctx,
+                     std::shared_ptr<clang::Preprocessor> PP) override {
+    if (FIndex)
+      FIndex->updatePreamble(Path, Ctx, std::move(PP));
+  }
+
+  void onMainAST(PathRef Path, ParsedAST &AST) override {
+    if (FIndex)
+      FIndex->updateMain(Path, AST);
+  }
+
+  void onDiagnostics(PathRef File, std::vector<Diag> Diags) override {
+    DiagConsumer.onDiagnosticsReady(File, std::move(Diags));
+  }
+
+  void onFileUpdated(PathRef File, const TUStatus &Status) override {
+    DiagConsumer.onFileUpdated(File, Status);
+  }
+
+private:
+  FileIndex *FIndex;
+  DiagnosticsConsumer &DiagConsumer;
+};
+} // namespace
 
 ClangdServer::Options ClangdServer::optsForTest() {
   ClangdServer::Options Opts;
@@ -77,14 +103,17 @@ ClangdServer::Options ClangdServer::optsForTest() {
   return Opts;
 }
 
-ClangdServer::ClangdServer(GlobalCompilationDatabase &CDB,
-                           FileSystemProvider &FSProvider,
+ClangdServer::ClangdServer(const GlobalCompilationDatabase &CDB,
+                           const FileSystemProvider &FSProvider,
                            DiagnosticsConsumer &DiagConsumer,
                            const Options &Opts)
-    : CompileArgs(CDB, Opts.ResourceDir ? Opts.ResourceDir->str()
-                                        : getStandardResourceDir()),
-      DiagConsumer(DiagConsumer), FSProvider(FSProvider),
-      FileIdx(Opts.BuildDynamicSymbolIndex ? new FileIndex() : nullptr),
+    : CDB(CDB), FSProvider(FSProvider),
+      ResourceDir(Opts.ResourceDir ? *Opts.ResourceDir
+                                   : getStandardResourceDir()),
+      DynamicIdx(Opts.BuildDynamicSymbolIndex
+                     ? new FileIndex(Opts.HeavyweightDynamicSymbolIndex)
+                     : nullptr),
+      WorkspaceRoot(Opts.WorkspaceRoot),
       PCHs(std::make_shared<PCHContainerOperations>()),
       // Pass a callback into `WorkScheduler` to extract symbols from a newly
       // parsed file and rebuild the file index synchronously each time an AST
@@ -92,54 +121,48 @@ ClangdServer::ClangdServer(GlobalCompilationDatabase &CDB,
       // FIXME(ioeric): this can be slow and we may be able to index on less
       // critical paths.
       WorkScheduler(Opts.AsyncThreadsCount, Opts.StorePreamblesInMemory,
-                    FileIdx
-                        ? [this](PathRef Path,
-                                 ParsedAST *AST) { FileIdx->update(Path, AST); }
-                        : ASTParsedCallback(),
-                    Opts.UpdateDebounce) {
-  if (FileIdx && Opts.StaticIndex) {
-    MergedIndex = mergeIndex(FileIdx.get(), Opts.StaticIndex);
-    Index = MergedIndex.get();
-  } else if (FileIdx)
-    Index = FileIdx.get();
-  else if (Opts.StaticIndex)
-    Index = Opts.StaticIndex;
-  else
-    Index = nullptr;
+                    llvm::make_unique<UpdateIndexCallbacks>(DynamicIdx.get(),
+                                                            DiagConsumer),
+                    Opts.UpdateDebounce, Opts.RetentionPolicy) {
+  // Adds an index to the stack, at higher priority than existing indexes.
+  auto AddIndex = [&](SymbolIndex *Idx) {
+    if (this->Index != nullptr) {
+      MergedIdx.push_back(llvm::make_unique<MergedIndex>(Idx, this->Index));
+      this->Index = MergedIdx.back().get();
+    } else {
+      this->Index = Idx;
+    }
+  };
+  if (Opts.StaticIndex)
+    AddIndex(Opts.StaticIndex);
+  if (Opts.BackgroundIndex) {
+    BackgroundIdx = llvm::make_unique<BackgroundIndex>(
+        Context::current().clone(), ResourceDir, FSProvider, CDB,
+        BackgroundIndexStorage::createDiskBackedStorageFactory(),
+        Opts.BackgroundIndexRebuildPeriodMs);
+    AddIndex(BackgroundIdx.get());
+  }
+  if (DynamicIdx)
+    AddIndex(DynamicIdx.get());
 }
 
-void ClangdServer::setRootPath(PathRef RootPath) {
-  std::string NewRootPath = llvm::sys::path::convert_to_slash(
-      RootPath, llvm::sys::path::Style::posix);
-  if (llvm::sys::fs::is_directory(NewRootPath))
-    this->RootPath = NewRootPath;
+void ClangdServer::addDocument(PathRef File, llvm::StringRef Contents,
+                               WantDiagnostics WantDiags) {
+  // FIXME: some build systems like Bazel will take time to preparing
+  // environment to build the file, it would be nice if we could emit a
+  // "PreparingBuild" status to inform users, it is non-trivial given the
+  // current implementation.
+  WorkScheduler.update(File,
+                       ParseInputs{getCompileCommand(File),
+                                   FSProvider.getFileSystem(), Contents.str()},
+                       WantDiags);
 }
 
-void ClangdServer::addDocument(PathRef File, StringRef Contents,
-                               WantDiagnostics WantDiags, bool SkipCache) {
-  if (SkipCache)
-    CompileArgs.invalidate(File);
-
-  DocVersion Version = ++InternalVersion[File];
-  ParseInputs Inputs = {CompileArgs.getCompileCommand(File),
-                        FSProvider.getFileSystem(), Contents.str()};
-
-  Path FileStr = File.str();
-  WorkScheduler.update(File, std::move(Inputs), WantDiags,
-                       [this, FileStr, Version](std::vector<Diag> Diags) {
-                         consumeDiagnostics(FileStr, Version, std::move(Diags));
-                       });
-}
-
-void ClangdServer::removeDocument(PathRef File) {
-  ++InternalVersion[File];
-  CompileArgs.invalidate(File);
-  WorkScheduler.remove(File);
-}
+void ClangdServer::removeDocument(PathRef File) { WorkScheduler.remove(File); }
 
 void ClangdServer::codeComplete(PathRef File, Position Pos,
                                 const clangd::CodeCompleteOptions &Opts,
-                                Callback<CompletionList> CB) {
+                                Callback<CodeCompleteResult> CB) {
   // Copy completion options for passing them to async task handler.
   auto CodeCompleteOpts = Opts;
   if (!CodeCompleteOpts.Index) // Respect overridden index.
@@ -148,23 +171,46 @@ void ClangdServer::codeComplete(PathRef File, Position Pos,
   // Copy PCHs to avoid accessing this->PCHs concurrently
   std::shared_ptr<PCHContainerOperations> PCHs = this->PCHs;
   auto FS = FSProvider.getFileSystem();
-  auto Task = [PCHs, Pos, FS,
-               CodeCompleteOpts](Path File, Callback<CompletionList> CB,
-                                 llvm::Expected<InputsAndPreamble> IP) {
+
+  auto Task = [PCHs, Pos, FS, CodeCompleteOpts,
+               this](Path File, Callback<CodeCompleteResult> CB,
+                     llvm::Expected<InputsAndPreamble> IP) {
     if (!IP)
       return CB(IP.takeError());
+    if (isCancelled())
+      return CB(llvm::make_error<CancelledError>());
 
-    auto PreambleData = IP->Preamble;
+    llvm::Optional<SpeculativeFuzzyFind> SpecFuzzyFind;
+    if (CodeCompleteOpts.Index && CodeCompleteOpts.SpeculativeIndexRequest) {
+      SpecFuzzyFind.emplace();
+      {
+        std::lock_guard<std::mutex> Lock(CachedCompletionFuzzyFindRequestMutex);
+        SpecFuzzyFind->CachedReq = CachedCompletionFuzzyFindRequestByFile[File];
+      }
+    }
 
     // FIXME(ibiryukov): even if Preamble is non-null, we may want to check
     // both the old and the new version in case only one of them matches.
-    CompletionList Result = clangd::codeComplete(
-        File, IP->Command, PreambleData ? &PreambleData->Preamble : nullptr,
-        IP->Contents, Pos, FS, PCHs, CodeCompleteOpts);
-    CB(std::move(Result));
+    CodeCompleteResult Result = clangd::codeComplete(
+        File, IP->Command, IP->Preamble, IP->Contents, Pos, FS, PCHs,
+        CodeCompleteOpts, SpecFuzzyFind ? SpecFuzzyFind.getPointer() : nullptr);
+    {
+      clang::clangd::trace::Span Tracer("Completion results callback");
+      CB(std::move(Result));
+    }
+    if (SpecFuzzyFind && SpecFuzzyFind->NewReq.hasValue()) {
+      std::lock_guard<std::mutex> Lock(CachedCompletionFuzzyFindRequestMutex);
+      CachedCompletionFuzzyFindRequestByFile[File] =
+          SpecFuzzyFind->NewReq.getValue();
+    }
+    // SpecFuzzyFind is only destroyed after speculative fuzzy find finishes.
+    // We don't want `codeComplete` to wait for the async call if it doesn't use
+    // the result (e.g. non-index completion, speculation fails), so that `CB`
+    // is called as soon as results are available.
   };
 
-  WorkScheduler.runWithPreamble("CodeComplete", File,
+  // We use a potentially-stale preamble because latency is critical here.
+  WorkScheduler.runWithPreamble("CodeComplete", File, TUScheduler::Stale,
                                 Bind(Task, File.str(), std::move(CB)));
 }
 
@@ -173,23 +219,27 @@ void ClangdServer::signatureHelp(PathRef File, Position Pos,
 
   auto PCHs = this->PCHs;
   auto FS = FSProvider.getFileSystem();
-  auto Action = [Pos, FS, PCHs](Path File, Callback<SignatureHelp> CB,
-                                llvm::Expected<InputsAndPreamble> IP) {
+  auto *Index = this->Index;
+  auto Action = [Pos, FS, PCHs, Index](Path File, Callback<SignatureHelp> CB,
+                                       llvm::Expected<InputsAndPreamble> IP) {
     if (!IP)
       return CB(IP.takeError());
 
     auto PreambleData = IP->Preamble;
-    CB(clangd::signatureHelp(File, IP->Command,
-                             PreambleData ? &PreambleData->Preamble : nullptr,
-                             IP->Contents, Pos, FS, PCHs));
+    CB(clangd::signatureHelp(File, IP->Command, PreambleData, IP->Contents, Pos,
+                             FS, PCHs, Index));
   };
 
-  WorkScheduler.runWithPreamble("SignatureHelp", File,
+  // Unlike code completion, we wait for an up-to-date preamble here.
+  // Signature help is often triggered after code completion. If the code
+  // completion inserted a header to make the symbol available, then using
+  // the old preamble would yield useless results.
+  WorkScheduler.runWithPreamble("SignatureHelp", File, TUScheduler::Consistent,
                                 Bind(Action, File.str(), std::move(CB)));
 }
 
 llvm::Expected<tooling::Replacements>
-ClangdServer::formatRange(StringRef Code, PathRef File, Range Rng) {
+ClangdServer::formatRange(llvm::StringRef Code, PathRef File, Range Rng) {
   llvm::Expected<size_t> Begin = positionToOffset(Code, Rng.start);
   if (!Begin)
     return Begin.takeError();
@@ -199,21 +249,22 @@ ClangdServer::formatRange(StringRef Code, PathRef File, Range Rng) {
   return formatCode(Code, File, {tooling::Range(*Begin, *End - *Begin)});
 }
 
-llvm::Expected<tooling::Replacements> ClangdServer::formatFile(StringRef Code,
-                                                               PathRef File) {
+llvm::Expected<tooling::Replacements>
+ClangdServer::formatFile(llvm::StringRef Code, PathRef File) {
   // Format everything.
   return formatCode(Code, File, {tooling::Range(0, Code.size())});
 }
 
 llvm::Expected<tooling::Replacements>
-ClangdServer::formatOnType(StringRef Code, PathRef File, Position Pos) {
+ClangdServer::formatOnType(llvm::StringRef Code, PathRef File, Position Pos) {
   // Look for the previous opening brace from the character position and
   // format starting from there.
   llvm::Expected<size_t> CursorPos = positionToOffset(Code, Pos);
   if (!CursorPos)
     return CursorPos.takeError();
-  size_t PreviousLBracePos = StringRef(Code).find_last_of('{', *CursorPos);
-  if (PreviousLBracePos == StringRef::npos)
+  size_t PreviousLBracePos =
+      llvm::StringRef(Code).find_last_of('{', *CursorPos);
+  if (PreviousLBracePos == llvm::StringRef::npos)
     PreviousLBracePos = *CursorPos;
   size_t Len = *CursorPos - PreviousLBracePos;
 
@@ -224,21 +275,15 @@ void ClangdServer::rename(PathRef File, Position Pos, llvm::StringRef NewName,
                           Callback<std::vector<tooling::Replacement>> CB) {
   auto Action = [Pos](Path File, std::string NewName,
                       Callback<std::vector<tooling::Replacement>> CB,
-                      Expected<InputsAndAST> InpAST) {
+                      llvm::Expected<InputsAndAST> InpAST) {
     if (!InpAST)
       return CB(InpAST.takeError());
     auto &AST = InpAST->AST;
 
     RefactoringResultCollector ResultCollector;
     const SourceManager &SourceMgr = AST.getASTContext().getSourceManager();
-    const FileEntry *FE =
-        SourceMgr.getFileEntryForID(SourceMgr.getMainFileID());
-    if (!FE)
-      return CB(llvm::make_error<llvm::StringError>(
-          "rename called for non-added document",
-          llvm::errc::invalid_argument));
     SourceLocation SourceLocationBeg =
-        clangd::getBeginningOfIdentifier(AST, Pos, FE);
+        clangd::getBeginningOfIdentifier(AST, Pos, SourceMgr.getMainFileID());
     tooling::RefactoringRuleContext Context(
         AST.getASTContext().getSourceManager());
     Context.setASTContext(AST.getASTContext());
@@ -277,65 +322,12 @@ void ClangdServer::rename(PathRef File, Position Pos, llvm::StringRef NewName,
       "Rename", File, Bind(Action, File.str(), NewName.str(), std::move(CB)));
 }
 
-/// Creates a `HeaderFile` from \p Header which can be either a URI or a literal
-/// include.
-static llvm::Expected<HeaderFile> toHeaderFile(StringRef Header,
-                                               llvm::StringRef HintPath) {
-  if (isLiteralInclude(Header))
-    return HeaderFile{Header.str(), /*Verbatim=*/true};
-  auto U = URI::parse(Header);
-  if (!U)
-    return U.takeError();
-  auto Resolved = URI::resolve(*U, HintPath);
-  if (!Resolved)
-    return Resolved.takeError();
-  return HeaderFile{std::move(*Resolved), /*Verbatim=*/false};
-}
-
-Expected<tooling::Replacements>
-ClangdServer::insertInclude(PathRef File, StringRef Code,
-                            StringRef DeclaringHeader,
-                            StringRef InsertedHeader) {
-  assert(!DeclaringHeader.empty() && !InsertedHeader.empty());
-  std::string ToInclude;
-  auto ResolvedOrginal = toHeaderFile(DeclaringHeader, File);
-  if (!ResolvedOrginal)
-    return ResolvedOrginal.takeError();
-  auto ResolvedPreferred = toHeaderFile(InsertedHeader, File);
-  if (!ResolvedPreferred)
-    return ResolvedPreferred.takeError();
-  tooling::CompileCommand CompileCommand = CompileArgs.getCompileCommand(File);
-  auto Include =
-      calculateIncludePath(File, Code, *ResolvedOrginal, *ResolvedPreferred,
-                           CompileCommand, FSProvider.getFileSystem());
-  if (!Include)
-    return Include.takeError();
-  if (Include->empty())
-    return tooling::Replacements();
-  ToInclude = std::move(*Include);
-
-  auto Style = format::getStyle("file", File, "llvm");
-  if (!Style) {
-    llvm::consumeError(Style.takeError());
-    // FIXME(ioeric): needs more consistent style support in clangd server.
-    Style = format::getLLVMStyle();
-  }
-  // Replacement with offset UINT_MAX and length 0 will be treated as include
-  // insertion.
-  tooling::Replacement R(File, /*Offset=*/UINT_MAX, 0, "#include " + ToInclude);
-  auto Replaces =
-      format::cleanupAroundReplacements(Code, tooling::Replacements(R), *Style);
-  if (!Replaces)
-    return Replaces;
-  return formatReplacements(Code, *Replaces, *Style);
-}
-
 void ClangdServer::dumpAST(PathRef File,
-                           UniqueFunction<void(std::string)> Callback) {
+                           llvm::unique_function<void(std::string)> Callback) {
   auto Action = [](decltype(Callback) Callback,
                    llvm::Expected<InputsAndAST> InpAST) {
     if (!InpAST) {
-      ignoreError(InpAST.takeError());
+      llvm::consumeError(InpAST.takeError());
       return Callback("<no-ast>");
     }
     std::string Result;
@@ -352,12 +344,11 @@ void ClangdServer::dumpAST(PathRef File,
 
 void ClangdServer::findDefinitions(PathRef File, Position Pos,
                                    Callback<std::vector<Location>> CB) {
-  auto FS = FSProvider.getFileSystem();
-  auto Action = [Pos, FS](Callback<std::vector<Location>> CB,
-                          llvm::Expected<InputsAndAST> InpAST) {
+  auto Action = [Pos, this](Callback<std::vector<Location>> CB,
+                            llvm::Expected<InputsAndAST> InpAST) {
     if (!InpAST)
       return CB(InpAST.takeError());
-    CB(clangd::findDefinitions(InpAST->AST, Pos));
+    CB(clangd::findDefinitions(InpAST->AST, Pos, Index));
   };
 
   WorkScheduler.runWithAST("Definitions", File, Bind(Action, std::move(CB)));
@@ -365,48 +356,46 @@ void ClangdServer::findDefinitions(PathRef File, Position Pos,
 
 llvm::Optional<Path> ClangdServer::switchSourceHeader(PathRef Path) {
 
-  StringRef SourceExtensions[] = {".cpp", ".c", ".cc", ".cxx",
-                                  ".c++", ".m", ".mm"};
-  StringRef HeaderExtensions[] = {".h", ".hh", ".hpp", ".hxx", ".inc"};
+  llvm::StringRef SourceExtensions[] = {".cpp", ".c", ".cc", ".cxx",
+                                        ".c++", ".m", ".mm"};
+  llvm::StringRef HeaderExtensions[] = {".h", ".hh", ".hpp", ".hxx", ".inc"};
 
-  StringRef PathExt = llvm::sys::path::extension(Path);
+  llvm::StringRef PathExt = llvm::sys::path::extension(Path);
 
   // Lookup in a list of known extensions.
   auto SourceIter =
-      std::find_if(std::begin(SourceExtensions), std::end(SourceExtensions),
-                   [&PathExt](PathRef SourceExt) {
-                     return SourceExt.equals_lower(PathExt);
-                   });
+      llvm::find_if(SourceExtensions, [&PathExt](PathRef SourceExt) {
+        return SourceExt.equals_lower(PathExt);
+      });
   bool IsSource = SourceIter != std::end(SourceExtensions);
 
   auto HeaderIter =
-      std::find_if(std::begin(HeaderExtensions), std::end(HeaderExtensions),
-                   [&PathExt](PathRef HeaderExt) {
-                     return HeaderExt.equals_lower(PathExt);
-                   });
+      llvm::find_if(HeaderExtensions, [&PathExt](PathRef HeaderExt) {
+        return HeaderExt.equals_lower(PathExt);
+      });
 
   bool IsHeader = HeaderIter != std::end(HeaderExtensions);
 
-  // We can only switch between extensions known extensions.
+  // We can only switch between the known extensions.
   if (!IsSource && !IsHeader)
-    return llvm::None;
+    return None;
 
   // Array to lookup extensions for the switch. An opposite of where original
   // extension was found.
-  ArrayRef<StringRef> NewExts;
+  llvm::ArrayRef<llvm::StringRef> NewExts;
   if (IsSource)
     NewExts = HeaderExtensions;
   else
     NewExts = SourceExtensions;
 
   // Storage for the new path.
-  SmallString<128> NewPath = StringRef(Path);
+  llvm::SmallString<128> NewPath = llvm::StringRef(Path);
 
   // Instance of vfs::FileSystem, used for file existence checks.
   auto FS = FSProvider.getFileSystem();
 
   // Loop through switched extension candidates.
-  for (StringRef NewExt : NewExts) {
+  for (llvm::StringRef NewExt : NewExts) {
     llvm::sys::path::replace_extension(NewPath, NewExt);
     if (FS->exists(NewPath))
       return NewPath.str().str(); // First str() to convert from SmallString to
@@ -419,15 +408,16 @@ llvm::Optional<Path> ClangdServer::switchSourceHeader(PathRef Path) {
       return NewPath.str().str();
   }
 
-  return llvm::None;
+  return None;
 }
 
 llvm::Expected<tooling::Replacements>
 ClangdServer::formatCode(llvm::StringRef Code, PathRef File,
-                         ArrayRef<tooling::Range> Ranges) {
+                         llvm::ArrayRef<tooling::Range> Ranges) {
   // Call clang-format.
   auto FS = FSProvider.getFileSystem();
-  auto Style = format::getStyle("file", File, "LLVM", Code, FS.get());
+  auto Style = format::getStyle(format::DefaultFormatStyle, File,
+                                format::DefaultFallbackStyle, Code, FS.get());
   if (!Style)
     return Style.takeError();
 
@@ -445,10 +435,8 @@ ClangdServer::formatCode(llvm::StringRef Code, PathRef File,
 
 void ClangdServer::findDocumentHighlights(
     PathRef File, Position Pos, Callback<std::vector<DocumentHighlight>> CB) {
-
-  auto FS = FSProvider.getFileSystem();
-  auto Action = [FS, Pos](Callback<std::vector<DocumentHighlight>> CB,
-                          llvm::Expected<InputsAndAST> InpAST) {
+  auto Action = [Pos](Callback<std::vector<DocumentHighlight>> CB,
+                      llvm::Expected<InputsAndAST> InpAST) {
     if (!InpAST)
       return CB(InpAST.takeError());
     CB(clangd::findDocumentHighlights(InpAST->AST, Pos));
@@ -457,10 +445,10 @@ void ClangdServer::findDocumentHighlights(
   WorkScheduler.runWithAST("Highlights", File, Bind(Action, std::move(CB)));
 }
 
-void ClangdServer::findHover(PathRef File, Position Pos, Callback<Hover> CB) {
-  auto FS = FSProvider.getFileSystem();
-  auto Action = [Pos, FS](Callback<Hover> CB,
-                          llvm::Expected<InputsAndAST> InpAST) {
+void ClangdServer::findHover(PathRef File, Position Pos,
+                             Callback<llvm::Optional<Hover>> CB) {
+  auto Action = [Pos](Callback<llvm::Optional<Hover>> CB,
+                      llvm::Expected<InputsAndAST> InpAST) {
     if (!InpAST)
       return CB(InpAST.takeError());
     CB(clangd::getHover(InpAST->AST, Pos));
@@ -469,27 +457,71 @@ void ClangdServer::findHover(PathRef File, Position Pos, Callback<Hover> CB) {
   WorkScheduler.runWithAST("Hover", File, Bind(Action, std::move(CB)));
 }
 
-void ClangdServer::consumeDiagnostics(PathRef File, DocVersion Version,
-                                      std::vector<Diag> Diags) {
-  // We need to serialize access to resulting diagnostics to avoid calling
-  // `onDiagnosticsReady` in the wrong order.
-  std::lock_guard<std::mutex> DiagsLock(DiagnosticsMutex);
-  DocVersion &LastReportedDiagsVersion = ReportedDiagnosticVersions[File];
+tooling::CompileCommand ClangdServer::getCompileCommand(PathRef File) {
+  trace::Span Span("GetCompileCommand");
+  llvm::Optional<tooling::CompileCommand> C = CDB.getCompileCommand(File);
+  if (!C) // FIXME: Suppress diagnostics? Let the user know?
+    C = CDB.getFallbackCommand(File);
 
-  // FIXME(ibiryukov): get rid of '<' comparison here. In the current
-  // implementation diagnostics will not be reported after version counters'
-  // overflow. This should not happen in practice, since DocVersion is a
-  // 64-bit unsigned integer.
-  if (Version < LastReportedDiagsVersion)
-    return;
-  LastReportedDiagsVersion = Version;
-
-  DiagConsumer.onDiagnosticsReady(File, std::move(Diags));
+  // Inject the resource dir.
+  // FIXME: Don't overwrite it if it's already there.
+  C->CommandLine.push_back("-resource-dir=" + ResourceDir);
+  return std::move(*C);
 }
 
 void ClangdServer::onFileEvent(const DidChangeWatchedFilesParams &Params) {
   // FIXME: Do nothing for now. This will be used for indexing and potentially
   // invalidating other caches.
+}
+
+void ClangdServer::workspaceSymbols(
+    llvm::StringRef Query, int Limit,
+    Callback<std::vector<SymbolInformation>> CB) {
+  std::string QueryCopy = Query;
+  WorkScheduler.run(
+      "getWorkspaceSymbols",
+      Bind(
+          [QueryCopy, Limit, this](decltype(CB) CB) {
+            CB(clangd::getWorkspaceSymbols(QueryCopy, Limit, Index,
+                                           WorkspaceRoot.getValueOr("")));
+          },
+          std::move(CB)));
+}
+
+void ClangdServer::documentSymbols(llvm::StringRef File,
+                                   Callback<std::vector<DocumentSymbol>> CB) {
+  auto Action = [](Callback<std::vector<DocumentSymbol>> CB,
+                   llvm::Expected<InputsAndAST> InpAST) {
+    if (!InpAST)
+      return CB(InpAST.takeError());
+    CB(clangd::getDocumentSymbols(InpAST->AST));
+  };
+  WorkScheduler.runWithAST("documentSymbols", File,
+                           Bind(Action, std::move(CB)));
+}
+
+void ClangdServer::findReferences(PathRef File, Position Pos, uint32_t Limit,
+                                  Callback<std::vector<Location>> CB) {
+  auto Action = [Pos, Limit, this](Callback<std::vector<Location>> CB,
+                                   llvm::Expected<InputsAndAST> InpAST) {
+    if (!InpAST)
+      return CB(InpAST.takeError());
+    CB(clangd::findReferences(InpAST->AST, Pos, Limit, Index));
+  };
+
+  WorkScheduler.runWithAST("References", File, Bind(Action, std::move(CB)));
+}
+
+void ClangdServer::symbolInfo(PathRef File, Position Pos,
+                              Callback<std::vector<SymbolDetails>> CB) {
+  auto Action = [Pos](Callback<std::vector<SymbolDetails>> CB,
+                      llvm::Expected<InputsAndAST> InpAST) {
+    if (!InpAST)
+      return CB(InpAST.takeError());
+    CB(clangd::getSymbolInfo(InpAST->AST, Pos));
+  };
+
+  WorkScheduler.runWithAST("SymbolInfo", File, Bind(Action, std::move(CB)));
 }
 
 std::vector<std::pair<Path, std::size_t>>
@@ -499,5 +531,10 @@ ClangdServer::getUsedBytesPerFile() const {
 
 LLVM_NODISCARD bool
 ClangdServer::blockUntilIdleForTest(llvm::Optional<double> TimeoutSeconds) {
-  return WorkScheduler.blockUntilIdle(timeoutSeconds(TimeoutSeconds));
+  return WorkScheduler.blockUntilIdle(timeoutSeconds(TimeoutSeconds)) &&
+         (!BackgroundIdx ||
+          BackgroundIdx->blockUntilIdleForTest(TimeoutSeconds));
 }
+
+} // namespace clangd
+} // namespace clang

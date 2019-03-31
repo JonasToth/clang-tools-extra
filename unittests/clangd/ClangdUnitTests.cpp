@@ -9,23 +9,21 @@
 
 #include "Annotations.h"
 #include "ClangdUnit.h"
-#include "TestFS.h"
-#include "clang/Frontend/CompilerInvocation.h"
-#include "clang/Frontend/PCHContainerOperations.h"
-#include "clang/Frontend/Utils.h"
+#include "SourceCode.h"
+#include "TestTU.h"
 #include "llvm/Support/ScopedPrinter.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
 namespace clang {
 namespace clangd {
-using namespace llvm;
-
 namespace {
+
 using testing::ElementsAre;
 using testing::Field;
 using testing::IsEmpty;
 using testing::Pair;
+using testing::UnorderedElementsAre;
 
 testing::Matcher<const Diag &> WithFix(testing::Matcher<Fix> FixMatcher) {
   return Field(&Diag::Fixes, ElementsAre(FixMatcher));
@@ -33,24 +31,6 @@ testing::Matcher<const Diag &> WithFix(testing::Matcher<Fix> FixMatcher) {
 
 testing::Matcher<const Diag &> WithNote(testing::Matcher<Note> NoteMatcher) {
   return Field(&Diag::Notes, ElementsAre(NoteMatcher));
-}
-
-// FIXME: this is duplicated with FileIndexTests. Share it.
-ParsedAST build(StringRef Code, std::vector<const char *> Flags = {}) {
-  std::vector<const char *> Cmd = {"clang", "main.cpp"};
-  Cmd.insert(Cmd.begin() + 1, Flags.begin(), Flags.end());
-  auto CI = createInvocationFromCommandLine(Cmd);
-  auto Buf = MemoryBuffer::getMemBuffer(Code);
-  auto AST = ParsedAST::Build(std::move(CI), nullptr, std::move(Buf),
-                              std::make_shared<PCHContainerOperations>(),
-                              vfs::getRealFileSystem());
-  assert(AST.hasValue());
-  return std::move(*AST);
-}
-
-std::vector<Diag> buildDiags(llvm::StringRef Code,
-                             std::vector<const char *> Flags = {}) {
-  return build(Code, std::move(Flags)).getDiagnostics();
 }
 
 MATCHER_P2(Diag, Range, Message,
@@ -92,53 +72,96 @@ Position pos(int line, int character) {
   return Res;
 }
 
-/// Matches diagnostic that has exactly one fix with the same range and message
-/// as the diagnostic itself.
-testing::Matcher<const clangd::Diag &> DiagWithEqualFix(clangd::Range Range,
-                                                        std::string Replacement,
-                                                        std::string Message) {
-  return AllOf(Diag(Range, Message), WithFix(Fix(Range, Replacement, Message)));
-}
-
 TEST(DiagnosticsTest, DiagnosticRanges) {
   // Check we report correct ranges, including various edge-cases.
   Annotations Test(R"cpp(
+    namespace test{};
     void $decl[[foo]]();
     int main() {
       $typo[[go\
 o]]();
-      foo()$semicolon[[]]
+      foo()$semicolon[[]]//with comments
       $unk[[unknown]]();
+      double $type[[bar]] = "foo";
+      struct Foo { int x; }; Foo a;
+      a.$nomember[[y]];
+      test::$nomembernamespace[[test]];
     }
   )cpp");
-  llvm::errs() << Test.code();
   EXPECT_THAT(
-      buildDiags(Test.code()),
+      TestTU::withCode(Test.code()).build().getDiagnostics(),
       ElementsAre(
           // This range spans lines.
-          AllOf(DiagWithEqualFix(
-                    Test.range("typo"), "foo",
-                    "use of undeclared identifier 'goo'; did you mean 'foo'?"),
+          AllOf(Diag(Test.range("typo"),
+                     "use of undeclared identifier 'goo'; did you mean 'foo'?"),
+                WithFix(
+                    Fix(Test.range("typo"), "foo", "change 'go\\ o' to 'foo'")),
                 // This is a pretty normal range.
                 WithNote(Diag(Test.range("decl"), "'foo' declared here"))),
-          // This range is zero-width, and at the end of a line.
-          DiagWithEqualFix(Test.range("semicolon"), ";",
-                           "expected ';' after expression"),
+          // This range is zero-width and insertion. Therefore make sure we are
+          // not expanding it into other tokens. Since we are not going to
+          // replace those.
+          AllOf(Diag(Test.range("semicolon"), "expected ';' after expression"),
+                WithFix(Fix(Test.range("semicolon"), ";", "insert ';'"))),
           // This range isn't provided by clang, we expand to the token.
-          Diag(Test.range("unk"), "use of undeclared identifier 'unknown'")));
+          Diag(Test.range("unk"), "use of undeclared identifier 'unknown'"),
+          Diag(Test.range("type"),
+               "cannot initialize a variable of type 'double' with an lvalue "
+               "of type 'const char [4]'"),
+          Diag(Test.range("nomember"), "no member named 'y' in 'Foo'"),
+          Diag(Test.range("nomembernamespace"),
+               "no member named 'test' in namespace 'test'")));
 }
 
 TEST(DiagnosticsTest, FlagsMatter) {
   Annotations Test("[[void]] main() {}");
-  EXPECT_THAT(buildDiags(Test.code()),
-              ElementsAre(DiagWithEqualFix(Test.range(), "int",
-                                           "'main' must return 'int'")));
+  auto TU = TestTU::withCode(Test.code());
+  EXPECT_THAT(TU.build().getDiagnostics(),
+              ElementsAre(AllOf(Diag(Test.range(), "'main' must return 'int'"),
+                                WithFix(Fix(Test.range(), "int",
+                                            "change 'void' to 'int'")))));
   // Same code built as C gets different diagnostics.
+  TU.Filename = "Plain.c";
   EXPECT_THAT(
-      buildDiags(Test.code(), {"-x", "c"}),
+      TU.build().getDiagnostics(),
       ElementsAre(AllOf(
           Diag(Test.range(), "return type of 'main' is not 'int'"),
           WithFix(Fix(Test.range(), "int", "change return type to 'int'")))));
+}
+
+TEST(DiagnosticsTest, ClangTidy) {
+  Annotations Test(R"cpp(
+    #include $deprecated[["assert.h"]]
+
+    #define $macrodef[[SQUARE]](X) (X)*(X)
+    int main() {
+      return $doubled[[sizeof]](sizeof(int));
+      int y = 4;
+      return SQUARE($macroarg[[++]]y);
+    }
+  )cpp");
+  auto TU = TestTU::withCode(Test.code());
+  TU.HeaderFilename = "assert.h"; // Suppress "not found" error.
+  EXPECT_THAT(
+      TU.build().getDiagnostics(),
+      UnorderedElementsAre(
+          AllOf(Diag(Test.range("deprecated"),
+                     "inclusion of deprecated C++ header 'assert.h'; consider "
+                     "using 'cassert' instead [modernize-deprecated-headers]"),
+                WithFix(Fix(Test.range("deprecated"), "<cassert>",
+                            "change '\"assert.h\"' to '<cassert>'"))),
+          Diag(Test.range("doubled"),
+               "suspicious usage of 'sizeof(sizeof(...))' "
+               "[bugprone-sizeof-expression]"),
+          AllOf(
+              Diag(Test.range("macroarg"),
+                   "side effects in the 1st macro argument 'X' are repeated in "
+                   "macro expansion [bugprone-macro-repeated-side-effects]"),
+              WithNote(Diag(Test.range("macrodef"),
+                            "macro 'SQUARE' defined here "
+                            "[bugprone-macro-repeated-side-effects]"))),
+          Diag(Test.range("macroarg"),
+               "multiple unsequenced modifications to 'y'")));
 }
 
 TEST(DiagnosticsTest, Preprocessor) {
@@ -156,8 +179,29 @@ TEST(DiagnosticsTest, Preprocessor) {
     #endif
     )cpp");
   EXPECT_THAT(
-      buildDiags(Test.code()),
+      TestTU::withCode(Test.code()).build().getDiagnostics(),
       ElementsAre(Diag(Test.range(), "use of undeclared identifier 'b'")));
+}
+
+TEST(DiagnosticsTest, InsideMacros) {
+  Annotations Test(R"cpp(
+    #define TEN 10
+    #define RET(x) return x + 10
+
+    int* foo() {
+      RET($foo[[0]]);
+    }
+    int* bar() {
+      return $bar[[TEN]];
+    }
+    )cpp");
+  EXPECT_THAT(TestTU::withCode(Test.code()).build().getDiagnostics(),
+              ElementsAre(Diag(Test.range("foo"),
+                               "cannot initialize return object of type "
+                               "'int *' with an rvalue of type 'int'"),
+                          Diag(Test.range("bar"),
+                               "cannot initialize return object of type "
+                               "'int *' with an rvalue of type 'int'")));
 }
 
 TEST(DiagnosticsTest, ToLSP) {
@@ -188,7 +232,7 @@ TEST(DiagnosticsTest, ToLSP) {
   F.Message = "do something";
   D.Fixes.push_back(F);
 
-  auto MatchingLSP = [](const DiagBase &D, llvm::StringRef Message) {
+  auto MatchingLSP = [](const DiagBase &D, StringRef Message) {
     clangd::Diagnostic Res;
     Res.range = D.Range;
     Res.severity = getSeverity(D.Severity);
@@ -197,7 +241,7 @@ TEST(DiagnosticsTest, ToLSP) {
   };
 
   // Diagnostics should turn into these:
-  clangd::Diagnostic MainLSP = MatchingLSP(D, R"(something terrible happened
+  clangd::Diagnostic MainLSP = MatchingLSP(D, R"(Something terrible happened
 
 main.cpp:6:7: remark: declared somewhere in the main file
 
@@ -205,22 +249,91 @@ main.cpp:6:7: remark: declared somewhere in the main file
 note: declared somewhere in the header file)");
 
   clangd::Diagnostic NoteInMainLSP =
-      MatchingLSP(NoteInMain, R"(declared somewhere in the main file
+      MatchingLSP(NoteInMain, R"(Declared somewhere in the main file
 
 main.cpp:2:3: error: something terrible happened)");
 
   // Transform dianostics and check the results.
   std::vector<std::pair<clangd::Diagnostic, std::vector<clangd::Fix>>> LSPDiags;
-  toLSPDiags(D, [&](clangd::Diagnostic LSPDiag,
-                    llvm::ArrayRef<clangd::Fix> Fixes) {
-    LSPDiags.push_back({std::move(LSPDiag),
-                        std::vector<clangd::Fix>(Fixes.begin(), Fixes.end())});
-  });
+  toLSPDiags(D,
+#ifdef _WIN32
+             URIForFile::canonicalize("c:\\path\\to\\foo\\bar\\main.cpp",
+                                      /*TUPath=*/""),
+#else
+      URIForFile::canonicalize("/path/to/foo/bar/main.cpp", /*TUPath=*/""),
+#endif
+             ClangdDiagnosticOptions(),
+             [&](clangd::Diagnostic LSPDiag, ArrayRef<clangd::Fix> Fixes) {
+               LSPDiags.push_back(
+                   {std::move(LSPDiag),
+                    std::vector<clangd::Fix>(Fixes.begin(), Fixes.end())});
+             });
 
   EXPECT_THAT(
       LSPDiags,
       ElementsAre(Pair(EqualToLSPDiag(MainLSP), ElementsAre(EqualToFix(F))),
                   Pair(EqualToLSPDiag(NoteInMainLSP), IsEmpty())));
+}
+
+TEST(ClangdUnitTest, GetBeginningOfIdentifier) {
+  std::string Preamble = R"cpp(
+struct Bar { int func(); };
+#define MACRO(X) void f() { X; }
+Bar* bar;
+  )cpp";
+  // First ^ is the expected beginning, last is the search position.
+  for (std::string Text : std::vector<std::string>{
+           "int ^f^oo();", // inside identifier
+           "int ^foo();",  // beginning of identifier
+           "int ^foo^();", // end of identifier
+           "int foo(^);",  // non-identifier
+           "^int foo();",  // beginning of file (can't back up)
+           "int ^f0^0();", // after a digit (lexing at N-1 is wrong)
+           "int ^λλ^λ();", // UTF-8 handled properly when backing up
+
+           // identifier in macro arg
+           "MACRO(bar->^func())",  // beginning of identifier
+           "MACRO(bar->^fun^c())", // inside identifier
+           "MACRO(bar->^func^())", // end of identifier
+           "MACRO(^bar->func())",  // begin identifier
+           "MACRO(^bar^->func())", // end identifier
+           "^MACRO(bar->func())",  // beginning of macro name
+           "^MAC^RO(bar->func())", // inside macro name
+           "^MACRO^(bar->func())", // end of macro name
+       }) {
+    std::string WithPreamble = Preamble + Text;
+    Annotations TestCase(WithPreamble);
+    auto AST = TestTU::withCode(TestCase.code()).build();
+    const auto &SourceMgr = AST.getASTContext().getSourceManager();
+    SourceLocation Actual = getBeginningOfIdentifier(
+        AST, TestCase.points().back(), SourceMgr.getMainFileID());
+    Position ActualPos = offsetToPosition(
+        TestCase.code(),
+        SourceMgr.getFileOffset(SourceMgr.getSpellingLoc(Actual)));
+    EXPECT_EQ(TestCase.points().front(), ActualPos) << Text;
+  }
+}
+
+MATCHER_P(DeclNamed, Name, "") {
+  if (NamedDecl *ND = dyn_cast<NamedDecl>(arg))
+    if (ND->getName() == Name)
+      return true;
+  if (auto *Stream = result_listener->stream()) {
+    llvm::raw_os_ostream OS(*Stream);
+    arg->dump(OS);
+  }
+  return false;
+}
+
+TEST(ClangdUnitTest, TopLevelDecls) {
+  TestTU TU;
+  TU.HeaderCode = R"(
+    int header1();
+    int header2;
+  )";
+  TU.Code = "int main();";
+  auto AST = TU.build();
+  EXPECT_THAT(AST.getLocalTopLevelDecls(), ElementsAre(DeclNamed("main")));
 }
 
 } // namespace

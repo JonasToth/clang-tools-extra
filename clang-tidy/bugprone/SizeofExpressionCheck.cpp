@@ -62,12 +62,16 @@ SizeofExpressionCheck::SizeofExpressionCheck(StringRef Name,
                                              ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
       WarnOnSizeOfConstant(Options.get("WarnOnSizeOfConstant", 1) != 0),
+      WarnOnSizeOfIntegerExpression(
+          Options.get("WarnOnSizeOfIntegerExpression", 0) != 0),
       WarnOnSizeOfThis(Options.get("WarnOnSizeOfThis", 1) != 0),
       WarnOnSizeOfCompareToConstant(
           Options.get("WarnOnSizeOfCompareToConstant", 1) != 0) {}
 
 void SizeofExpressionCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "WarnOnSizeOfConstant", WarnOnSizeOfConstant);
+  Options.store(Opts, "WarnOnSizeOfIntegerExpression",
+                WarnOnSizeOfIntegerExpression);
   Options.store(Opts, "WarnOnSizeOfThis", WarnOnSizeOfThis);
   Options.store(Opts, "WarnOnSizeOfCompareToConstant",
                 WarnOnSizeOfCompareToConstant);
@@ -78,6 +82,9 @@ void SizeofExpressionCheck::registerMatchers(MatchFinder *Finder) {
   const auto ConstantExpr = expr(ignoringParenImpCasts(
       anyOf(integerLiteral(), unaryOperator(hasUnaryOperand(IntegerExpr)),
             binaryOperator(hasLHS(IntegerExpr), hasRHS(IntegerExpr)))));
+  const auto IntegerCallExpr = expr(ignoringParenImpCasts(
+      callExpr(anyOf(hasType(isInteger()), hasType(enumType())),
+               unless(isInTemplateInstantiation()))));
   const auto SizeOfExpr =
       expr(anyOf(sizeOfExpr(has(type())), sizeOfExpr(has(expr()))));
   const auto SizeOfZero = expr(
@@ -91,6 +98,14 @@ void SizeofExpressionCheck::registerMatchers(MatchFinder *Finder) {
         expr(sizeOfExpr(has(ignoringParenImpCasts(ConstantExpr))),
              unless(SizeOfZero))
             .bind("sizeof-constant"),
+        this);
+  }
+
+  // Detect sizeof(f())
+  if (WarnOnSizeOfIntegerExpression) {
+    Finder->addMatcher(
+        expr(sizeOfExpr(ignoringParenImpCasts(has(IntegerCallExpr))))
+            .bind("sizeof-integer-call"),
         this);
   }
 
@@ -201,25 +216,29 @@ void SizeofExpressionCheck::check(const MatchFinder::MatchResult &Result) {
   const ASTContext &Ctx = *Result.Context;
 
   if (const auto *E = Result.Nodes.getNodeAs<Expr>("sizeof-constant")) {
-    diag(E->getLocStart(),
+    diag(E->getBeginLoc(),
          "suspicious usage of 'sizeof(K)'; did you mean 'K'?");
+  } else if (const auto *E =
+                 Result.Nodes.getNodeAs<Expr>("sizeof-integer-call")) {
+    diag(E->getBeginLoc(), "suspicious usage of 'sizeof()' on an expression "
+                           "that results in an integer");
   } else if (const auto *E = Result.Nodes.getNodeAs<Expr>("sizeof-this")) {
-    diag(E->getLocStart(),
+    diag(E->getBeginLoc(),
          "suspicious usage of 'sizeof(this)'; did you mean 'sizeof(*this)'");
   } else if (const auto *E = Result.Nodes.getNodeAs<Expr>("sizeof-charp")) {
-    diag(E->getLocStart(),
+    diag(E->getBeginLoc(),
          "suspicious usage of 'sizeof(char*)'; do you mean 'strlen'?");
   } else if (const auto *E =
                  Result.Nodes.getNodeAs<Expr>("sizeof-pointer-to-aggregate")) {
-    diag(E->getLocStart(),
+    diag(E->getBeginLoc(),
          "suspicious usage of 'sizeof(A*)'; pointer to aggregate");
   } else if (const auto *E =
                  Result.Nodes.getNodeAs<Expr>("sizeof-compare-constant")) {
-    diag(E->getLocStart(),
+    diag(E->getBeginLoc(),
          "suspicious comparison of 'sizeof(expr)' to a constant");
   } else if (const auto *E =
                  Result.Nodes.getNodeAs<Expr>("sizeof-comma-expr")) {
-    diag(E->getLocStart(), "suspicious usage of 'sizeof(..., ...)'");
+    diag(E->getBeginLoc(), "suspicious usage of 'sizeof(..., ...)'");
   } else if (const auto *E =
                  Result.Nodes.getNodeAs<Expr>("sizeof-divide-expr")) {
     const auto *NumTy = Result.Nodes.getNodeAs<Type>("num-type");
@@ -233,30 +252,30 @@ void SizeofExpressionCheck::check(const MatchFinder::MatchResult &Result) {
 
     if (DenominatorSize > CharUnits::Zero() &&
         !NumeratorSize.isMultipleOf(DenominatorSize)) {
-      diag(E->getLocStart(), "suspicious usage of 'sizeof(...)/sizeof(...)';"
+      diag(E->getBeginLoc(), "suspicious usage of 'sizeof(...)/sizeof(...)';"
                              " numerator is not a multiple of denominator");
     } else if (ElementSize > CharUnits::Zero() &&
                DenominatorSize > CharUnits::Zero() &&
                ElementSize != DenominatorSize) {
-      diag(E->getLocStart(), "suspicious usage of 'sizeof(...)/sizeof(...)';"
+      diag(E->getBeginLoc(), "suspicious usage of 'sizeof(...)/sizeof(...)';"
                              " numerator is not a multiple of denominator");
     } else if (NumTy && DenomTy && NumTy == DenomTy) {
-      diag(E->getLocStart(),
+      diag(E->getBeginLoc(),
            "suspicious usage of sizeof pointer 'sizeof(T)/sizeof(T)'");
     } else if (PointedTy && DenomTy && PointedTy == DenomTy) {
-      diag(E->getLocStart(),
+      diag(E->getBeginLoc(),
            "suspicious usage of sizeof pointer 'sizeof(T*)/sizeof(T)'");
     } else if (NumTy && DenomTy && NumTy->isPointerType() &&
                DenomTy->isPointerType()) {
-      diag(E->getLocStart(),
+      diag(E->getBeginLoc(),
            "suspicious usage of sizeof pointer 'sizeof(P*)/sizeof(Q*)'");
     }
   } else if (const auto *E =
                  Result.Nodes.getNodeAs<Expr>("sizeof-sizeof-expr")) {
-    diag(E->getLocStart(), "suspicious usage of 'sizeof(sizeof(...))'");
+    diag(E->getBeginLoc(), "suspicious usage of 'sizeof(sizeof(...))'");
   } else if (const auto *E =
                  Result.Nodes.getNodeAs<Expr>("sizeof-multiply-sizeof")) {
-    diag(E->getLocStart(), "suspicious 'sizeof' by 'sizeof' multiplication");
+    diag(E->getBeginLoc(), "suspicious 'sizeof' by 'sizeof' multiplication");
   }
 }
 

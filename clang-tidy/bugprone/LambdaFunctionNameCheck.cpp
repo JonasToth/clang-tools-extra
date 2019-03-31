@@ -73,15 +73,15 @@ void LambdaFunctionNameCheck::registerPPCallbacks(CompilerInstance &Compiler) {
 
 void LambdaFunctionNameCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *E = Result.Nodes.getNodeAs<PredefinedExpr>("E");
-  if (E->getIdentType() != PredefinedExpr::Func &&
-      E->getIdentType() != PredefinedExpr::Function) {
+  if (E->getIdentKind() != PredefinedExpr::Func &&
+      E->getIdentKind() != PredefinedExpr::Function) {
     // We don't care about other PredefinedExprs.
     return;
   }
   if (E->getLocation().isMacroID()) {
     auto ER =
         Result.SourceManager->getImmediateExpansionRange(E->getLocation());
-    if (SuppressMacroExpansions.find(SourceRange(ER.first, ER.second)) !=
+    if (SuppressMacroExpansions.find(ER.getAsRange()) !=
         SuppressMacroExpansions.end()) {
       // This is a macro expansion for which we should not warn.
       return;
@@ -91,7 +91,7 @@ void LambdaFunctionNameCheck::check(const MatchFinder::MatchResult &Result) {
        "inside a lambda, '%0' expands to the name of the function call "
        "operator; consider capturing the name of the enclosing function "
        "explicitly")
-      << PredefinedExpr::getIdentTypeName(E->getIdentType());
+      << PredefinedExpr::getIdentKindName(E->getIdentKind());
 }
 
 } // namespace bugprone

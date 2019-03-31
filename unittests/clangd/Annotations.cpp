@@ -1,17 +1,17 @@
-//===--- Annotations.cpp - Annotated source code for unit tests -*- C++-*-===//
+//===--- Annotations.cpp - Annotated source code for unit tests --*- C++-*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
 // This file is distributed under the University of Illinois Open Source
 // License. See LICENSE.TXT for details.
 //
-//===---------------------------------------------------------------------===//
+//===----------------------------------------------------------------------===//
+
 #include "Annotations.h"
 #include "SourceCode.h"
 
 namespace clang {
 namespace clangd {
-using namespace llvm;
 
 // Crash if the assertion fails, printing the message and testcase.
 // More elegant error handling isn't needed for unit tests.
@@ -22,13 +22,13 @@ static void require(bool Assertion, const char *Msg, llvm::StringRef Code) {
   }
 }
 
-Annotations::Annotations(StringRef Text) {
+Annotations::Annotations(llvm::StringRef Text) {
   auto Here = [this] { return offsetToPosition(Code, Code.size()); };
   auto Require = [Text](bool Assertion, const char *Msg) {
     require(Assertion, Msg, Text);
   };
-  Optional<StringRef> Name;
-  SmallVector<std::pair<StringRef, Position>, 8> OpenRanges;
+  llvm::Optional<llvm::StringRef> Name;
+  llvm::SmallVector<std::pair<llvm::StringRef, Position>, 8> OpenRanges;
 
   Code.reserve(Text.size());
   while (!Text.empty()) {
@@ -81,16 +81,6 @@ Range Annotations::range(llvm::StringRef Name) const {
 std::vector<Range> Annotations::ranges(llvm::StringRef Name) const {
   auto R = Ranges.lookup(Name);
   return {R.begin(), R.end()};
-}
-
-std::pair<std::size_t, std::size_t>
-Annotations::offsetRange(llvm::StringRef Name) const {
-  auto R = range(Name);
-  llvm::Expected<size_t> Start = positionToOffset(Code, R.start);
-  llvm::Expected<size_t> End = positionToOffset(Code, R.end);
-  assert(Start);
-  assert(End);
-  return {*Start, *End};
 }
 
 } // namespace clangd

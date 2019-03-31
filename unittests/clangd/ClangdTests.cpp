@@ -33,14 +33,19 @@
 namespace clang {
 namespace clangd {
 
+namespace {
+
 using ::testing::ElementsAre;
 using ::testing::Eq;
+using ::testing::Field;
 using ::testing::Gt;
 using ::testing::IsEmpty;
 using ::testing::Pair;
 using ::testing::UnorderedElementsAre;
 
-namespace {
+MATCHER_P2(FileRange, File, Range, "") {
+  return Location{URIForFile::canonicalize(File, testRoot()), Range} == arg;
+}
 
 bool diagsContainErrors(const std::vector<Diag> &Diagnostics) {
   for (auto D : Diagnostics) {
@@ -109,7 +114,7 @@ private:
 /// Replaces all patterns of the form 0x123abc with spaces
 std::string replacePtrsInDump(std::string const &Dump) {
   llvm::Regex RE("0x[0-9a-fA-F]+");
-  llvm::SmallVector<StringRef, 1> Matches;
+  llvm::SmallVector<llvm::StringRef, 1> Matches;
   llvm::StringRef Pending = Dump;
 
   std::string Result;
@@ -133,8 +138,8 @@ std::string dumpASTWithoutMemoryLocs(ClangdServer &Server, PathRef File) {
 class ClangdVFSTest : public ::testing::Test {
 protected:
   std::string parseSourceAndDumpAST(
-      PathRef SourceFileRelPath, StringRef SourceContents,
-      std::vector<std::pair<PathRef, StringRef>> ExtraFiles = {},
+      PathRef SourceFileRelPath, llvm::StringRef SourceContents,
+      std::vector<std::pair<PathRef, llvm::StringRef>> ExtraFiles = {},
       bool ExpectErrors = false) {
     MockFSProvider FS;
     ErrorCheckingDiagConsumer DiagConsumer;
@@ -263,11 +268,11 @@ int b = a;
 TEST_F(ClangdVFSTest, PropagatesContexts) {
   static Key<int> Secret;
   struct FSProvider : public FileSystemProvider {
-    IntrusiveRefCntPtr<vfs::FileSystem> getFileSystem() override {
+    IntrusiveRefCntPtr<llvm::vfs::FileSystem> getFileSystem() const override {
       Got = Context::current().getExisting(Secret);
       return buildTestFS({});
     }
-    int Got;
+    mutable int Got;
   } FS;
   struct DiagConsumer : public DiagnosticsConsumer {
     void onDiagnosticsReady(PathRef File,
@@ -368,16 +373,7 @@ struct bar { T x; };
 
   // Now switch to C++ mode.
   CDB.ExtraClangFlags = {"-xc++"};
-  // By default addDocument does not check if CompileCommand has changed, so we
-  // expect to see the errors.
-  runAddDocument(Server, FooCpp, SourceContents1);
-  EXPECT_TRUE(DiagConsumer.hadErrorInLastDiags());
-  runAddDocument(Server, FooCpp, SourceContents2);
-  EXPECT_TRUE(DiagConsumer.hadErrorInLastDiags());
-  // Passing SkipCache=true will force addDocument to reparse the file with
-  // proper flags.
-  runAddDocument(Server, FooCpp, SourceContents2, WantDiagnostics::Auto,
-                 /*SkipCache=*/true);
+  runAddDocument(Server, FooCpp, SourceContents2, WantDiagnostics::Auto);
   EXPECT_FALSE(DiagConsumer.hadErrorInLastDiags());
   // Subsequent addDocument calls should finish without errors too.
   runAddDocument(Server, FooCpp, SourceContents1);
@@ -409,14 +405,7 @@ int main() { return 0; }
 
   // Parse without the define, no errors should be produced.
   CDB.ExtraClangFlags = {};
-  // By default addDocument does not check if CompileCommand has changed, so we
-  // expect to see the errors.
-  runAddDocument(Server, FooCpp, SourceContents);
-  EXPECT_TRUE(DiagConsumer.hadErrorInLastDiags());
-  // Passing SkipCache=true will force addDocument to reparse the file with
-  // proper flags.
-  runAddDocument(Server, FooCpp, SourceContents, WantDiagnostics::Auto,
-                 /*SkipCache=*/true);
+  runAddDocument(Server, FooCpp, SourceContents, WantDiagnostics::Auto);
   ASSERT_TRUE(Server.blockUntilIdleForTest());
   EXPECT_FALSE(DiagConsumer.hadErrorInLastDiags());
   // Subsequent addDocument call should finish without errors too.
@@ -471,17 +460,15 @@ int hello;
 
   auto Locations = runFindDefinitions(Server, FooCpp, FooSource.point());
   EXPECT_TRUE(bool(Locations));
-  EXPECT_THAT(*Locations, ElementsAre(Location{URIForFile{FooCpp},
-                                               FooSource.range("one")}));
+  EXPECT_THAT(*Locations,
+              ElementsAre(FileRange(FooCpp, FooSource.range("one"))));
 
   // Undefine MACRO, close baz.cpp.
   CDB.ExtraClangFlags.clear();
   DiagConsumer.clear();
   Server.removeDocument(BazCpp);
-  Server.addDocument(FooCpp, FooSource.code(), WantDiagnostics::Auto,
-                     /*SkipCache=*/true);
-  Server.addDocument(BarCpp, BarSource.code(), WantDiagnostics::Auto,
-                     /*SkipCache=*/true);
+  Server.addDocument(FooCpp, FooSource.code(), WantDiagnostics::Auto);
+  Server.addDocument(BarCpp, BarSource.code(), WantDiagnostics::Auto);
   ASSERT_TRUE(Server.blockUntilIdleForTest());
 
   EXPECT_THAT(DiagConsumer.filesWithDiags(),
@@ -489,8 +476,8 @@ int hello;
 
   Locations = runFindDefinitions(Server, FooCpp, FooSource.point());
   EXPECT_TRUE(bool(Locations));
-  EXPECT_THAT(*Locations, ElementsAre(Location{URIForFile{FooCpp},
-                                               FooSource.range("two")}));
+  EXPECT_THAT(*Locations,
+              ElementsAre(FileRange(FooCpp, FooSource.range("two"))));
 }
 
 TEST_F(ClangdVFSTest, MemoryUsage) {
@@ -552,7 +539,7 @@ TEST_F(ClangdVFSTest, InvalidCompileCommand) {
   // can't parse the file.
   EXPECT_THAT(cantFail(runCodeComplete(Server, FooCpp, Position(),
                                        clangd::CodeCompleteOptions()))
-                  .items,
+                  .Completions,
               IsEmpty());
   auto SigHelp = runSignatureHelp(Server, FooCpp, Position());
   ASSERT_TRUE(bool(SigHelp)) << "signatureHelp returned an error";
@@ -686,7 +673,7 @@ int d;
       Server.addDocument(FilePaths[FileIndex],
                          ShouldHaveErrors ? SourceContentsWithErrors
                                           : SourceContentsWithoutErrors,
-                         WantDiagnostics::Auto, SkipCache);
+                         WantDiagnostics::Auto);
       UpdateStatsOnAddDocument(FileIndex, ShouldHaveErrors);
     };
 
@@ -764,7 +751,8 @@ int d;
         BlockingRequests[RequestIndex]();
       }
     }
-  } // Wait for ClangdServer to shutdown before proceeding.
+    ASSERT_TRUE(Server.blockUntilIdleForTest());
+  }
 
   // Check some invariants about the state of the program.
   std::vector<FileStat> Stats = DiagConsumer.takeFileStats();
@@ -798,7 +786,7 @@ TEST_F(ClangdVFSTest, CheckSourceHeaderSwitch) {
   FS.Files[FooH] = "int a;";
   FS.Files[Invalid] = "int main() { \n return 0; \n }";
 
-  llvm::Optional<Path> PathResult = Server.switchSourceHeader(FooCpp);
+  Optional<Path> PathResult = Server.switchSourceHeader(FooCpp);
   EXPECT_TRUE(PathResult.hasValue());
   ASSERT_EQ(PathResult.getValue(), FooH);
 
@@ -916,63 +904,6 @@ int d;
   ASSERT_EQ(DiagConsumer.Count, 2); // Sanity check - we actually ran both?
 }
 
-TEST_F(ClangdVFSTest, InsertIncludes) {
-  MockFSProvider FS;
-  ErrorCheckingDiagConsumer DiagConsumer;
-  MockCompilationDatabase CDB;
-  std::string SearchDirArg = (llvm::Twine("-I") + testRoot()).str();
-  CDB.ExtraClangFlags.insert(CDB.ExtraClangFlags.end(), {SearchDirArg.c_str()});
-  ClangdServer Server(CDB, FS, DiagConsumer, ClangdServer::optsForTest());
-
-  auto FooCpp = testPath("foo.cpp");
-  const auto Code = R"cpp(
-#include "x.h"
-#include "z.h"
-
-void f() {}
-)cpp";
-  FS.Files[FooCpp] = Code;
-  runAddDocument(Server, FooCpp, Code);
-
-  auto ChangedCode = [&](llvm::StringRef Original, llvm::StringRef Preferred) {
-    auto Replaces = Server.insertInclude(
-        FooCpp, Code, Original, Preferred.empty() ? Original : Preferred);
-    EXPECT_TRUE(static_cast<bool>(Replaces));
-    auto Changed = tooling::applyAllReplacements(Code, *Replaces);
-    EXPECT_TRUE(static_cast<bool>(Changed));
-    return *Changed;
-  };
-  auto Inserted = [&](llvm::StringRef Original, llvm::StringRef Preferred,
-                      llvm::StringRef Expected) {
-    return llvm::StringRef(ChangedCode(Original, Preferred))
-        .contains((llvm::Twine("#include ") + Expected + "").str());
-  };
-
-  EXPECT_TRUE(Inserted("\"y.h\"", /*Preferred=*/"", "\"y.h\""));
-  EXPECT_TRUE(Inserted("\"y.h\"", /*Preferred=*/"\"Y.h\"", "\"Y.h\""));
-  EXPECT_TRUE(Inserted("<string>", /*Preferred=*/"", "<string>"));
-  EXPECT_TRUE(Inserted("<string>", /*Preferred=*/"", "<string>"));
-
-  std::string OriginalHeader = URI::createFile(testPath("y.h")).toString();
-  std::string PreferredHeader = URI::createFile(testPath("Y.h")).toString();
-  EXPECT_TRUE(Inserted(OriginalHeader,
-                       /*Preferred=*/"", "\"y.h\""));
-  EXPECT_TRUE(Inserted(OriginalHeader,
-                       /*Preferred=*/"<Y.h>", "<Y.h>"));
-  EXPECT_TRUE(Inserted(OriginalHeader, PreferredHeader, "\"Y.h\""));
-  EXPECT_TRUE(Inserted("<y.h>", PreferredHeader, "\"Y.h\""));
-
-  // Check that includes are sorted.
-  const auto Expected = R"cpp(
-#include "x.h"
-#include "y.h"
-#include "z.h"
-
-void f() {}
-)cpp";
-  EXPECT_EQ(Expected, ChangedCode("\"y.h\"", /*Preferred=*/""));
-}
-
 TEST_F(ClangdVFSTest, FormatCode) {
   MockFSProvider FS;
   ErrorCheckingDiagConsumer DiagConsumer;
@@ -1001,6 +932,110 @@ void f() {}
   EXPECT_TRUE(static_cast<bool>(Changed));
   EXPECT_EQ(Expected, *Changed);
 }
+
+TEST_F(ClangdVFSTest, ChangedHeaderFromISystem) {
+  MockFSProvider FS;
+  ErrorCheckingDiagConsumer DiagConsumer;
+  MockCompilationDatabase CDB;
+  ClangdServer Server(CDB, FS, DiagConsumer, ClangdServer::optsForTest());
+
+  auto SourcePath = testPath("source/foo.cpp");
+  auto HeaderPath = testPath("headers/foo.h");
+  FS.Files[HeaderPath] = "struct X { int bar; };";
+  Annotations Code(R"cpp(
+    #include "foo.h"
+
+    int main() {
+      X().ba^
+    })cpp");
+  CDB.ExtraClangFlags.push_back("-xc++");
+  CDB.ExtraClangFlags.push_back("-isystem" + testPath("headers"));
+
+  runAddDocument(Server, SourcePath, Code.code());
+  auto Completions = cantFail(runCodeComplete(Server, SourcePath, Code.point(),
+                                              clangd::CodeCompleteOptions()))
+                         .Completions;
+  EXPECT_THAT(Completions, ElementsAre(Field(&CodeCompletion::Name, "bar")));
+  // Update the header and rerun addDocument to make sure we get the updated
+  // files.
+  FS.Files[HeaderPath] = "struct X { int bar; int baz; };";
+  runAddDocument(Server, SourcePath, Code.code());
+  Completions = cantFail(runCodeComplete(Server, SourcePath, Code.point(),
+                                         clangd::CodeCompleteOptions()))
+                    .Completions;
+  // We want to make sure we see the updated version.
+  EXPECT_THAT(Completions, ElementsAre(Field(&CodeCompletion::Name, "bar"),
+                                       Field(&CodeCompletion::Name, "baz")));
+}
+
+// FIXME(ioeric): make this work for windows again.
+#ifndef _WIN32
+// Check that running code completion doesn't stat() a bunch of files from the
+// preamble again. (They should be using the preamble's stat-cache)
+TEST(ClangdTests, PreambleVFSStatCache) {
+  class ListenStatsFSProvider : public FileSystemProvider {
+  public:
+    ListenStatsFSProvider(llvm::StringMap<unsigned> &CountStats)
+        : CountStats(CountStats) {}
+
+    IntrusiveRefCntPtr<llvm::vfs::FileSystem> getFileSystem() const override {
+      class ListenStatVFS : public llvm::vfs::ProxyFileSystem {
+      public:
+        ListenStatVFS(IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS,
+                      llvm::StringMap<unsigned> &CountStats)
+            : ProxyFileSystem(std::move(FS)), CountStats(CountStats) {}
+
+        llvm::ErrorOr<std::unique_ptr<llvm::vfs::File>>
+        openFileForRead(const Twine &Path) override {
+          ++CountStats[llvm::sys::path::filename(Path.str())];
+          return ProxyFileSystem::openFileForRead(Path);
+        }
+        llvm::ErrorOr<llvm::vfs::Status> status(const Twine &Path) override {
+          ++CountStats[llvm::sys::path::filename(Path.str())];
+          return ProxyFileSystem::status(Path);
+        }
+
+      private:
+        llvm::StringMap<unsigned> &CountStats;
+      };
+
+      return IntrusiveRefCntPtr<ListenStatVFS>(
+          new ListenStatVFS(buildTestFS(Files), CountStats));
+    }
+
+    // If relative paths are used, they are resolved with testPath().
+    llvm::StringMap<std::string> Files;
+    llvm::StringMap<unsigned> &CountStats;
+  };
+
+  llvm::StringMap<unsigned> CountStats;
+  ListenStatsFSProvider FS(CountStats);
+  ErrorCheckingDiagConsumer DiagConsumer;
+  MockCompilationDatabase CDB;
+  ClangdServer Server(CDB, FS, DiagConsumer, ClangdServer::optsForTest());
+
+  auto SourcePath = testPath("foo.cpp");
+  auto HeaderPath = testPath("foo.h");
+  FS.Files[HeaderPath] = "struct TestSym {};";
+  Annotations Code(R"cpp(
+    #include "foo.h"
+
+    int main() {
+      TestSy^
+    })cpp");
+
+  runAddDocument(Server, SourcePath, Code.code());
+
+  unsigned Before = CountStats["foo.h"];
+  EXPECT_GT(Before, 0u);
+  auto Completions = cantFail(runCodeComplete(Server, SourcePath, Code.point(),
+                                              clangd::CodeCompleteOptions()))
+                         .Completions;
+  EXPECT_EQ(CountStats["foo.h"], Before);
+  EXPECT_THAT(Completions,
+              ElementsAre(Field(&CodeCompletion::Name, "TestSym")));
+}
+#endif
 
 } // namespace
 } // namespace clangd
