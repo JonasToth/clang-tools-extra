@@ -1,9 +1,8 @@
 //===-- FuzzyMatchTests.cpp - String fuzzy matcher tests --------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -248,6 +247,8 @@ TEST(FuzzyMatch, Ranking) {
   EXPECT_THAT("foo", ranks("[foo]", "[Foo]"));
   EXPECT_THAT("onMes",
               ranks("[onMes]sage", "[onmes]sage", "[on]This[M]ega[Es]capes"));
+  EXPECT_THAT("onmes",
+              ranks("[onmes]sage", "[onMes]sage", "[on]This[M]ega[Es]capes"));
   EXPECT_THAT("CC", ranks("[C]amel[C]ase", "[c]amel[C]ase"));
   EXPECT_THAT("cC", ranks("[c]amel[C]ase", "[C]amel[C]ase"));
   EXPECT_THAT("p", ranks("[p]", "[p]arse", "[p]osix", "[p]afdsa", "[p]ath"));
@@ -271,10 +272,16 @@ TEST(FuzzyMatch, Ranking) {
 // Verify some bounds so we know scores fall in the right range.
 // Testing exact scores is fragile, so we prefer Ranking tests.
 TEST(FuzzyMatch, Scoring) {
-  EXPECT_THAT("abs", matches("[a]w[B]xYz[S]", 0.f));
+  EXPECT_THAT("abs", matches("[a]w[B]xYz[S]", 7.f / 12.f));
   EXPECT_THAT("abs", matches("[abs]l", 1.f));
   EXPECT_THAT("abs", matches("[abs]", 2.f));
   EXPECT_THAT("Abs", matches("[abs]", 2.f));
+}
+
+TEST(FuzzyMatch, InitialismAndPrefix) {
+  // We want these scores to be roughly the same.
+  EXPECT_THAT("up", matches("[u]nique_[p]tr", 3.f / 4.f));
+  EXPECT_THAT("up", matches("[up]per_bound", 1.f));
 }
 
 // Returns pretty-printed segmentation of Text.

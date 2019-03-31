@@ -1,15 +1,15 @@
 //===-- ClangdTests.cpp - Clangd unit tests ---------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
 #include "Annotations.h"
 #include "ClangdLSPServer.h"
 #include "ClangdServer.h"
+#include "GlobalCompilationDatabase.h"
 #include "Matchers.h"
 #include "SyncAPI.h"
 #include "TestFS.h"
@@ -43,8 +43,9 @@ using ::testing::IsEmpty;
 using ::testing::Pair;
 using ::testing::UnorderedElementsAre;
 
-MATCHER_P2(FileRange, File, Range, "") {
-  return Location{URIForFile::canonicalize(File, testRoot()), Range} == arg;
+MATCHER_P2(DeclAt, File, Range, "") {
+  return arg.PreferredDeclaration ==
+         Location{URIForFile::canonicalize(File, testRoot()), Range};
 }
 
 bool diagsContainErrors(const std::vector<Diag> &Diagnostics) {
@@ -458,10 +459,9 @@ int hello;
               UnorderedElementsAre(Pair(FooCpp, false), Pair(BarCpp, true),
                                    Pair(BazCpp, false)));
 
-  auto Locations = runFindDefinitions(Server, FooCpp, FooSource.point());
+  auto Locations = runLocateSymbolAt(Server, FooCpp, FooSource.point());
   EXPECT_TRUE(bool(Locations));
-  EXPECT_THAT(*Locations,
-              ElementsAre(FileRange(FooCpp, FooSource.range("one"))));
+  EXPECT_THAT(*Locations, ElementsAre(DeclAt(FooCpp, FooSource.range("one"))));
 
   // Undefine MACRO, close baz.cpp.
   CDB.ExtraClangFlags.clear();
@@ -474,10 +474,9 @@ int hello;
   EXPECT_THAT(DiagConsumer.filesWithDiags(),
               UnorderedElementsAre(Pair(FooCpp, false), Pair(BarCpp, false)));
 
-  Locations = runFindDefinitions(Server, FooCpp, FooSource.point());
+  Locations = runLocateSymbolAt(Server, FooCpp, FooSource.point());
   EXPECT_TRUE(bool(Locations));
-  EXPECT_THAT(*Locations,
-              ElementsAre(FileRange(FooCpp, FooSource.range("two"))));
+  EXPECT_THAT(*Locations, ElementsAre(DeclAt(FooCpp, FooSource.range("two"))));
 }
 
 TEST_F(ClangdVFSTest, MemoryUsage) {
@@ -532,7 +531,7 @@ TEST_F(ClangdVFSTest, InvalidCompileCommand) {
   runAddDocument(Server, FooCpp, "int main() {}");
 
   EXPECT_EQ(runDumpAST(Server, FooCpp), "<no-ast>");
-  EXPECT_ERROR(runFindDefinitions(Server, FooCpp, Position()));
+  EXPECT_ERROR(runLocateSymbolAt(Server, FooCpp, Position()));
   EXPECT_ERROR(runFindDocumentHighlights(Server, FooCpp, Position()));
   EXPECT_ERROR(runRename(Server, FooCpp, Position(), "new_name"));
   // FIXME: codeComplete and signatureHelp should also return errors when they
@@ -717,7 +716,7 @@ int d;
                                clangd::CodeCompleteOptions()));
     };
 
-    auto FindDefinitionsRequest = [&]() {
+    auto LocateSymbolRequest = [&]() {
       unsigned FileIndex = FileIndexDist(RandGen);
       // Make sure we don't violate the ClangdServer's contract.
       if (ReqStats[FileIndex].FileIsRemoved)
@@ -727,13 +726,13 @@ int d;
       Pos.line = LineDist(RandGen);
       Pos.character = ColumnDist(RandGen);
 
-      ASSERT_TRUE(!!runFindDefinitions(Server, FilePaths[FileIndex], Pos));
+      ASSERT_TRUE(!!runLocateSymbolAt(Server, FilePaths[FileIndex], Pos));
     };
 
     std::vector<std::function<void()>> AsyncRequests = {
         AddDocumentRequest, ForceReparseRequest, RemoveDocumentRequest};
     std::vector<std::function<void()>> BlockingRequests = {
-        CodeCompletionRequest, FindDefinitionsRequest};
+        CodeCompletionRequest, LocateSymbolRequest};
 
     // Bash requests to ClangdServer in a loop.
     std::uniform_int_distribution<int> AsyncRequestIndexDist(
@@ -1036,6 +1035,28 @@ TEST(ClangdTests, PreambleVFSStatCache) {
               ElementsAre(Field(&CodeCompletion::Name, "TestSym")));
 }
 #endif
+
+TEST_F(ClangdVFSTest, FlagsWithPlugins) {
+  MockFSProvider FS;
+  ErrorCheckingDiagConsumer DiagConsumer;
+  MockCompilationDatabase CDB;
+  CDB.ExtraClangFlags = {
+      "-Xclang",
+      "-add-plugin",
+      "-Xclang",
+      "random-plugin",
+  };
+  OverlayCDB OCDB(&CDB);
+  ClangdServer Server(OCDB, FS, DiagConsumer, ClangdServer::optsForTest());
+
+  auto FooCpp = testPath("foo.cpp");
+  const auto SourceContents = "int main() { return 0; }";
+  FS.Files[FooCpp] = FooCpp;
+  Server.addDocument(FooCpp, SourceContents);
+  auto Result = dumpASTWithoutMemoryLocs(Server, FooCpp);
+  EXPECT_TRUE(Server.blockUntilIdleForTest()) << "Waiting for diagnostics";
+  EXPECT_NE(Result, "<no-ast>");
+}
 
 } // namespace
 } // namespace clangd

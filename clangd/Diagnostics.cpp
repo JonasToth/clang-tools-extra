@@ -1,9 +1,8 @@
 //===--- Diagnostics.cpp -----------------------------------------*- C++-*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -162,10 +161,12 @@ std::string capitalize(std::string Message) {
 ///
 ///     dir1/dir2/dir3/../../dir4/header.h:12:23
 ///     note: candidate function not viable: requires 3 arguments
-std::string mainMessage(const Diag &D) {
+std::string mainMessage(const Diag &D, bool DisplayFixesCount) {
   std::string Result;
   llvm::raw_string_ostream OS(Result);
   OS << D.Message;
+  if (DisplayFixesCount && !D.Fixes.empty())
+    OS << " (" << (D.Fixes.size() > 1 ? "fixes" : "fix") << " available)";
   for (auto &Note : D.Notes) {
     OS << "\n\n";
     printDiag(OS, Note);
@@ -251,7 +252,7 @@ void toLSPDiags(
 
   {
     clangd::Diagnostic Main = FillBasicFields(D);
-    Main.message = mainMessage(D);
+    Main.message = mainMessage(D, Opts.DisplayFixesCount);
     if (Opts.EmbedFixesInDiagnostics) {
       Main.codeActions.emplace();
       for (const auto &Fix : D.Fixes)
@@ -334,6 +335,11 @@ void StoreDiags::HandleDiagnostic(DiagnosticsEngine::Level DiagLevel,
 
     llvm::SmallVector<TextEdit, 1> Edits;
     for (auto &FixIt : Info.getFixItHints()) {
+      // Follow clang's behavior, don't apply FixIt to the code in macros,
+      // we are less certain it is the right fix.
+      if (FixIt.RemoveRange.getBegin().isMacroID() ||
+          FixIt.RemoveRange.getEnd().isMacroID())
+        return false;
       if (!isInsideMainFile(FixIt.RemoveRange.getBegin(),
                             Info.getSourceManager()))
         return false;
@@ -371,10 +377,16 @@ void StoreDiags::HandleDiagnostic(DiagnosticsEngine::Level DiagLevel,
     flushLastDiag();
 
     LastDiag = Diag();
+    LastDiag->ID = Info.getID();
     FillDiagBase(*LastDiag);
 
     if (!Info.getFixItHints().empty())
       AddFix(true /* try to invent a message instead of repeating the diag */);
+    if (Fixer) {
+      auto ExtraFixes = Fixer(DiagLevel, Info);
+      LastDiag->Fixes.insert(LastDiag->Fixes.end(), ExtraFixes.begin(),
+                             ExtraFixes.end());
+    }
   } else {
     // Handle a note to an existing diagnostic.
     if (!LastDiag) {
@@ -404,8 +416,8 @@ void StoreDiags::flushLastDiag() {
   if (mentionsMainFile(*LastDiag))
     Output.push_back(std::move(*LastDiag));
   else
-    log("Dropped diagnostic outside main file: {0}: {1}", LastDiag->File,
-        LastDiag->Message);
+    vlog("Dropped diagnostic outside main file: {0}: {1}", LastDiag->File,
+         LastDiag->Message);
   LastDiag.reset();
 }
 

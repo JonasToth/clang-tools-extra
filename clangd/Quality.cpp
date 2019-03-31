@@ -1,16 +1,16 @@
 //===--- Quality.cpp ---------------------------------------------*- C++-*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+
 #include "Quality.h"
 #include "AST.h"
 #include "FileDistance.h"
 #include "URI.h"
-#include "index/Index.h"
+#include "index/Symbol.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
@@ -283,12 +283,12 @@ computeScope(const NamedDecl *D) {
 }
 
 void SymbolRelevanceSignals::merge(const Symbol &IndexResult) {
-  // FIXME: Index results always assumed to be at global scope. If Scope becomes
-  // relevant to non-completion requests, we should recognize class members etc.
-
   SymbolURI = IndexResult.CanonicalDeclaration.FileURI;
   SymbolScope = IndexResult.Scope;
   IsInstanceMember |= isInstanceMember(IndexResult.SymInfo);
+  if (!(IndexResult.Flags & Symbol::VisibleOutsideFile)) {
+    Scope = AccessibleScope::FileScope;
+  }
 }
 
 void SymbolRelevanceSignals::merge(const CodeCompletionResult &SemaCCResult) {
@@ -366,13 +366,26 @@ float SymbolRelevanceSignals::evaluate() const {
     case GlobalScope:
       break;
     case FileScope:
-      Score *= 1.5;
+      Score *= 1.5f;
       break;
     case ClassScope:
       Score *= 2;
       break;
     case FunctionScope:
       Score *= 4;
+      break;
+    }
+  } else {
+    // For non-completion queries, the wider the scope where a symbol is
+    // visible, the more likely it is to be relevant.
+    switch (Scope) {
+    case GlobalScope:
+      break;
+    case FileScope:
+      Score *= 0.5f;
+      break;
+    default:
+      // TODO: Handle other scopes as we start to use them for index results.
       break;
     }
   }

@@ -2,10 +2,9 @@
 #
 #===- run-clang-tidy.py - Parallel clang-tidy runner ---------*- python -*--===#
 #
-#                     The LLVM Compiler Infrastructure
-#
-# This file is distributed under the University of Illinois Open Source
-# License. See LICENSE.TXT for details.
+# Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 #
 #===------------------------------------------------------------------------===#
 # FIXME: Integrate with clang-tidy-diff.py
@@ -48,7 +47,11 @@ import sys
 import tempfile
 import threading
 import traceback
-import yaml
+
+try:
+  import yaml
+except ImportError:
+  yaml = None
 
 is_py2 = sys.version[0] == '2'
 
@@ -200,9 +203,10 @@ def main():
                       'headers to output diagnostics from. Diagnostics from '
                       'the main file of each translation unit are always '
                       'displayed.')
-  parser.add_argument('-export-fixes', metavar='filename', dest='export_fixes',
-                      help='Create a yaml file to store suggested fixes in, '
-                      'which can be applied with clang-apply-replacements.')
+  if yaml:
+    parser.add_argument('-export-fixes', metavar='filename', dest='export_fixes',
+                        help='Create a yaml file to store suggested fixes in, '
+                        'which can be applied with clang-apply-replacements.')
   parser.add_argument('-j', type=int, default=0,
                       help='number of tidy instances to be run in parallel.')
   parser.add_argument('files', nargs='*', default=['.*'],
@@ -255,7 +259,7 @@ def main():
     max_task = multiprocessing.cpu_count()
 
   tmpdir = None
-  if args.fix or args.export_fixes:
+  if args.fix or (yaml and args.export_fixes):
     check_clang_apply_replacements_binary(args)
     tmpdir = tempfile.mkdtemp()
 
@@ -293,7 +297,7 @@ def main():
       shutil.rmtree(tmpdir)
     os.kill(0, 9)
 
-  if args.export_fixes:
+  if yaml and args.export_fixes:
     print('Writing fixes to ' + args.export_fixes + ' ...')
     try:
       merge_replacement_files(tmpdir, args.export_fixes)
